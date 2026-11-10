@@ -48,13 +48,13 @@ class LinkSettings:
     reg_ecnt: str = "51"
     reg_ts_lsb: str = "52"
     reg_ts_msb: str = "53"
-    reg_waddr: str = "1A"
+    reg_waddr: str = "1D"
     reg_w: list = field(default_factory=lambda: ["54", "55", "56", "57", "58"])   # TS MSB, TS LSB, data, gap, gap_err
     wdepth: int = 256
-    reg_eaddr: str = "1B"
+    reg_eaddr: str = "1E"
     reg_e: list = field(default_factory=lambda: ["59", "5A", "5B", "5C", "5D"])   # TS MSB, TS LSB, code, addr, data
     edepth: int = 256
-    reg_baddr: str = "1C"
+    reg_baddr: str = "1F"
     reg_b: list = field(default_factory=lambda: ["5E", "5F", "60", "61"])         # pulse, perr, null, nerr
     bit_words: int = 8
     read_word: str = "all"         # all | last | none
@@ -64,6 +64,8 @@ class LinkSettings:
     read_bit: str = "all"          # N: Bit Diagnostic verisi okunacak Word sayısı
     read_bit_n: int = 4
     out_dir: str = ""
+    verify_select: bool = True     # BRAM adres seçimini geri okuyarak doğrula
+    addr_version: int = 2
 
     def to_dict(self):
         return asdict(self)
@@ -71,6 +73,11 @@ class LinkSettings:
     @staticmethod
     def from_dict(d):
         d = dict(d)
+        if d.get("addr_version", 1) < 2:                    # eski adres seçimleri 1A/1B/1C → 1D/1E/1F
+            for k, old, new in (("reg_waddr", "1A", "1D"), ("reg_eaddr", "1B", "1E"), ("reg_baddr", "1C", "1F")):
+                if str(d.get(k, old)).upper() == old:
+                    d[k] = new
+            d["addr_version"] = 2
         if "zero_cnt" in d and "hs_response" not in d:      # eski dosyalar: 00 sayısı
             d["hs_response"] = " ".join(["00"] * int(d["zero_cnt"]))
         return LinkSettings(**{k: v for k, v in d.items() if k in LinkSettings.__dataclass_fields__})
@@ -176,13 +183,50 @@ class Link:
             self.on_write(reg_hex, value, data, rx)
         return rx
 
-    def send_config(self, regs):
-        """regs: [(ad, adres_hex, değer)]"""
-        self.log("[RX Config] RX Config gönderiliyor")
+    def send_config(self, regs, title="RX Config", verify=True):
+        """regs: [(ad, adres_hex, değer)]. verify: yazılanları geri okuyup karşılaştırır."""
+        self.log(f"[{title}] {title} gönderiliyor")
         for name, adr, val in regs:
             self.log(f" {name}")
             self.write_reg(adr, val)
-        self.log(f"RX Config tamamlandı: {len(regs)} komut.")
+        if verify:
+            bad = []
+            for name, adr, val in regs:
+                got = self.read_reg(adr, True)
+                if got != val:
+                    bad.append(f"{name} ({adr}): yazılan {val}, okunan {got}")
+            for b in bad:
+                self.log(f"  -> UYUŞMADI: {b}")
+            if bad:
+                raise LinkError(f"{title} geri okuma doğrulaması başarısız: {len(bad)} Register uyuşmadı.")
+            self.log(f"{title} geri okuma ile doğrulandı.")
+        self.log(f"{title} tamamlandı: {len(regs)} komut.")
+
+    def select(self, reg_hex, addr, quiet=True):
+        """BRAM adres seçimi; açıksa geri okuyup doğrular, uyuşmazsa bir kez tekrar yazar."""
+        for _ in range(2):
+            self.write_reg(reg_hex, addr, quiet)
+            if not self.st.verify_select or self.read_reg(reg_hex, quiet) == addr:
+                return
+            self.log(f"  -> {reg_hex} adres seçimi ({addr}) doğrulanamadı, tekrar yazılıyor.")
+        raise LinkError(f"{reg_hex} adres seçimi ({addr}) doğrulanamadı.")
+
+    def read_all(self, progress=lambda done, total, msg: None, quiet=True) -> dict:
+        """rx_cfg_read_mode okuma süresince 1 tutulur (kayıtlar dondurulur), sonunda 0 yapılır."""
+        freeze = self.regmap.tx_regs.get("rx_read_mode")
+        if freeze:
+            self.write_reg(freeze, 1, quiet)
+        try:
+            return self._read_all(progress, quiet)
+        finally:
+            if freeze and self.ser:
+                stopped = self.stop_flag.is_set(); self.stop_flag.clear()
+                try:
+                    self.write_reg(freeze, 0, quiet)
+                except Exception as e:
+                    self.log(f"UYARI: RX read mode kapatılamadı: {e}")
+                if stopped:
+                    self.stop_flag.set()
 
     # ---------- okuma
     def read_reg(self, reg_hex: str, quiet=False):
@@ -197,7 +241,7 @@ class Link:
         self.log(f"HATA: Register {reg_hex} okunamadı.")
         return None
 
-    def read_all(self, progress=lambda done, total, msg: None, quiet=True) -> dict:
+    def _read_all(self, progress, quiet):
         st = self.st
         self.log("[RX Okuma] RX okuma başlıyor")
         wtot = self.read_reg(st.reg_wcnt)
@@ -222,20 +266,20 @@ class Link:
         words, errors, bits = [], [], []
         for i in range(wn):                   # en yeni önce
             addr = (wstart + wfull - 1 - i) % st.wdepth
-            self.write_reg(st.reg_waddr, addr, quiet)
+            self.select(st.reg_waddr, addr, quiet)
             w = [self.read_reg(r, quiet) for r in st.reg_w]
             words.append({"no": wtot - 1 - i, "addr": addr, "w": w})
             done += 6; progress(done, total, f"Word {i + 1}/{wn}")
         for i in range(en):
             addr = (estart + efull - 1 - i) % st.edepth
-            self.write_reg(st.reg_eaddr, addr, quiet)
+            self.select(st.reg_eaddr, addr, quiet)
             w = [self.read_reg(r, quiet) for r in st.reg_e]
             errors.append({"addr": addr, "w": w})
             done += 6; progress(done, total, f"Error {i + 1}/{en}")
         for kb in range(bn * 32):
             wno, bno = wtot - 1 - kb // 32, kb % 32
             addr = (wno % st.bit_words) * 32 + bno
-            self.write_reg(st.reg_baddr, addr, quiet)
+            self.select(st.reg_baddr, addr, quiet)
             w = [self.read_reg(r, quiet) for r in st.reg_b]
             bits.append({"word": wno, "bit": bno, "w": w})
             done += 5; progress(done, total, f"Bit Diagnostic: Word {wno}, Bit {bno + 1}")
@@ -260,7 +304,8 @@ class SimDevice:
         st = st or LinkSettings()
         self.hs, self.hs_rsp = bytes.fromhex(st.handshake), bytes.fromhex(st.hs_response)
         self._rx = bytearray(); self.hs_count = 0
-        self.regs = {}; self.sel = {"1A": 0, "1B": 0, "1C": 0}
+        self.regs = {}; self.sel = {st.reg_waddr.upper(): 0, st.reg_eaddr.upper(): 0, st.reg_baddr.upper(): 0}
+        self.wsel, self.esel, self.bsel = st.reg_waddr.upper(), st.reg_eaddr.upper(), st.reg_baddr.upper()
         self.wtot, self.etot = n_words, n_err
         ts = 1_000_000
         self.wmem, self.bmem, self.emem = {}, {}, {}
@@ -327,7 +372,8 @@ class SimDevice:
             elif r == 0x51: self._reply(self.etot)
             elif r == 0x52: self._reply(self.now & 0xFFFFFFFF)
             elif r == 0x53: self._reply(self.now >> 32)
-            elif 0x54 <= r <= 0x58: self._reply(self.wmem.get(self.sel["1A"], [0] * 5)[r - 0x54])
-            elif 0x59 <= r <= 0x5D: self._reply(self.emem.get(self.sel["1B"], [0] * 5)[r - 0x59])
-            elif 0x5E <= r <= 0x61: self._reply(self.bmem.get(self.sel["1C"], [0] * 4)[r - 0x5E])
-            else: self._reply(0)
+            elif 0x54 <= r <= 0x58: self._reply(self.wmem.get(self.sel[self.wsel], [0] * 5)[r - 0x54])
+            elif 0x59 <= r <= 0x5D: self._reply(self.emem.get(self.sel[self.esel], [0] * 5)[r - 0x59])
+            elif 0x5E <= r <= 0x61: self._reply(self.bmem.get(self.sel[self.bsel], [0] * 4)[r - 0x5E])
+            elif f"{r:02X}" in self.sel: self._reply(self.sel[f"{r:02X}"])
+            else: self._reply(self.regs.get(f"{r:02X}", 0))     # Config Register'ları geri okunabilir

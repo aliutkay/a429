@@ -102,7 +102,7 @@ class _RegDialog(tk.Toplevel):
         except ValueError as e:
             messagebox.showerror("Register", str(e) if "base 16" not in str(e) else "Adres hex olmalı.", parent=self); return
         new = (ReadReg(name, addr, self.fmt.get()) if self.variables is None
-               else WriteReg(name, addr, self.formula.get().strip(), self.enabled.get()))
+               else WriteReg(name, addr, self.formula.get().strip(), self.enabled.get(), getattr(r, "bits", 32)))
         err = self.on_ok(r, new)
         if err:
             messagebox.showerror("Register", err, parent=self); return
@@ -286,8 +286,8 @@ class RegisterEditor(tk.Toplevel):
 
     # ------------------------------------------------------------- TX Register'ları
     def _tab_tx(self, nb):
-        t = ttk.Frame(nb, padding=8); nb.add(t, text="TX Register'ları")
-        ttk.Label(t, text="TX Canlı Kontrol'ün kullandığı adresler (hex). Boş bırakılan Register'a yazma yapılmaz.",
+        t = ttk.Frame(nb, padding=8); nb.add(t, text="TX ve kontrol Register'ları")
+        ttk.Label(t, text="TX Config, TX Canlı Kontrol, IP reset ve RX read mode adresleri (hex). Boş bırakılan Register'a yazma yapılmaz.",
                   foreground="gray").grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
         self.txv = {}
         for r, (key, text) in enumerate(TX_REGISTERS, 1):

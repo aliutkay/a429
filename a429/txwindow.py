@@ -4,7 +4,7 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from .txlive import (OVERRIDE_CODES, TIME_UNITS, build_word, fmt_binary, gap_from_period, parse_bin_word, parse_builder,
+from .txlive import (OVERRIDE_LINES, TRIGGER, override_writes, sched_values as calc_sched, TIME_UNITS, build_word, fmt_binary, gap_from_period, parse_bin_word, parse_builder,
                      parse_hex_word, parity_bit, to_clk, word_fields_text)
 
 OK_COLOR, BAD_COLOR = "#006100", "#C00000"
@@ -97,10 +97,10 @@ class TxLiveWindow(tk.Toplevel):
     def word_writes(self):
         cfg = {k: v.get() for k, v in self.vars.items()}
         if cfg["source"] == "direct":
-            return [("tx_mode", 1), ("tx_word", self.current_word())]
+            return [("tx_ext_data", self.current_word()), ("tx_builder_en", 0)]
         label, sdi, data, ssm, odd = parse_builder(cfg)
         build_word(label, sdi, data, ssm, odd)
-        return [("tx_mode", 0), ("tx_label", label), ("tx_sdi", sdi), ("tx_data", data), ("tx_ssm", ssm), ("tx_parity_type", int(odd))]
+        return [("tx_label", label), ("tx_sdi", sdi), ("tx_data", data), ("tx_ssm", ssm), ("tx_parity_type", int(odd)), ("tx_builder_en", 1)]
 
     def write_word(self):
         try:
@@ -127,13 +127,13 @@ class TxLiveWindow(tk.Toplevel):
         self.sched_frame = s = ttk.Frame(g)
         self.sched_en = tk.BooleanVar(value=getattr(self.app, "tx_sched_on", False))
         f = ttk.Frame(s); f.pack(fill=tk.X)
-        self._time_row(f, 0, "Internal delay", "delay_us", "delay_unit")
-        ttk.Label(f, text="Interword gap").grid(row=1, column=0, sticky="w", padx=(0, 10), pady=2)
+        self._time_row(f, 0, "Initial delay", "delay_us", "delay_unit")
+        ttk.Label(f, text="Inter word gap").grid(row=1, column=0, sticky="w", padx=(0, 10), pady=2)
         m = ttk.Frame(f); m.grid(row=1, column=1, columnspan=2, sticky="w")
         ttk.Radiobutton(m, text="Periyottan hesapla", variable=self.vars["gap_mode"], value="period").pack(side=tk.LEFT)
         ttk.Radiobutton(m, text="Direkt gir", variable=self.vars["gap_mode"], value="direct").pack(side=tk.LEFT, padx=(8, 0))
         self.period_row = self._time_row(f, 2, "Periyot", "period_us", "period_unit")
-        self.gap_row = self._time_row(f, 3, "Interword gap", "gap_us", "gap_unit")
+        self.gap_row = self._time_row(f, 3, "Inter word gap", "gap_us", "gap_unit")
         self.period_ent, self.gap_ent = self.period_row[1], self.gap_row[1]
         self.sched_info = ttk.Label(s, text="", justify=tk.LEFT, wraplength=620); self.sched_info.pack(anchor="w", pady=(4, 2))
         bar = ttk.Frame(s); bar.pack(fill=tk.X)
@@ -169,24 +169,7 @@ class TxLiveWindow(tk.Toplevel):
     def sched_values(self):
         """(delay_clk, gap_clk, açıklama)"""
         cfg = {k: v.get() for k, v in self.vars.items()}
-        mhz = self.app.ci.clk_mhz
-        delay_clk = round(to_clk(self._number(cfg["delay_us"], "Internal delay"), cfg["delay_unit"], mhz))
-        if cfg["gap_mode"] == "period":
-            period_us = to_clk(self._number(cfg["period_us"], "Periyot"), cfg["period_unit"], mhz) / mhz
-            gap, word, fixed = gap_from_period(period_us, self._tbit_us())
-            head = (f"TX profili: {self.app._current('tx_profile').name}\n"
-                    f"Periyot: {period_us:g} µs\n"
-                    f"Word süresi (32 Bit): {word:g} µs\n"
-                    f"Zorunlu gap (4 Bit): {fixed:g} µs\n"
-                    f"Interword gap = {period_us:g} − {word:g} − {fixed:g} = {gap:g} µs")
-            if gap < 0:
-                raise ValueError(head + "\nPeriyot çok kısa.")
-            gap_clk = round(gap * mhz)
-            text = f"{head} = {gap_clk:,} clk"
-        else:
-            gap_clk = round(to_clk(self._number(cfg["gap_us"], "Interword gap"), cfg["gap_unit"], mhz))
-            text = f"Interword gap: {gap_clk / mhz:g} µs = {gap_clk:,} clk"
-        return delay_clk, gap_clk, f"{text}\nInternal delay: {delay_clk / mhz:g} µs = {delay_clk:,} clk"
+        return calc_sched(cfg, self.app.ci.clk_mhz, self._tbit_us(), self.app._current("tx_profile").name)
 
     def sched_writes(self):
         delay, gap, _ = self.sched_values()
@@ -212,7 +195,7 @@ class TxLiveWindow(tk.Toplevel):
             else:
                 self.app.tx_sched_on = not enable
         try:
-            writes = (self.sched_writes() + [("sched_enable", 1)]) if enable else [("sched_enable", 0)]
+            writes = (self.sched_writes() + [("tx_msg_sched_en", 1), ("sched_enable", 1)]) if enable else [("sched_enable", 0)]
         except ValueError as e:
             messagebox.showerror("TX Canlı Kontrol", str(e), parent=self); revert(); return
         self._run_state()
@@ -229,7 +212,7 @@ class TxLiveWindow(tk.Toplevel):
         return ms
 
     def manual_send(self):
-        self.app.tx_write("TX manuel gönderim", [("tx_manual_send", 1)], parent=self)
+        self.app.tx_write("TX manuel gönderim", [("tx_msg_sched_en", 0)] + TRIGGER, parent=self)
 
     def press_manual(self):
         if self.manual_running:
@@ -238,7 +221,7 @@ class TxLiveWindow(tk.Toplevel):
             self.manual_period_ms()
         except ValueError as e:
             messagebox.showerror("TX Canlı Kontrol", str(e), parent=self); return
-        self.manual_running, self.sent, self.skipped = True, 0, 0
+        self.manual_running, self.sent, self.skipped, self._first = True, 0, 0, True
         self._run_state()
         self._tick()
 
@@ -251,8 +234,11 @@ class TxLiveWindow(tk.Toplevel):
             self.stop_manual(); return
         if self.app.busy:
             self.skipped += 1
-        elif not self.app.tx_write("TX periyodik gönderim", [("tx_manual_send", 1)], parent=self, on_done=self._tick_done, quiet=True):
-            self.stop_manual(); return
+        else:
+            writes = ([("tx_msg_sched_en", 0)] if self._first else []) + TRIGGER
+            if not self.app.tx_write("TX periyodik gönderim", writes, parent=self, on_done=self._tick_done, quiet=True, verify=False):
+                self.stop_manual(); return
+            self._first = False
         self.manual_after = self.after(max(1, round(ms)), self._tick)
         self._manual_text()
 
@@ -299,7 +285,7 @@ class TxLiveWindow(tk.Toplevel):
         self.override = tk.StringVar(value=getattr(self.app, "tx_override", "Kapalı"))
         top = ttk.Frame(g); top.pack(fill=tk.X)
         f = ttk.Frame(top); f.pack(side=tk.LEFT)
-        for name in OVERRIDE_CODES:
+        for name in OVERRIDE_LINES:
             ttk.Radiobutton(f, text=name, variable=self.override, value=name).pack(side=tk.LEFT, padx=(0, 8))
         ttk.Button(top, text="Uygula", command=self.apply_override).pack(side=tk.LEFT, padx=(8, 0))
         self.override_info = ttk.Label(g, text="", foreground=BAD_COLOR); self.override_info.pack(anchor="w", pady=(4, 0))
@@ -310,9 +296,10 @@ class TxLiveWindow(tk.Toplevel):
         def done(ok):
             if ok:
                 self.app.tx_override = choice
+                self.app._fill_tx()
                 if self.winfo_exists():
                     self._override_look()
-        self.app.tx_write(f"TX hat override: {choice}", [("line_override", OVERRIDE_CODES[choice])], parent=self, on_done=done)
+        self.app.tx_write(f"TX hat override: {choice}", override_writes(choice), parent=self, on_done=done)
 
     def override_on(self):
         return getattr(self.app, "tx_override", "Kapalı") != "Kapalı"
@@ -356,7 +343,7 @@ class TxLiveWindow(tk.Toplevel):
         if self._loading:
             return
         self.app.ci.tx_live.update({k: v.get() for k, v in self.vars.items()})
-        self.app.mark_dirty()
+        self.app.mark_dirty(); self.app._fill_tx()
         self.refresh()
 
     def refresh(self):

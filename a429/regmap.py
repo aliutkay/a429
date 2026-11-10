@@ -146,6 +146,7 @@ class WriteReg:
     addr: str
     formula: str
     enabled: bool = True
+    bits: int = 32              # IP'deki alan genişliği
 
 
 @dataclass
@@ -155,30 +156,52 @@ class ReadReg:
     fmt: str = "hex"            # hex | dec
 
 
-# TX canlı kontrol Register'ları: adresler IP'ye göre düzenleyiciden girilir, boşsa o işlem yazılmaz.
+# TX ve kontrol Register'ları (IP adres haritası 00–1F). Adresi boş Register'a yazma yapılmaz.
 TX_REGISTERS = [
-    ("tx_mode", "Word kaynağı (0: alanlar, 1: direkt)"), ("tx_word", "Direkt 32-bit Word"),
+    ("ip_reset", "IP reset (cfg_reset)"),
+    ("tx_transmitter_en", "Word Transmitter enable (0: hat ext_high/ext_low ile sürülür)"),
+    ("tx_msg_sched_en", "Message Scheduler modu (1: Scheduler, 0: ext_data_valid tetiği)"),
+    ("tx_builder_en", "Word Builder enable (1: alanlar, 0: ext_data)"),
     ("tx_label", "Label"), ("tx_sdi", "SDI"), ("tx_data", "Data"), ("tx_ssm", "SSM"),
-    ("tx_parity_type", "Parity tipi (1: Odd, 0: Even)"), ("sched_enable", "Scheduler enable"),
-    ("sched_delay", "Scheduler internal delay (clk)"), ("sched_gap", "Interword gap duration (clk)"),
-    ("tx_manual_send", "Manuel gönder"), ("line_override", "Hat override (0: kapalı, 1: HIGH, 2: NULL, 3: LOW, 4: HIGH-Z)"),
+    ("tx_parity_type", "Parity tipi (1: Odd, 0: Even)"),
+    ("sched_enable", "Scheduler enable (başlat/durdur)"),
+    ("sched_delay", "Initial delay (clk)"), ("sched_gap", "Inter word gap (clk)"),
+    ("tx_pulse_dur", "Pulse süresi (clk)"), ("tx_null_dur", "Null süresi (clk)"), ("tx_gap_dur", "Word Gap süresi (clk)"),
+    ("tx_slp", "SLP hız seçimi (1: 1.5 µs, 0: 10 µs)"),
+    ("tx_ext_valid", "ext_data_valid (gönderim tetiği, kenar)"), ("tx_ext_data", "ext_data (32-bit Word)"),
+    ("tx_ext_high", "ext_high"), ("tx_ext_low", "ext_low"),
+    ("rx_read_mode", "RX read mode (okuma sırasında kayıtları dondurur)"),
 ]
+DEFAULT_TX_ADDR = dict(zip([k for k, _ in TX_REGISTERS], [f"{i:02X}" for i in range(0x14)] + ["1C"]))
+MAP_VERSION = 2
 
 
 def default_tx_regs():
-    return {k: "" for k, _ in TX_REGISTERS}
+    return dict(DEFAULT_TX_ADDR)
 
 
 DEFAULT_WRITE_REGS = [
-    ("CFG Glitch Filter Size", "11", "glitch_filter_size"),
-    ("CFG Min Pulse Duration", "12", "min_pulse"),
-    ("CFG Max Pulse Duration", "13", "max_pulse"),
-    ("CFG Min Bit Duration", "14", "min_bit"),
-    ("CFG Max Bit Duration", "15", "max_bit"),
-    ("CFG Max Gap Glitch Error", "16", "max_gap_glitch_error"),
-    ("CFG Max Null Glitch Error", "17", "max_null_glitch_error"),
-    ("CFG Max Pulse Glitch Error", "18", "max_pulse_glitch_error"),
+    ("CFG Glitch Filter Size", "14", "glitch_filter_size", True, 16),
+    ("CFG Min Pulse Duration", "15", "min_pulse", True, 16),
+    ("CFG Max Pulse Duration", "16", "max_pulse", True, 16),
+    ("CFG Min Bit Duration", "17", "min_bit", True, 16),
+    ("CFG Max Bit Duration", "18", "max_bit", True, 16),
+    ("CFG Max Gap Glitch Error", "19", "max_gap_glitch_error", True, 16),
+    ("CFG Max Null Glitch Error", "1A", "max_null_glitch_error", True, 16),
+    ("CFG Max Pulse Glitch Error", "1B", "max_pulse_glitch_error", True, 16),
 ]
+OLD_RX_ADDR = {f"{0x11 + i:02X}": f"{0x14 + i:02X}" for i in range(8)}      # harita sürüm 1 → 2
+
+
+def _migrate_v1(rm):
+    """Sürüm 1 haritası: RX Config 11–18 → 14–1B, 16 bit; TX yer tutucuları yerine yeni TX haritası."""
+    names = {r[0] for r in DEFAULT_WRITE_REGS}
+    for r in rm.write_regs:
+        r.addr = OLD_RX_ADDR.get(r.addr, r.addr)
+        if r.name in names:
+            r.bits = 16
+    rm.tx_regs = default_tx_regs()
+    return rm
 
 
 def norm_addr(a):
@@ -197,6 +220,7 @@ class RegisterMap:
     write_regs: list = field(default_factory=lambda: [WriteReg(*r) for r in DEFAULT_WRITE_REGS])
     extra_read: list = field(default_factory=list)
     tx_regs: dict = field(default_factory=default_tx_regs)
+    map_version: int = MAP_VERSION
 
     @staticmethod
     def from_dict(d):
@@ -210,8 +234,8 @@ class RegisterMap:
                 rm.read_cmd = f"{r.group(1)} {{IP}} {r.group(3)}"
         rm.write_regs = [WriteReg(**r) for r in d.get("write_regs", [])]
         rm.extra_read = [ReadReg(**r) for r in d.get("extra_read", [])]
-        rm.tx_regs = {**default_tx_regs(), **d.get("tx_regs", {})}
-        return rm
+        rm.tx_regs = {**default_tx_regs(), **{k: v for k, v in d.get("tx_regs", {}).items() if k in DEFAULT_TX_ADDR}}
+        return _migrate_v1(rm) if d.get("map_version", 1) < MAP_VERSION else rm
 
     @staticmethod
     def from_legacy(config, link=None):
@@ -224,7 +248,7 @@ class RegisterMap:
                          read_rsp=f"{h(link.get('rsp_start', 'AB'))} {{DATA32}} {h(link.get('rsp_end', 'CD'))}")
         for r, a in zip(rm.write_regs, config.get("reg_addr", [])):
             r.addr = h(a)
-        return rm
+        return _migrate_v1(rm)
 
     def copy(self):
         return copy.deepcopy(self)
@@ -266,6 +290,8 @@ class RegisterMap:
             v = evaluate(reg.formula, variables)
             if v < 0:
                 raise FrameError(f"Negatif değer: {v}")
+            if v >= 1 << getattr(reg, "bits", 32):
+                raise FrameError(f"{v} değeri {reg.bits} bit alana sığmıyor (en fazla {(1 << reg.bits) - 1}).")
             value_hex = hexstr(_int_bytes(v, self.data_bytes(), self.endian, "Data"))
             return v, value_hex, hexstr(self.build_write(reg.addr, v)), None
         except (FormulaError, FrameError, ValueError) as e:

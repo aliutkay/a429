@@ -57,7 +57,7 @@ dalga formunda nominal süreyle çizilir.
 
 Bağlantı sekmesindeki **TX Canlı Kontrol…** ayrı pencerede açılır: Word oluşturucu (Label, SDI, Data, SSM, Parity tipi) veya direkt 32-bit Word (hex/binary), Scheduler (internal delay, periyottan veya direkt Interword gap, ▶/⏸) veya manuel gönderim (tek gönderim ya da bilgisayar zamanlamasıyla periyodik ▶/⏸), hat override (HIGH, NULL, LOW, HIGH-Z); override etkinken Word ve Gönderim bölümleri kapalıdır. Süreler clk, ns, µs veya ms girilebilir. Periyot modunda Interword gap = periyot − 32 Bit Word süresi − 4 Bit gap süresi; Bit Time, TX ARINC profilinin Bit Rate NOM değerinden alınır.
 
-Register adresleri **Komut ve Register Düzenleyici → TX Register'ları** sekmesinden girilir; adresi boş Register'a yazılmaz. **Register yazma logunu da kaydet** seçiliyse tüm yazmalar okuma klasöründe `yazma_log_*.txt` dosyasına eklenir.
+Gönderim `ext_data_valid` 1→0 darbesiyle tetiklenir; override `Word Transmitter enable` 0 yapılıp `ext_high`/`ext_low` ile sürülür (00 NULL, 10 HIGH, 01 LOW, 11 HIGH-Z). Adresler **Komut ve Register Düzenleyici → TX ve kontrol Register'ları** sekmesindedir. **TX Config gönder** tüm TX sinyallerini başlangıç değerleriyle yazar (Pulse/Null/Gap TX profilinden, SLP Bit Rate'ten: 14.5 kbps üstü 1), `scheduler_en` en son ve 0 olarak yazılır. **Register yazma logunu da kaydet** seçiliyse tüm yazmalar okuma klasöründe `yazma_log_*.txt` dosyasına eklenir.
 
 ## Dosyalar
 
@@ -77,7 +77,8 @@ Eski TTL çıktıları Dosya → *TTL/Excel txt dosyalarından içe aktar* ile a
 - Handshake: `AA 11 BB 22 CC 33 DD 44` → echo, tekrar → ayarlanan Handshake cevabı (varsayılan 16 × `00`) = bağlı.
 - Yazma: `C3 00 <ip> <reg> <data32>` (IP ACK göndermez).
 - Okuma: `CF 00 <ip> <reg>` → `AB <data32> CD`.
-- Word/Error/Bit BRAM adres seçimi `1A` / `1B` / `1C`; okuma en yeniden eskiye.
+- Word/Error/Bit BRAM adres seçimi `1D` / `1E` / `1F` (geri okunarak doğrulanır); okuma en yeniden eskiye, `rx_cfg_read_mode` (`1C`) okuma süresince 1.
+- Register haritası `00`–`1F`: `00` IP reset, `01`–`13` TX, `14`–`1B` RX Config (16 bit), `1C` read mode, `1D`–`1F` BRAM adres seçimi. RX ve TX Config yazıldıktan sonra geri okunup doğrulanır.
 
 Tüm adresler ve byte'lar **Ayarlar → Komut ve Register Düzenleyici** penceresinden değiştirilir ve projeyle birlikte kaydedilir.
 

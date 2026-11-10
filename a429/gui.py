@@ -20,6 +20,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from . import project as P
 from .model import ConfigInputs, SpecProfile, compute, HB_ARINC, HB_50
 from .formulas import DERIVED_ROWS, draw_formula
+from .txcfg import compute_tx
 from .celltable import CellTable, Cell
 from .protocol import LinkSettings, Link, LinkError, SIM_PORT, hx, native_port
 from .regmap import norm_addr
@@ -813,7 +814,8 @@ class App(tk.Tk):
         fr.pack(fill=tk.BOTH, expand=True)
         ttk.Button(g, text="Komutları panoya kopyala", command=self.copy_cmds).pack(anchor="w", padx=2, pady=2)
 
-        ttk.Label(tx, text="TX hesapları sonraki aşamada eklenecek.", font=BOLD_FONT).pack(fill=tk.X, pady=(0, 4))
+        self.tx_chk_lbl = ttk.Label(tx, text="", font=BOLD_FONT); self.tx_chk_lbl.pack(fill=tk.X)
+        self.tx_info = ttk.Label(tx, text="", foreground="gray"); self.tx_info.pack(fill=tk.X, pady=(0, 4))
         g = ttk.LabelFrame(tx, text="TX Kontrolleri"); g.pack(fill=tk.BOTH, expand=True)
         fr, self.tv_tx_chk = make_tree(g, ("Kontrol", "Sonuç"), [520, 90], 8); fr.pack(fill=tk.BOTH, expand=True)
         g = ttk.LabelFrame(tx, text="TX Config Register'ları"); g.pack(fill=tk.BOTH, expand=True, pady=(6, 0))
@@ -918,6 +920,11 @@ class App(tk.Tk):
             n.trace_add("write", lambda *a: self.mark_dirty())
         ttk.Label(g, text="Bit Diagnostic için N, Word sayısıdır (her Word 32 Bit). En yeni kayıtlar okunur.",
                   foreground="gray").grid(row=3, column=0, columnspan=3, sticky="w", padx=4)
+        self.verify_sel = tk.BooleanVar(value=True)
+        ttk.Checkbutton(g, text="BRAM adres seçimini geri okuyarak doğrula", variable=self.verify_sel,
+                        command=self.mark_dirty).grid(row=4, column=0, columnspan=3, sticky="w", padx=4)
+        ttk.Label(g, text="Okuma süresince RX read mode açık tutulur (kayıtlar dondurulur).", foreground="gray").grid(
+            row=5, column=0, columnspan=3, sticky="w", padx=4)
         g = ttk.LabelFrame(left, text="Okuma ve yazma dosyaları"); g.pack(fill=tk.X, pady=3)
         ent(g, 0, 0, "Klasör", "out_dir", 30)
         ttk.Button(g, text="…", width=3, command=self._pick_out).grid(row=0, column=2)
@@ -938,7 +945,7 @@ class App(tk.Tk):
                 b = ttk.Button(g, text=txt, command=fn); b.pack(side=tk.LEFT, padx=2); self.btns.append(b)
             return g
 
-        g = group(row1, "Bağlantı", (("Bağlan", self.do_connect),))
+        g = group(row1, "Bağlantı", (("Bağlan", self.do_connect), ("IP reset", self.do_ip_reset)))
         ttk.Button(g, text="Bağlantıyı kes", command=self.do_disconnect).pack(side=tk.LEFT, padx=2)
         ttk.Button(g, text="Durdur", command=self.do_stop).pack(side=tk.LEFT, padx=2)
         self.conn_lbl = ttk.Label(g, text="● Bağlı değil", foreground="#C00000"); self.conn_lbl.pack(side=tk.LEFT, padx=(8, 2))
@@ -981,7 +988,33 @@ class App(tk.Tk):
             self.log(f"Yazma logu yazılamadı: {e}")
 
     def do_send_tx_cfg(self):
-        messagebox.showinfo(APP, "TX Config gönderimi TX hesapları eklendiğinde etkinleşecek.")
+        def job():
+            L = self._ensure_link(); L.stop_flag.clear()
+            L.send_config([(n, a, v) for n, a, v, _, _ in self.job_tx["regs"]], title="TX Config")
+            return "tx_cfg"
+        self._run("TX Config gönderiliyor", job, need_tx=True)
+
+    def do_ip_reset(self):
+        if messagebox.askyesno(APP, "ARINC 429 IP bloğu resetlensin mi? (cfg_reset 1 sonra 0 yazılır)"):
+            self.tx_write("IP reset", [("ip_reset", 1), ("ip_reset", 0)], verify=False)
+
+    def _fill_tx(self):
+        try:
+            self.res_tx = compute_tx(self.ci, getattr(self, "tx_override", "Kapalı"))
+        except ValueError as e:
+            self.res_tx = None
+            for tv in (self.tv_tx_regs, self.tv_tx_chk):
+                tv.delete(*tv.get_children())
+            self.tx_chk_lbl.configure(text=f"TX Config hesaplanamadı: {e}", foreground="#C00000"); self.tx_info.configure(text="")
+            return
+        tx = self.res_tx
+        fill_tree(self.tv_tx_regs, [["" if c is None else c for c in r] for r in tx["regs"]],
+                  ["fail" if r[2] is None or not r[1] else "" for r in tx["regs"]])
+        fill_tree(self.tv_tx_chk, [[n, "OK" if ok else "UYARI"] for n, ok in tx["checks"]], ["ok" if ok else "fail" for _, ok in tx["checks"]])
+        bad = sum(1 for _, ok in tx["checks"] if not ok)
+        self.tx_chk_lbl.configure(text=f"UYARI: {bad} TX kontrolü sağlanmıyor." if bad else f"Tüm TX kontrolleri sağlanıyor ({len(tx['checks'])}/{len(tx['checks'])}).",
+                                  foreground="#C00000" if bad else "#006100")
+        self.tx_info.configure(text=tx["text"])
 
     def open_tx_live(self):
         win = getattr(self, "tx_win", None)
@@ -990,7 +1023,7 @@ class App(tk.Tk):
         from .txwindow import TxLiveWindow
         self.tx_win = TxLiveWindow(self)
 
-    def tx_write(self, title, writes, parent=None, on_done=None, quiet=False):
+    def tx_write(self, title, writes, parent=None, on_done=None, quiet=False, verify=True):
         """TX Register'larına [(anahtar, değer)] yazar. Başlatılamazsa False döner."""
         regs = self.ci.regmap.tx_regs
         missing = [k for k, _ in writes if not regs.get(k)]
@@ -998,16 +1031,24 @@ class App(tk.Tk):
             from .regmap import TX_REGISTERS
             names = dict(TX_REGISTERS)
             messagebox.showerror(APP, "Şu TX Register adresleri girilmemiş:\n" + "\n".join(names[k] for k in missing)
-                                 + "\n\nKomut ve Register Düzenleyici → TX Register'ları", parent=parent)
+                                 + "\n\nKomut ve Register Düzenleyici → TX ve kontrol Register'ları", parent=parent)
             return False
         if self.busy:
             messagebox.showinfo(APP, "Seri port işlemi sürüyor.", parent=parent); return False
-        pairs = [(regs[k], v) for k, v in writes]
+        pairs = [(k, regs[k], v) for k, v in writes]
+        no_verify = {"tx_ext_valid", "ip_reset"}         # darbe olarak yazılanlar
 
         def job():
             L = self._ensure_link(); L.stop_flag.clear()
-            for addr, value in pairs:
+            bad = []
+            for key, addr, value in pairs:
                 L.write_reg(addr, value, quiet)
+                if verify and key not in no_verify:
+                    got = L.read_reg(addr, quiet)
+                    if got != value:
+                        bad.append(f"{addr}: yazılan {value}, okunan {got}")
+            if bad:
+                raise LinkError("Geri okuma uyuşmadı: " + "; ".join(bad))
             return "tx"
         self._job_cb = on_done
         if not self._run(title, job, fresh=False):
@@ -1043,7 +1084,7 @@ class App(tk.Tk):
         for x in self.btns:
             x.configure(state=tk.DISABLED if b else tk.NORMAL)
 
-    def _run(self, name, fn, fresh=True):
+    def _run(self, name, fn, fresh=True, need_tx=False):
         """Seri işlemi başlatır; başlayamazsa False döner. fresh: önce formdan yeniden hesapla."""
         if self.busy:
             return False
@@ -1055,6 +1096,10 @@ class App(tk.Tk):
                 messagebox.showerror(APP, f"İşlem başlatılmadı, girişleri düzeltin:\n{self._calc_error}"); return False
         elif not self._commit_form():
             return False
+        if need_tx and (self.res_tx is None or self.res_tx["errors"]):
+            messagebox.showerror(APP, "TX Config gönderilemez:\n" + ("\n".join(self.res_tx["errors"][:8]) if self.res_tx else self.tx_chk_lbl.cget("text")))
+            return False
+        self.job_tx = getattr(self, "res_tx", None)
         self.job_ls, self.job_regmap = copy.deepcopy(self.ls), copy.deepcopy(self.ci.regmap)   # işlem sürerken form değişse de etkilenmez
         self.job_res, self.job_mhz = self.res, self.ci.clk_mhz
         self._set_busy(True); self.status.set(f"{name}…")
@@ -1466,7 +1511,7 @@ class App(tk.Tk):
         for k, var in self.lv.items():
             val = getattr(ls, k)
             var.set(",".join(val) if isinstance(val, list) else (f"{val:g}" if isinstance(val, float) else str(val)))
-        v["ip_port"].set(ci.regmap.ip_port)
+        v["ip_port"].set(ci.regmap.ip_port); self.verify_sel.set(self.ls.verify_select)
         names = {b: a for a, b in READ_MODES.items()}
         for key, (mode, n, _) in self.read_opts.items():
             mode.set(names[getattr(ls, f"read_{key}")]); n.set(str(getattr(ls, f"read_{key}_n")))
@@ -1534,6 +1579,7 @@ class App(tk.Tk):
             ci.regmap.ip_port = norm_addr(v["ip_port"].get())
         except ValueError:
             raise ValueError("Hedef IP portu hex olmalı (ör. 01).") from None
+        ls.verify_select = self.verify_sel.get()
         for key, (mode, n, _) in self.read_opts.items():
             m = READ_MODES[mode.get()]
             setattr(ls, f"read_{key}", m)
@@ -1575,6 +1621,7 @@ class App(tk.Tk):
         self.chk_lbl.configure(text=(f"UYARI: {bad} RX kontrolü sağlanmıyor (ayrıntı aşağıda, Kontroller sekmesinde)." if bad
                                      else f"Tüm RX kontrolleri sağlanıyor ({len(r.checks)}/{len(r.checks)})."),
                                foreground="#C00000" if bad else "#006100")
+        self._fill_tx()
         self.draw_cfg_charts()
         self.refresh_read()
         self.status.set("RX Config hesaplandı.")

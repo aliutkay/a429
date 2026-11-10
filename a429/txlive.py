@@ -1,13 +1,22 @@
 """TX canlı kontrol hesapları: ARINC 429 Word oluşturma, Parity ve Scheduler süreleri."""
 from __future__ import annotations
 
-OVERRIDE_CODES = {"Kapalı": 0, "HIGH": 1, "NULL": 2, "LOW": 3, "HIGH-Z": 4}
+# Hat override: None = Word Transmitter etkin; aksi halde (ext_high, ext_low)
+OVERRIDE_LINES = {"Kapalı": None, "HIGH": (1, 0), "NULL": (0, 0), "LOW": (0, 1), "HIGH-Z": (1, 1)}
+TRIGGER = [("tx_ext_valid", 1), ("tx_ext_valid", 0)]     # ext_data_valid kenarla tetikler: 1 sonra 0
+
+
+def override_writes(name):
+    lines = OVERRIDE_LINES[name]
+    if lines is None:
+        return [("tx_ext_high", 0), ("tx_ext_low", 0), ("tx_transmitter_en", 1)]
+    return [("tx_ext_high", lines[0]), ("tx_ext_low", lines[1]), ("tx_transmitter_en", 0)]
 
 
 def default_tx_live():
     return dict(source="builder", label="310", sdi="0", data="00000", ssm="0", parity="Odd", word="00000000",
                 send_mode="scheduler", delay_us="0", delay_unit="µs", gap_mode="period", period_us="1000", period_unit="µs",
-                gap_us="0", gap_unit="µs", manual_period="100", manual_unit="ms")
+                gap_us="100", gap_unit="µs", manual_period="100", manual_unit="ms")
 
 
 TIME_UNITS = ["clk", "ns", "µs", "ms"]
@@ -74,6 +83,40 @@ def fmt_binary(word):
 def word_fields_text(word):
     return (f"Label {word & 0xFF:03o} · SDI {(word >> 8) & 3} · Data {(word >> 10) & 0x7FFFF:05X} · "
             f"SSM {(word >> 29) & 3} · Parity {(word >> 31) & 1}")
+
+
+def _number(text, name):
+    try:
+        value = float(str(text).replace(",", "."))
+    except ValueError:
+        raise ValueError(f"{name} sayı olmalı.") from None
+    if value < 0:
+        raise ValueError(f"{name} negatif olamaz.")
+    return value
+
+
+def sched_values(cfg, mhz, tbit_us, profile_name):
+    """Scheduler süreleri: (initial_delay_clk, inter_word_gap_clk, açıklama)."""
+    delay_clk = round(to_clk(_number(cfg["delay_us"], "Initial delay"), cfg["delay_unit"], mhz))
+    if cfg["gap_mode"] == "period":
+        period_us = to_clk(_number(cfg["period_us"], "Periyot"), cfg["period_unit"], mhz) / mhz
+        gap, word, fixed = gap_from_period(period_us, tbit_us)
+        head = (f"TX profili: {profile_name}\n"
+                f"Periyot: {period_us:g} µs\n"
+                f"Word süresi (32 Bit): {word:g} µs\n"
+                f"Zorunlu gap (4 Bit): {fixed:g} µs\n"
+                f"Inter word gap = {period_us:g} − {word:g} − {fixed:g} = {gap:g} µs")
+        gap_clk = round(gap * mhz)
+        if gap_clk < 1:      # gap, 32 Bit Word + 4 Bit gap'ten sonra eklenir ve 0 olamaz
+            raise ValueError(f"{head}\nPeriyot, Word + 4 Bit gap süresinden ({word + fixed:g} µs) uzun olmalı "
+                             f"(Inter word gap en az 1 clk).")
+        text = f"{head} = {gap_clk:,} clk"
+    else:
+        gap_clk = round(to_clk(_number(cfg["gap_us"], "Inter word gap"), cfg["gap_unit"], mhz))
+        if gap_clk < 1:
+            raise ValueError("Inter word gap en az 1 clk olmalı (0 olamaz).")
+        text = f"Inter word gap: {gap_clk / mhz:g} µs = {gap_clk:,} clk"
+    return delay_clk, gap_clk, f"{text}\nInitial delay: {delay_clk / mhz:g} µs = {delay_clk:,} clk"
 
 
 def gap_from_period(period_us, tbit_us):
