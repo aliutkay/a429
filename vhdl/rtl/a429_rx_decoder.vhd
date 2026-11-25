@@ -1,32 +1,32 @@
 --------------------------------------------------------------------------------
--- a429_rx_decoder
+-- Dosya       : a429_rx_decoder.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- ARINC 429 alıcı çözücüsü (eski arinc429_rx_fsm). Filtrelenmiş hat durumundan
--- bitleri ölçer, 32 bitlik Word'ü toplar, zaman / gürültü / parity hatalarını bulur.
+-- Amaç:
+--   Filtrelenmiş ARINC 429 hat durumundan (00 NULL, 10 HIGH, 01 LOW, 11 FAULT)
+--   bit sürelerini ölçen, 32-bit Word'ü toplayan, Bit Diagnostic metriklerini
+--   üreten ve 8 fiziksel/protokol hatasını tespit eden alıcı çözücü FSM'i.
 --
--- Hat durumu (rx_high & rx_low): 00 NULL, 10 HIGH (bit 1), 01 LOW (bit 0), 11 bus fault
---
--- Durumlar:
---   IDLE         : gap ölçülür, bit 0'ın pulse'ı beklenir
---   PULSE        : pulse süresi ölçülür, bit değeri alınır
---   NULL         : bit süresi tamamlanır, sonraki bit beklenir
---   WAIT_GAP     : 32. bitten sonra en az 4 bit NULL beklenir, Word sonra yayınlanır
---
--- Son bitin (bit 31) sonu hattan belli olmadığı için bit 31'in null süresi bit 30'un
--- null süresine eşit kabul edilir: bit 31 sonu = bit 31 pulse + bit 30 null
--- (min_bit ile max_bit arasına sınırlanır). word_gap_dur bu noktadan sonraki NULL'dur;
--- böylece ek Register gerekmeden gerçek gap ölçülür. Bit 31'in bit_null_dur'u da bu tahmindir.
---   ERR_RECOVERY : hatadan sonra (ve reset sonrası) en az 4 bit NULL beklenir
---
--- Word formatı (word_data):
---   [7:0] Label, bit 7 = Label MSB (hatta ilk gönderilen bit), yani Label okunduğu gibi
---   [31:8] hattaki sırasıyla bit 9..32 (SDI, Data, SSM, Parity)
---   TX tarafının word_tx'i aynı formatta olmalıdır (checker bu formatla karşılaştırır).
---
--- Parity (cfg_parity_mode): 00 kontrol yok, 01 Odd, 10 Even, 11 kontrol yok.
---   Parity hatalıysa word_valid ÜRETİLMEZ; sadece err_parity (err_data = Word) üretilir.
---
--- Bir clk'de en fazla bir hata bayrağı üretilir.
+-- Gereksinimler:
+--   REQ-1 : FSM durumları: ST_IDLE -> ST_PULSE -> ST_NULL (32 bit) ->
+--           ST_WAIT_GAP (en az 4*min_bit NULL) -> ST_IDLE; hata ve reset
+--           sonrası ST_ERR_RECOVERY (en az 4*min_bit temiz NULL bekler).
+--   REQ-2 : Config girişleri yalnızca ST_IDLE veya ST_ERR_RECOVERY durumundayken
+--           iç kopyaya alınır (Word ortasında config değişimi Word'ü bozmaz).
+--   REQ-3 : Bit 0 pulse'ının ilk clk'inde 1 clk'lik word_start darbesi üretilir
+--           (logger timestamp'i Word başından yakalar).
+--   REQ-4 : Word formatı: word_data[7:0] = Label (bit 7 = hatta ilk gelen MSB),
+--           word_data[31:8] = SDI, Data, SSM, Parity.
+--   REQ-5 : Bit 31 null süresi hattan ayrıştırılamadığı için bit 30'un null
+--           süresine eşit tahmin edilir ([min_bit, max_bit] sınırlı); gerçek
+--           word_gap_dur bu tahmini bitişten sonraki NULL süresidir.
+--   REQ-6 : Parity (cfg_parity_mode): "00"/"11" kontrol yok, "01" Odd, "10" Even.
+--           Parity hatalı Word'de word_valid ÜRETİLMEZ, yalnızca err_parity
+--           (err_addr=31, err_data=Word) üretilir.
+--   REQ-7 : Tespit edilen 8 hata (clk başına en fazla 1 bayrak): BUS_FAULT,
+--           NOISE_VIOLATION, GAP_VIOLATION, BIT_EARLY, PULSE_GLITCH,
+--           PULSE_STUCK, BIT_TIMEOUT, PARITY.
+--   REQ-8 : soft_rst = '1' durumunda FSM ST_ERR_RECOVERY'ye döner.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

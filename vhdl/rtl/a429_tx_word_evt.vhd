@@ -1,7 +1,16 @@
 --------------------------------------------------------------------------------
--- a429_tx_word_evt
+-- Dosya       : a429_tx_word_evt.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- tx_busy kenarlarından 1 clk'lik word_start ve word_done olay darbeleri üretir.
+-- Amaç:
+--   TX vericisinin tx_busy sinyalinin yükselen ve düşen kenarlarını algılayarak
+--   1 clock genişliğinde tx_word_start ve tx_word_done olay darbeleri üretir.
+--
+-- Gereksinimler:
+--   REQ-1 : tx_busy '0' -> '1' geçişinde tam 1 clk tx_word_start = '1' üretilir
+--           (TX_WORD_CNT artımı ve TX BIT Checker FIFO eklemesi için).
+--   REQ-2 : tx_busy '1' -> '0' geçişinde tam 1 clk tx_word_done = '1' üretilir.
+--   REQ-3 : rst_n = '0' veya soft_rst = '1' durumunda dahili busy_d1 sıfırlanır.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

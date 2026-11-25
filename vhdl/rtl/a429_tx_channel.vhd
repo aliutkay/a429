@@ -1,7 +1,20 @@
 --------------------------------------------------------------------------------
--- a429_tx_channel
+-- Dosya       : a429_tx_channel.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- TX kanalı: a429_tx_cfg_sel + a429_tx_core + a429_tx_word_evt + TX_WORD_CNT.
+-- Amaç:
+--   TX kanalının üst sarmalayıcısı: a429_tx_cfg_sel + a429_tx_core (3 alt blok
+--   + 3 MUX) + a429_tx_word_evt + 32-bit TX_WORD_CNT sayacı.
+--
+-- Gereksinimler:
+--   REQ-1 : Aktif TX config'i (ACT_PULSE/NULL/GAP/SLP ve TX_STATUS.ACT_CFG)
+--           a429_tx_cfg_sel üzerinden yönetir ve AXIL arayüzüne sunar.
+--   REQ-2 : Gönderilen her gerçek Word için tx_word_start darbesiyle
+--           TX_WORD_CNT +1 artar (Scheduler Δ TX_WORD_CNT ölçümü ile uyumlu).
+--   REQ-3 : tx_word_start, tx_word_done ve tx_word_tx sinyallerini TX BIT
+--           Word Checker bloğuna iletir.
+--   REQ-4 : soft_rst = '1' veya rst_n = '0' durumunda tüm alt bloklar ve
+--           TX_WORD_CNT sıfırlanır, config High Speed Preset'e döner.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

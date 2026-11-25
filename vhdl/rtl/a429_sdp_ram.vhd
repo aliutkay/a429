@@ -1,9 +1,20 @@
 --------------------------------------------------------------------------------
--- a429_sdp_ram
+-- Dosya       : a429_sdp_ram.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- Generic Simple Dual-Port RAM (tek clock, 1 clk senkron okuma).
--- Xilinx / Intel sentez araçları tarafından BRAM olarak çıkarılır.
--- raddr AXI4-Lite register'ından sürülür; sonraki okuma erişiminde rdata hazırdır.
+-- Amaç:
+--   Word RAM (144-bit), Error RAM (128-bit) ve Bit Diagnostic RAM (64-bit)
+--   için generic, tek saatli Simple Dual-Port RAM bloğu.
+--
+-- Gereksinimler:
+--   REQ-1 : Derinlik 2^G_ADDR_W, veri genişliği G_DATA_W bit olarak generic
+--           parametrelerle ayarlanabilmelidir.
+--   REQ-2 : Yazma portu (we, waddr, wdata) ile okuma portu (raddr, rdata)
+--           bağımsız çalışmalı, Xilinx/Intel sentez araçlarında BRAM olarak
+--           çıkarılabilmelidir (reset içermeyen standart SDP şablonu).
+--   REQ-3 : Okuma senkron olup tam 1 clk gecikmelidir (raddr yükselen kenarda
+--           örneklenir, rdata ertesi clk'de geçerli olur).
+--   REQ-4 : Yazma işlemi yalnızca we = '1' iken waddr adresini günceller.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
@@ -25,7 +36,8 @@ entity a429_sdp_ram is
 end entity a429_sdp_ram;
 
 architecture rtl of a429_sdp_ram is
-    type t_mem is array (0 to (2 ** G_ADDR_W) - 1) of std_logic_vector(G_DATA_W - 1 downto 0);
+    constant C_DEPTH : positive := 2 ** G_ADDR_W;
+    type t_mem is array (0 to C_DEPTH - 1) of std_logic_vector(G_DATA_W - 1 downto 0);
     signal mem : t_mem := (others => (others => '0'));
 begin
 

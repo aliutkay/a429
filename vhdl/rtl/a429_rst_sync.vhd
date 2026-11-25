@@ -1,8 +1,19 @@
 --------------------------------------------------------------------------------
--- a429_rst_sync
+-- Dosya       : a429_rst_sync.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- Dış aktif-düşük rst_n sinyalini IP clock'una senkronlar:
--- asenkron assert, senkron deassert (2 FF).
+-- Amaç:
+--   Dış aktif-düşük rst_n reset sinyalini IP saat domain'ine güvenli şekilde
+--   senkronize eder (asenkron assert, senkron deassert).
+--
+-- Gereksinimler:
+--   REQ-1 : rst_n = '0' olduğunda saat beklenmeden çıkış rst_n_sync anında
+--           '0' olmalıdır (asenkron assert).
+--   REQ-2 : rst_n = '1' bırakıldığında metastabiliteyi önlemek için en az 2
+--           saat kenarı boyunca '0' tutulup 2. yükselen kenarda '1' olmalıdır
+--           (senkron deassert).
+--   REQ-3 : 2 kademeli FF zinciri ASYNC_REG = "TRUE" özniteliğine sahip
+--           olmalıdır (Xilinx/Vivado yerleşim kısıtı).
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

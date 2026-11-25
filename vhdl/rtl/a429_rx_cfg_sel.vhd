@@ -1,9 +1,22 @@
 --------------------------------------------------------------------------------
--- a429_rx_cfg_sel
+-- Dosya       : a429_rx_cfg_sel.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- RX / TB kanalı için Preset (HS/LS) veya Custom shadow -> active seçicisi.
--- CFG_APPLY darbesiyle 1 clk içinde aktif değerler ve ACT_CFG güncellenir;
--- decoder iç kopyasını IDLE/ERR_RECOVERY'de güncellediği için yarım Word bozulmaz.
+-- Amaç:
+--   Tek bir RX veya TX BIT kanalı için aktif zamanlama/gürültü/parity config
+--   kaynağını (High Speed Preset, Low Speed Preset veya Custom) seçer ve
+--   CFG_APPLY darbesiyle shadow -> active kopyalamasını yapar.
+--
+-- Gereksinimler:
+--   REQ-1 : Reset (rst_n = '0') ve soft_rst = '1' sonrasında varsayılan olarak
+--           C_RX_PRESET_HS (act_mode = "00") yüklenir.
+--   REQ-2 : cfg_sel veya cust_cfg değişse bile cfg_apply = '1' gelmeden
+--           act_cfg ve act_mode DEĞİŞMEMELİDİR (shadow izolasyonu).
+--   REQ-3 : cfg_apply = '1' geldiğinde 1 clk içinde seçili preset ("00" HS,
+--           "01" LS) veya cust_cfg ("10" Custom) aktif çıkışlara (ACT_*) ve
+--           act_mode (STATUS.ACT_CFG) portuna aktarılır.
+--   REQ-4 : Decoder iç kopyasını yalnızca IDLE/ERR_RECOVERY'de güncellediği
+--           için anlık aktivasyon Word ortasında bozulmaya yol açmaz.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

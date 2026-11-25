@@ -1,8 +1,23 @@
 --------------------------------------------------------------------------------
--- a429_pkg
+-- Dosya       : a429_pkg.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- ARINC 429 IP ortak tipler, config record'ları, hata kodu bit indeksleri ve
--- AXIL Studio register arayüzü record tanımları.
+-- Amaç:
+--   ARINC 429 IP'nin tüm blokları arasında paylaşılan sabitler, config
+--   record'ları, AXIL Studio register arayüzü record'ları ve yardımcı
+--   dönüşüm fonksiyonlarını tanımlar.
+--
+-- Gereksinimler:
+--   REQ-1 : Config seçim kodları DESIGN.md ile birebir uyumlu olmalıdır:
+--             "00" = High Speed Preset (100 kbps)
+--             "01" = Low Speed Preset (12.5 kbps)
+--             "10" = Custom (CUST_* register değerleri)
+--   REQ-2 : Parity mod kodları: "00" kapalı, "01" Odd, "10" Even.
+--   REQ-3 : 12 bitlik hata kodu bit indeksleri (C_ERR_BUS_FAULT=0 ..
+--           C_ERR_LABEL_FILTERED=11) DESIGN.md §9 ve Python a429/decode.py
+--           ERR_NAMES listesi ile birebir örtüşmelidir.
+--   REQ-4 : t_rx_reg_in/out ve t_tx_reg_in/out record'ları AXIL Studio'nun
+--           ürettiği arinc429_axil.v portlarını temiz şekilde gruplamalıdır.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

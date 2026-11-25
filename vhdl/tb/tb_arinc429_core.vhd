@@ -49,9 +49,10 @@ architecture sim of tb_arinc429_core is
     signal rx_low        : std_logic_vector(1 downto 0);
 
     signal errors        : natural := 0;
+    signal sim_done      : boolean := false;
 begin
 
-    clk <= not clk after T_CLK / 2;
+    clk <= not clk after T_CLK / 2 when not sim_done else '0';
 
     -- TX -> RX0 doğrudan loopback; TX -> TB (hata enjeksiyon anahtarlı)
     rx_high(0) <= tx_high;
@@ -318,7 +319,8 @@ begin
         else
             report "SONUC: " & integer'image(errors) & " HATA VAR" severity failure;
         end if;
-        std.env.stop;
+        sim_done <= true;
+        wait;
     end process;
 
 end architecture sim;

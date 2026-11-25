@@ -1,7 +1,7 @@
 # arinc429_ip — AXI4-Lite + AXIL Studio Tasarım Dokümanı
 
 ARINC 429 verici (TX), verici doğrulama (TX BIT + Word Checker) ve çok kanallı alıcı (RX0..RXn) IP'si.
-Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU `easyaxil.v`) ile üretilir; çekirdek mantığı saf **VHDL-2008**'dir.
+Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU `easyaxil.v`) ile üretilir; çekirdek mantığı **VHDL-93 / VHDL-2008** çift standart uyumlu saf VHDL'dir.
 
 > Eski APB3 tabanlı tasarım dokümanları arşiv olarak [`legacy_apb3/`](legacy_apb3/) altında saklanmıştır.
 
@@ -55,11 +55,16 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
 | `vhdl/rtl/a429_word_checker.vhd` | TX BIT beklenen Word FIFO (`WORD_MISMATCH`, `NO_ECHO`, `UNEXPECTED_WORD`) |
 | `vhdl/rtl/a429_rx_channel.vhd` | Tek alıcı kanalı (`cfg_sel` + `rx_core` + `rx_logger` + 3× `sdp_ram` + `wr/rd_strobe` otomatik artan RADDR pointer + ops. `word_checker`) |
 | `vhdl/rtl/a429_tx_cfg_sel.vhd` | TX Preset (HS/LS) / Custom seçici (`tx_busy = 0`'da anında, meşgulken Word sınırında uygular) |
-| `vhdl/rtl/a429_tx_core.vhd` | MUX1 (Word Builder / `EXT_DATA`), MUX2 (Message Scheduler / `SEND_CMD`), MUX3 (Transmitter / Override) |
+| `vhdl/rtl/a429_tx_word_builder.vhd` | Label/SDI/Data/SSM + Odd/Even Parity kombinasyonel Word oluşturucu (MUX 1 kaynağı) |
+| `vhdl/rtl/a429_tx_scheduler.vhd` | `INITIAL_DELAY` + `INTER_WORD_GAP` periyodik Message Scheduler FSM (MUX 2 kaynağı) |
+| `vhdl/rtl/a429_tx_transmitter.vhd` | 32-bit RZ bipolar seri Word Transmitter FSM (MUX 3 kaynağı) |
+| `vhdl/rtl/a429_tx_core.vhd` | 3 alt blok + 3 MUX (`builder_en`, `msg_sched_en`, `transmitter_en` + Override/HIGH-Z) |
 | `vhdl/rtl/a429_tx_word_evt.vhd` | `tx_busy` kenarından `word_start` / `word_done` darbesi |
 | `vhdl/rtl/a429_tx_channel.vhd` | TX kanalı (`tx_cfg_sel` + `tx_core` + `tx_word_evt` + `TX_WORD_CNT`) |
 | `vhdl/rtl/arinc429_core.vhd` | Bus-bağımsız saf VHDL çekirdek (`G_NUM_RX`, `G_TX_EN`, `G_TXBIT_EN` generic) |
 | `vhdl/rtl/arinc429_ip.vhd` | `arinc429_axil` (Verilog) + `arinc429_core` (VHDL) karma-dil AXI4-Lite üst modülü |
+| `vhdl/tb/tb_*.vhd` | Her RTL bloğu için ayrı kendi kendini doğrulayan 19 adet birim/entegrasyon testbench'i |
+| `vhdl/scripts/run_tests.sh` | Tüm 19 VHDL testini hem VHDL-93 hem VHDL-2008 ile + Icarus Verilog AXIL testini koşar |
 
 ---
 
@@ -97,21 +102,8 @@ Tam bit-bazlı tablo: [`vhdl/axil/arinc429_axil_regs.md`](../axil/arinc429_axil_
 
 ## 4. Simülasyon Doğrulaması
 
-```bash
-# 1) AXI4-Lite slave (Icarus Verilog)
-iverilog -g2005 -o /tmp/arinc429_axil_tb.vvp vhdl/axil/arinc429_axil.v vhdl/axil/arinc429_axil_tb.v
-vvp /tmp/arinc429_axil_tb.vvp
+Tüm 19 VHDL birim/entegrasyon testbench'i (hem **VHDL-93** hem **VHDL-2008**) ve AXIL Studio **Icarus Verilog** testbench'i tek komutla çalıştırılır:
 
-# 2) VHDL çekirdek + RX ön ucu (GHDL, VHDL-2008)
-mkdir -p /tmp/ghdl_work
-ghdl -a --std=08 --workdir=/tmp/ghdl_work \
-  vhdl/rtl/a429_pkg.vhd vhdl/rtl/a429_presets_pkg.vhd vhdl/rtl/a429_rst_sync.vhd \
-  vhdl/rtl/a429_timestamp.vhd vhdl/rtl/a429_sdp_ram.vhd vhdl/rtl/a429_cdc_sync.vhd \
-  vhdl/rtl/a429_glitch_filter.vhd vhdl/rtl/a429_rx_decoder.vhd vhdl/rtl/a429_rx_core.vhd \
-  vhdl/rtl/a429_rx_cfg_sel.vhd vhdl/rtl/a429_rx_logger.vhd vhdl/rtl/a429_word_checker.vhd \
-  vhdl/rtl/a429_rx_channel.vhd vhdl/rtl/a429_tx_cfg_sel.vhd vhdl/rtl/a429_tx_core.vhd \
-  vhdl/rtl/a429_tx_word_evt.vhd vhdl/rtl/a429_tx_channel.vhd vhdl/rtl/arinc429_core.vhd \
-  vhdl/rtl/arinc429_ip.vhd vhdl/tb/tb_a429_rx_core.vhd vhdl/tb/tb_arinc429_core.vhd
-(cd /tmp/ghdl_work && ghdl -e --std=08 tb_a429_rx_core && ./tb_a429_rx_core)
-(cd /tmp/ghdl_work && ghdl -e --std=08 tb_arinc429_core && ./tb_arinc429_core)
+```bash
+bash vhdl/scripts/run_tests.sh
 ```

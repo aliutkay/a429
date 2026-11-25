@@ -1,9 +1,23 @@
 --------------------------------------------------------------------------------
--- a429_rx_channel
+-- Dosya       : a429_rx_channel.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- Tek bir alıcı kanalı (RXn veya TX BIT):
+-- Amaç:
+--   Tek bir RX veya TX BIT (G_HAS_CHECKER = true) kanalını oluşturur:
 --   a429_rx_cfg_sel -> a429_rx_core -> a429_rx_logger -> 3x a429_sdp_ram
---   + (G_HAS_CHECKER = true ise) a429_word_checker
+--   (+ opsiyonel a429_word_checker) ve otomatik artan RAM okuma pointer'ları.
+--
+-- Gereksinimler:
+--   REQ-1 : G_HAS_CHECKER = true iken TX BIT Word Checker sentezlenir; false
+--           iken checker kaynak harcamaz ve ilgili çıkışlar '0' kalır.
+--   REQ-2 : G_BITDIAG_EN = true iken 2^G_BITDIAG_WORDS_LOG2 x 32 satırlık
+--           64-bit Bit Diagnostic RAM sentezlenir.
+--   REQ-3 : Otomatik artan okuma pointer'ları (Seçenek 2 — wr_strobe + rd_strobe):
+--             * *_RADDR yazıldığında (*_raddr_wr='1') pointer o adrese yüklenir.
+--             * Kaydın son RD register'ı okunduğunda (*_rd_last='1') pointer
+--               dairesel +1 artar (BIT'te bit 31 -> sonraki Word bit 0).
+--             * next_*_ptr doğrudan BRAM raddr'a sürülerek 1 clk gecikme gizlenir.
+--   REQ-4 : soft_rst veya ctrl_clear okuma pointer'larını da sıfırlar.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

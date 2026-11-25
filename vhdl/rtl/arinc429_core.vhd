@@ -1,15 +1,22 @@
 --------------------------------------------------------------------------------
--- arinc429_core
+-- Dosya       : arinc429_core.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- Bus-bağımsız, saf VHDL ARINC 429 çekirdeği:
---   * a429_rst_sync     : asenkron assert, senkron deassert reset
---   * a429_timestamp    : 64-bit ortak zaman damgası (+ TS_LSB okuma latch'i)
---   * a429_tx_channel   : G_TX_EN = true ise verici kanalı
---   * a429_rx_channel   : G_TXBIT_EN = true ise TX BIT (TB) kanalı (+ Word Checker)
---   * a429_rx_channel   : G_NUM_RX adet bağımsız RX kanalı
+-- Amaç:
+--   Bus-bağımsız, generic, saf VHDL ARINC 429 IP çekirdeği. Tek saat domain'i
+--   içinde reset senkronizasyonu, ortak 64-bit zaman damgası, opsiyonel TX
+--   kanalı, opsiyonel TX BIT (checker'lı) kanalı ve G_NUM_RX adet RX kanalını
+--   birleştirir.
 --
--- Register portları AXIL Studio'nun ürettiği arinc429_axil.v AXI4-Lite slave'ine
--- birebir bağlanmak üzere a429_pkg record'ları ile gruplanmıştır (bkz. arinc429_ip.vhd).
+-- Gereksinimler:
+--   REQ-1 : G_TX_EN = false iken TX bloğu sentezlenmez, çıkışlar '0' kalır;
+--           G_TXBIT_EN yalnızca G_TX_EN = true iken aktiftir.
+--   REQ-2 : Tüm RX ve TX BIT kanalları tek a429_timestamp sayacından (ts_now)
+--           ve tek global_freeze sinyalinden beslenir.
+--   REQ-3 : SOFT_RESET.RST_ALL tüm alt blokları; TX, TXBIT ve RX(n) darbeleri
+--           yalnızca kendi kanalını senkron olarak sıfırlar.
+--   REQ-4 : Register portları AXIL Studio'nun ürettiği arinc429_axil.v
+--           AXI4-Lite slave'i ile arinc429_ip.vhd üzerinden 1-1 bağlanır.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

@@ -1,14 +1,29 @@
 --------------------------------------------------------------------------------
--- a429_rx_logger
+-- Dosya       : a429_rx_logger.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- Tek bir RX / TB kanalının kayıt ve istatistik motoru:
---   * word_start anında 64-bit ts_now yakalar
---   * Geçerli Word'ü (144-bit), Bit Diagnostic'i (64-bit) ve Hataları (128-bit)
---     dairesel olarak Simple Dual-Port RAM'lere yazar
---   * CTRL.ENABLE = '0' iken kayıt yazmaz; FREEZE / GLOBAL_FREEZE aktifken
---     gelen kayıtları atıp DROP_CNT sayar
---   * Aynı clk'de birden fazla hata gelirse hata bitleri OR'lanır (öncelik:
---     1. FSM, 2. Label filtresi, 3. Word Checker)
+-- Amaç:
+--   Tek bir RX veya TX BIT kanalının dairesel kayıt, zaman damgası yakalama,
+--   FREEZE/DROP sayma ve 12-bit hata birleştirme motoru.
+--
+-- Gereksinimler:
+--   REQ-1 : word_start = '1' anında 64-bit ts_now yakalanır (ts_word_lat) ve
+--           Word RAM kaydının [143:80] alanına yazılır (Word başı zamanı).
+--   REQ-2 : enable = '0' iken hiçbir RAM'e yazılmaz ve sayaçlar artmaz;
+--           decoder arka planda çalışmaya devam eder.
+--   REQ-3 : frozen = (freeze OR global_freeze) = '1' iken gelen Word ve
+--           Error kayıtları RAM'e yazılmaz, bunun yerine drop_cnt +1 artar;
+--           Bit Diagnostic yazmaları da durdurulur.
+--   REQ-4 : Dairesel RAM formatları (DESIGN.md §9):
+--             Word (144b)    : ts(64) & word(32) & gap(32) & gap_err(16)
+--             Error (128b)   : ts(64) & code(16) & addr(16) & data(32)
+--             Bit Diag (64b) : pulse(16) & pulse_err(16) & null(16) & null_err(16)
+--           RAM tam dolduğunda word_wrap / err_wrap kalıcı '1' olur.
+--   REQ-5 : Aynı clk'de birden fazla kaynaktan hata gelirse code bitleri
+--           OR'lanır (hata kaybı olmaz); addr/data önceliği: 1. FSM,
+--           2. Label filtresi, 3. Word Checker.
+--   REQ-6 : clear = '1' veya soft_rst = '1' tüm sayaçları, last_word ve
+--           wrap bayraklarını sıfırlar.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

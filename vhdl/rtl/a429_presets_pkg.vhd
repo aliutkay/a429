@@ -1,10 +1,20 @@
 --------------------------------------------------------------------------------
--- a429_presets_pkg
+-- Dosya       : a429_presets_pkg.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- Gömülü High Speed (100 kbps) ve Low Speed (12.5 kbps) RX/TX preset sabitleri.
--- Değerler ARINC 429 Test Aracı (a429/model.py ve a429/txcfg.py) ile 50 MHz
--- sistem saati için hesaplanmıştır (HI-8591 RX / HI-8597 TX, LVCMOS33).
--- Farklı G_CLK_HZ kullanıldığında tool'dan yeniden hesaplanıp güncellenebilir.
+-- Amaç:
+--   Reset sonrası veya CFG_SEL = 0/1 seçildiğinde donanıma yüklenen gömülü
+--   High Speed (100 kbps) ve Low Speed (12.5 kbps) RX/TX preset sabitlerini
+--   barındırır.
+--
+-- Gereksinimler:
+--   REQ-1 : Tüm preset süreleri sıfırdan büyük, geçerli ARINC 429 zamanlama
+--           sınırlarında olmalıdır (reset anında alıcı kilitlenmemelidir).
+--   REQ-2 : Değerler ARINC 429 Test Aracı (a429/model.py, a429/txcfg.py) ile
+--           50 MHz sistem saati, HI-8591 RX, HI-8597 TX ve LVCMOS33 için
+--           hesaplanmıştır; farklı saat frekanslarında tool'dan güncellenir.
+--   REQ-3 : Preset'lerde varsayılan parity modu Odd (C_PAR_ODD = "01"),
+--           TX eğim pini HS için '1' (1.5 µs), LS için '0' (10 µs) olmalıdır.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

@@ -1,9 +1,18 @@
 --------------------------------------------------------------------------------
--- arinc429_ip (AXI4-Lite + AXIL Studio top-level)
+-- Dosya       : arinc429_ip.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- AXIL Studio'nun ürettiği arinc429_axil.v (AXI4-Lite slave) ile saf VHDL
--- arinc429_core çekirdeğini birleştirir.
--- Bu dosya vhdl/scripts/gen_axil_spec.py tarafından otomatik üretilmiştir.
+-- Amaç:
+--   AXIL Studio'nun ürettiği arinc429_axil.v (AXI4-Lite slave, ZipCPU easyaxil)
+--   ile saf VHDL arinc429_core çekirdeğini tek üst modülde birleştirir.
+--
+-- Gereksinimler:
+--   REQ-1 : Dış bus arayüzü standart 32-bit AXI4-Lite Slave (S_AXI_*) olup
+--           tek saat domain'inde (S_AXI_ACLK, S_AXI_ARESETN) çalışır.
+--   REQ-2 : Tüm o_* / i_* register portları ve RAM wr_strobe / rd_strobe
+--           sinyalleri arinc429_core record portlarına 1-1 bağlanır.
+--   REQ-3 : Bu dosya vhdl/scripts/gen_axil_spec.py ile otomatik üretilir;
+--           farklı RX kanal sayılarında tek komutla yenilenebilir.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

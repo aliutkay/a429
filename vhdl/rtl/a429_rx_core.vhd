@@ -1,17 +1,20 @@
 --------------------------------------------------------------------------------
--- a429_rx_core
+-- Dosya       : a429_rx_core.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- RX ön ucu: a429_cdc_sync (G_SYNC_STAGES) → a429_glitch_filter → a429_rx_decoder
+-- Amaç:
+--   ARINC 429 RX ön uç sarmalayıcısı: a429_cdc_sync -> a429_glitch_filter ->
+--   a429_rx_decoder zincirini tek blokta birleştirir.
 --
---   pin_high/pin_low (alıcı entegresi ROUTA/ROUTB, asenkron)
---        │
---   a429_cdc_sync      : G_SYNC_STAGES FF (varsayılan 4)
---        │
---   a429_glitch_filter : 2 bitlik hat durumu tek sembol olarak filtrelenir
---        │ rx_high_f, rx_low_f, glitch_win_cnt
---   a429_rx_decoder    : bit / Word ölçümü ve hata tespiti
---
--- Toplam gecikme (pin → decoder girişi): G_SYNC_STAGES + glitch_size + 1 clk (sabit).
+-- Gereksinimler:
+--   REQ-1 : Asenkron pin_high/pin_low girişleri önce G_SYNC_STAGES kademeli
+--           CDC senkronizatöründen, ardından tek-sembol glitch filtresinden
+--           geçirilerek a429_rx_decoder'a verilir.
+--   REQ-2 : Pin -> decoder toplam sabit gecikmesi = G_SYNC_STAGES +
+--           cfg_glitch_size + 1 clock'tur; tüm kenarlar eşit geciktiği için
+--           darbe, null ve gap süre ölçümleri korunur.
+--   REQ-3 : soft_rst yalnızca glitch_filter ve rx_decoder'ı senkron sıfırlar;
+--           a429_cdc_sync yalnızca asenkron rst_n ile sıfırlanır.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

@@ -46,6 +46,7 @@ architecture sim of tb_a429_rx_core is
     signal last_b31_null : natural := 0;
 
     signal errors      : natural := 0;
+    signal sim_done    : boolean := false;
 
     -- Label bitleri okunduğu gibi [7:0]; hatta önce bit 7 gider
     function wire_bit(w : std_logic_vector(31 downto 0); k : natural) return std_logic is
@@ -65,16 +66,16 @@ architecture sim of tb_a429_rx_core is
             if w(i) = '1' then ones := ones + 1; end if;
         end loop;
         if odd then
-            r(31) := '1' when ones mod 2 = 0 else '0';
+            if ones mod 2 = 0 then r(31) := '1'; else r(31) := '0'; end if;
         else
-            r(31) := '1' when ones mod 2 = 1 else '0';
+            if ones mod 2 = 1 then r(31) := '1'; else r(31) := '0'; end if;
         end if;
         return r;
     end function;
 
 begin
 
-    clk <= not clk after T_CLK / 2;
+    clk <= not clk after T_CLK / 2 when not sim_done else '0';
 
     dut : entity work.a429_rx_core
         generic map (G_SYNC_STAGES => 4)
@@ -275,7 +276,8 @@ begin
         else
             report "SONUC: " & integer'image(errors) & " TEST BASARISIZ" severity failure;
         end if;
-        std.env.finish;
+        sim_done <= true;
+        wait;
     end process;
 
 end architecture sim;

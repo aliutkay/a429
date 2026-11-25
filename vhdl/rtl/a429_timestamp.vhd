@@ -1,11 +1,22 @@
 --------------------------------------------------------------------------------
--- a429_timestamp
+-- Dosya       : a429_timestamp.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- Ortak 64-bit zaman damgası sayacı (clk cinsinden).
--- AXIL Studio (easyaxil) TS_LSB okuma zamanlaması ile atomik MSB latch:
---   Clk T   : AXI4-Lite okuma kabulü -> axil_read_data <= i_ts_lsb (ts_now[31:0])
---   Clk T+1 : o_ts_lsb_rd = '1' -> bu an ts_msb_d1 (= Clk T'deki ts_now[63:32])
---             msb_latch'e kopyalanır; 32-bit taşma sınırında bile atomiktir.
+-- Amaç:
+--   Tüm RX ve TX BIT logger'ları için ortak 64-bit sistem zaman damgası
+--   sayacını (clk cinsinden) ve 32-bit AXI4-Lite bus üzerinden atomik
+--   TS_LSB + TS_MSB okuma mekanizmasını sağlar.
+--
+-- Gereksinimler:
+--   REQ-1 : ts_en = '1' iken her yükselen saat kenarında 64-bit sayaç +1 artar;
+--           ts_en = '0' iken mevcut değerini korur.
+--   REQ-2 : soft_rst = '1', ts_clr = '1' veya rst_n = '0' durumunda sayaç,
+--           msb_d1 ve msb_latch sıfırlanır.
+--   REQ-3 : Atomik 64-bit okuma: AXIL Studio (easyaxil) TS_LSB okumasından
+--           1 clk sonra ts_lsb_rd = '1' darbesi üretir. 32-bit LSB -> MSB
+--           taşma sınırında dahi tutarlılık için 1 clk gecikmeli msb_d1
+--           değeri msb_latch'e kopyalanır (TS_LSB'nin okunduğu clock'taki MSB).
+--   REQ-4 : ts_now(63 downto 0) her clock canlı olarak tüm logger'lara gider.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

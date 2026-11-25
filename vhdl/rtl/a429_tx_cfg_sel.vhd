@@ -1,9 +1,22 @@
 --------------------------------------------------------------------------------
--- a429_tx_cfg_sel
+-- Dosya       : a429_tx_cfg_sel.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- TX kanalı için Preset (HS/LS) veya Custom shadow -> active seçicisi.
--- TX boştayken (tx_busy = '0') CFG_APPLY 1 clk içinde anında uygulanır;
--- gönderim ortasında gelirse Word bitiminde (tx_busy = '0') uygulanır.
+-- Amaç:
+--   TX kanalı için aktif süre ve eğim config'ini (High Speed Preset, Low Speed
+--   Preset veya Custom) seçer; Word ortasında config değişimini engelleyerek
+--   shadow -> active kopyalamasını yönetir.
+--
+-- Gereksinimler:
+--   REQ-1 : Reset (rst_n = '0') ve soft_rst = '1' sonrasında C_TX_PRESET_HS
+--           (act_mode = "00", SLP = '1') yüklenir ve bekleyen istek temizlenir.
+--   REQ-2 : cfg_apply = '1' gelmeden cfg_sel / cust_cfg değişiklikleri aktif
+--           çıkışları etkilemez (shadow izolasyonu).
+--   REQ-3 : cfg_apply = '1' geldiğinde tx_busy = '0' ise 1 clk içinde anında
+--           uygulanır (AXIL Studio geri okuma doğrulaması ile uyumlu).
+--   REQ-4 : cfg_apply = '1' geldiğinde tx_busy = '1' (Word gönderiliyor) ise
+--           seçim ve custom değerler beklemeye (pend) alınır, gönderim bitip
+--           tx_busy = '0' olduğu ilk clock'ta otomatik uygulanır.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

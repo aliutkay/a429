@@ -1,14 +1,27 @@
 --------------------------------------------------------------------------------
--- a429_word_checker
+-- Dosya       : a429_word_checker.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- TX BIT (wraparound) Word karşılaştırıcısı (DESIGN.md §8.1).
---   * TX gönderime başladığında (tx_word_start) tx_word_tx + ts_now FIFO'ya alınır.
---   * Alıcı geçerli Word aldığında (word_valid) FIFO başıyla karşılaştırılır:
---       eşit   -> chk_ok_cnt +1
---       farklı -> chk_mismatch (data = beklenen Word)
---   * FIFO boşken Word gelirse -> chk_unexpected (data = alınan Word)
---   * Alıcı fiziksel hata verirse (rx_err_any) -> FIFO başı düşürülür
---   * chk_timeout /= 0 ve süre aşılırsa -> chk_no_echo (data = beklenen Word)
+-- Amaç:
+--   TX BIT (wraparound) hattında TX'in gönderdiği Word'ler ile TX hattını
+--   dinleyen fiziksel alıcıdan dönen Word'leri FIFO üzerinden karşılaştırır.
+--
+-- Gereksinimler:
+--   REQ-1 : Yalnızca (chk_en = '1' AND chk_route_ok = '1') iken aktiftir.
+--   REQ-2 : tx_word_start = '1' anında (tx_word_tx, ts_now) beklenen FIFO'ya
+--           eklenir; FIFO doluysa yeni kayıt atılır ve chk_fifo_ovf = '1' olur.
+--   REQ-3 : rx_word_valid = '1' geldiğinde FIFO doluysa baş elemanla
+--           karşılaştırılır: eşitse chk_ok_cnt +1, farklıysa chk_mismatch = '1'
+--           (chk_data = beklenen Word, chk_addr = FIFO idx) ve chk_err_cnt +1.
+--   REQ-4 : FIFO boşken rx_word_valid = '1' gelirse chk_unexpected = '1'
+--           (chk_data = alınan Word) ve chk_err_cnt +1.
+--   REQ-5 : Alıcı fiziksel hata verirse (rx_err_any = '1') FIFO başı sessizce
+--           düşürülür (hata zaten FSM tarafından loglandı, çift NO_ECHO olmaz).
+--   REQ-6 : chk_timeout /= 0 ve (ts_now - fifo_ts) >= chk_timeout ise
+--           chk_no_echo = '1' (chk_data = beklenen Word) üretilip baş düşürülür.
+--           Aynı clk'de rx_word_valid gelmişse önce karşılaştırma yapılır.
+--   REQ-7 : chk_clear = '1' FIFO ve fifo_ovf'yi temizler; soft_rst = '1'
+--           ek olarak chk_ok_cnt ve chk_err_cnt sayaçlarını da sıfırlar.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

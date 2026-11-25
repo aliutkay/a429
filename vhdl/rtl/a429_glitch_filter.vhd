@@ -1,23 +1,26 @@
 --------------------------------------------------------------------------------
--- a429_glitch_filter
+-- Dosya       : a429_glitch_filter.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- Süre koruyan glitch filtresi. rx_high/rx_low iki bitlik hat durumu (00 NULL,
--- 10 HIGH, 01 LOW, 11 bus fault) TEK SEMBOL olarak filtrelenir; böylece iki bitin
--- ayrı ayrı filtrelenmesinden doğacak sahte 11 / 00 durumları oluşmaz.
+-- Amaç:
+--   Senkronlanmış 2-bitlik ARINC 429 hat durumunu (00 NULL, 10 HIGH, 01 LOW,
+--   11 BUS_FAULT) tek sembol olarak filtreleyen, darbe/null/gap sürelerini
+--   koruyan glitch filtresi ve gürültü sayacı.
 --
--- Yeni bir hat durumu en az glitch_size + 1 clk değişmeden kalırsa geçerli (stable)
--- durum olarak kabul edilir (glitch_size = 0 ve 1 aynı davranır). Daha kısa süren her
--- değişim bir glitch'tir ve çıkışa yansımaz.
--- Bütün geçişler aynı sabit gecikmeyle (glitch_size + 1 clk) çıkışa yansıdığı için
--- pulse / null / gap süreleri korunur.
---
--- Sayaçlar:
---   glitch_total_cnt : başlangıçtan beri toplam glitch (doyumlu)
---   glitch_win_cnt   : mevcut stable durum boyunca görülen glitch (stable durum
---                      değişince sıfırlanır, doyumlu). Decoder faz gürültüsü için kullanır.
---
--- Not: eski arinc429_line_filter'ın filtre kısmıdır; CDC ayrı entity'ye
--- (a429_cdc_sync) alındı, sayaçlar taşmak yerine doyuma gider.
+-- Gereksinimler:
+--   REQ-1 : rx_high_in & rx_low_in iki biti birlikte TEK SEMBOL olarak
+--           filtrelenir; böylece iki bitin ayrı filtrelenmesinden doğacak
+--           sahte "11" (bus fault) veya "00" geçişleri oluşmaz.
+--   REQ-2 : Yeni bir aday hat durumu kesintisiz en az (glitch_size + 1) clk
+--           boyunca sabit kalırsa stable_state çıkışına kabul edilir. Bütün
+--           geçişler eşit gecikmeyle aktarıldığından darbe/null süreleri korunur.
+--   REQ-3 : Aday durum stable olamadan değişirse 1 clk'lik glitch_tick üretilir;
+--           glitch_total_cnt (toplam) ve glitch_win_cnt (mevcut stable durum
+--           penceresi) doyumlu olarak +1 artar (taşma/sarma yapmaz).
+--   REQ-4 : Yeni bir stable durum kabul edildiğinde glitch_win_cnt sıfırlanır
+--           (decoder her fazın gürültüsünü bağımsız ölçer).
+--   REQ-5 : soft_rst = '1' veya rst_n = '0' durumunda çıkış NULL ("00"), tüm
+--           sayaçlar ve zamanlayıcı sıfırlanır.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;

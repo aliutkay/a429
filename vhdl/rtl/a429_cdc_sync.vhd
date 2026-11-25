@@ -1,12 +1,20 @@
 --------------------------------------------------------------------------------
--- a429_cdc_sync
+-- Dosya       : a429_cdc_sync.vhd
+-- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
--- Asenkron giriş sinyallerini IP clock'una senkronlayan çok kademeli FF zinciri.
--- Her bit bağımsız senkronlanır; çok bitlik sinyallerde bitler arası 1 clk kayma
--- olabilir (ARINC hattında rx_high/rx_low aynı anda değişmediği için sorun değildir,
--- glitch filter 2 biti tek sembol olarak filtreler).
+-- Amaç:
+--   Asenkron ARINC 429 alıcı çıkışlarını (ROUTA / ROUTB) metastabiliteye karşı
+--   koruyarak IP saat domain'ine senkronlayan çok kademeli FF zinciri.
 --
--- Gecikme: G_STAGES clk.
+-- Gereksinimler:
+--   REQ-1 : G_STAGES >= 2 olmalıdır (derleme/simülasyon anında assert kontrolü).
+--           Varsayılan 4 kademe ile yüksek MTBF sağlanır.
+--   REQ-2 : Her bit bağımsız G_STAGES kademeli FF zincirinden geçer; toplam
+--           sabit yayılım gecikmesi tam G_STAGES clock'tur.
+--   REQ-3 : Asenkron rst_n = '0' anında tüm kademeler G_RST_VALUE (ARINC NULL
+--           için '0') değerine sıfırlanır.
+--   REQ-4 : Sentez araçlarının FF'leri yakın yerleştirmesi için sync_ff üzerine
+--           ASYNC_REG = "TRUE" özniteliği uygulanır.
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
