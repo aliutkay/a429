@@ -41,6 +41,7 @@ entity a429_rx_decoder is
     port (
         clk                : in  std_logic;
         rst_n              : in  std_logic;
+        soft_rst           : in  std_logic := '0';
 
         -- Config (aktif değerler; decoder IDLE / ERR_RECOVERY'deyken iç kopyaya alınır)
         cfg_min_pulse      : in  std_logic_vector(G_DUR_W - 1 downto 0);
@@ -167,6 +168,7 @@ begin
         procedure go_recovery is
         begin
             gap_cnt       <= (others => '0');
+            cur_bit       <= (others => '0');
             null_err_base <= (others => '0');
             cur_null_err  <= (others => '0');
             state         <= ST_ERR_RECOVERY;
@@ -280,10 +282,29 @@ begin
                 r_parity    <= cfg_parity_mode;
             end if;
 
-            if bus_fault = '1' then
+            if soft_rst = '1' then
+                state         <= ST_ERR_RECOVERY;
+                gap_cnt       <= (others => '0');
+                bit_cnt       <= (others => '0');
+                shift_reg     <= (others => '0');
+                parity_acc    <= '0';
+                cur_bit       <= (others => '0');
+                exp_polarity  <= "00";
+                cur_pulse_dur <= (others => '0');
+                cur_pulse_err <= (others => '0');
+                cur_null_err  <= (others => '0');
+                prev_null_dur <= (others => '0');
+                null_err_base <= (others => '0');
+                lat_gap_dur   <= (others => '0');
+                lat_gap_err   <= (others => '0');
+            elsif bus_fault = '1' then
                 -- 11: her durumda hata (toparlanma sırasında tekrar raporlanmaz)
                 if state /= ST_ERR_RECOVERY then
-                    raise(err_bus_fault, bit_addr(cur_bit), dur32(bit_cnt));
+                    if state = ST_IDLE or state = ST_WAIT_GAP then
+                        raise(err_bus_fault, C_ADDR_GAP, dur32(gap_cnt));
+                    else
+                        raise(err_bus_fault, bit_addr(cur_bit), dur32(bit_cnt));
+                    end if;
                 end if;
                 go_recovery;
 

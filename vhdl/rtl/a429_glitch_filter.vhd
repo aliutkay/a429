@@ -31,6 +31,7 @@ entity a429_glitch_filter is
     port (
         clk              : in  std_logic;
         rst_n            : in  std_logic;
+        soft_rst         : in  std_logic := '0';
 
         glitch_size      : in  std_logic_vector(G_SIZE_W - 1 downto 0);  -- clk
 
@@ -73,29 +74,38 @@ begin
             win_cnt      <= (others => '0');
             glitch_tick  <= '0';
         elsif rising_edge(clk) then
-            glitch_tick <= '0';
+            if soft_rst = '1' then
+                last_state   <= "00";
+                stable_state <= "00";
+                timer        <= (others => '0');
+                total_cnt    <= (others => '0');
+                win_cnt      <= (others => '0');
+                glitch_tick  <= '0';
+            else
+                glitch_tick <= '0';
 
-            if cur_state /= last_state then
-                -- Hat değişti. Önceki aday durum stable olamadan değiştiyse glitch.
-                if last_state /= stable_state then
-                    glitch_tick <= '1';
-                    if total_cnt /= C_CNT_MAX then
-                        total_cnt <= total_cnt + 1;
+                if cur_state /= last_state then
+                    -- Hat değişti. Önceki aday durum stable olamadan değiştiyse glitch.
+                    if last_state /= stable_state then
+                        glitch_tick <= '1';
+                        if total_cnt /= C_CNT_MAX then
+                            total_cnt <= total_cnt + 1;
+                        end if;
+                        if win_cnt /= C_CNT_MAX then
+                            win_cnt <= win_cnt + 1;
+                        end if;
                     end if;
-                    if win_cnt /= C_CNT_MAX then
-                        win_cnt <= win_cnt + 1;
-                    end if;
-                end if;
-                last_state <= cur_state;
-                timer      <= to_unsigned(1, G_SIZE_W);
+                    last_state <= cur_state;
+                    timer      <= to_unsigned(1, G_SIZE_W);
 
-            elsif last_state /= stable_state then
-                -- Aday durum değişmeden duruyor: yeterli süre geçti mi?
-                if timer >= unsigned(glitch_size) then
-                    stable_state <= last_state;
-                    win_cnt      <= (others => '0');   -- yeni stable durum, yeni pencere
-                elsif timer /= C_TMR_MAX then
-                    timer <= timer + 1;
+                elsif last_state /= stable_state then
+                    -- Aday durum değişmeden duruyor: yeterli süre geçti mi?
+                    if timer >= unsigned(glitch_size) then
+                        stable_state <= last_state;
+                        win_cnt      <= (others => '0');   -- yeni stable durum, yeni pencere
+                    elsif timer /= C_TMR_MAX then
+                        timer <= timer + 1;
+                    end if;
                 end if;
             end if;
         end if;

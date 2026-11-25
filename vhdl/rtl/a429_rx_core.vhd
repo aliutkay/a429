@@ -28,6 +28,7 @@ entity a429_rx_core is
     port (
         clk                 : in  std_logic;
         rst_n               : in  std_logic;
+        soft_rst            : in  std_logic := '0';
 
         pin_high            : in  std_logic;
         pin_low             : in  std_logic;
@@ -97,6 +98,7 @@ begin
         port map (
             clk              => clk,
             rst_n            => rst_n,
+            soft_rst         => soft_rst,
             glitch_size      => cfg_glitch_size,
             rx_high_in       => sync_vec(1),
             rx_low_in        => sync_vec(0),
@@ -112,6 +114,7 @@ begin
         port map (
             clk                 => clk,
             rst_n               => rst_n,
+            soft_rst            => soft_rst,
             cfg_min_pulse       => cfg_min_pulse,
             cfg_max_pulse       => cfg_max_pulse,
             cfg_min_bit         => cfg_min_bit,

@@ -216,3 +216,18 @@ def test_active_config_check_and_recompare():
     rx3 = read_rx_active_config(sim, rm, "RX0", expected=res.rx_values)
     tx3 = read_tx_active_config(sim, rm, expected=tx_exp)
     assert rx3["mode"] == 0 and tx3["mode"] == 0
+
+
+def test_generated_axil_project_matches_regmap():
+    with open("vhdl/axil/arinc429.axproj.json", encoding="utf-8") as fh:
+        proj = json.load(fh)
+    ip = proj["ips"][0]
+    assert ip["panel"] == "arinc429"
+    rm = RegMap(ip)
+    assert rm.channels() == ["RX0", "RX1", "TB"]
+    for ch in rm.channels():
+        assert rm.missing_for_rx_config(ch) == []
+        assert rm.missing_for_rx_read(ch) == []
+    assert rm.missing_for_tx_config() == []
+    assert rm.missing_for_tx_live() == []
+    assert rm.missing_for_reset() == []

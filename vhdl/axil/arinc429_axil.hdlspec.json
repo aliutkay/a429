@@ -1,0 +1,3212 @@
+{
+  "format": "axil-ip-hdlspec",
+  "version": 1,
+  "module": "arinc429_axil",
+  "hdl_designer_wrapper": true,
+  "registers": [
+    {
+      "name": "IP_ID",
+      "offset": "0x00",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "IP_ID",
+          "lsb": 0,
+          "width": 32,
+          "kind": "CONST",
+          "reset": "0x41343239",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "IP_VERSION",
+      "offset": "0x04",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "IP_VERSION",
+          "lsb": 0,
+          "width": 32,
+          "kind": "CONST",
+          "reset": "0x10000",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "CAPS",
+      "offset": "0x08",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "NUM_RX",
+          "lsb": 0,
+          "width": 5,
+          "kind": "CONST",
+          "reset": "0x2",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "TX",
+          "lsb": 8,
+          "width": 1,
+          "kind": "CONST",
+          "reset": "0x1",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "TXBIT",
+          "lsb": 9,
+          "width": 1,
+          "kind": "CONST",
+          "reset": "0x1",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "RX_TEST",
+          "lsb": 10,
+          "width": 1,
+          "kind": "CONST",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "BITDIAG",
+          "lsb": 11,
+          "width": 1,
+          "kind": "CONST",
+          "reset": "0x1",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "CAPS_MEM",
+      "offset": "0x0C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "WORD_DEPTH_LOG2",
+          "lsb": 0,
+          "width": 8,
+          "kind": "CONST",
+          "reset": "0x8",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "ERR_DEPTH_LOG2",
+          "lsb": 8,
+          "width": 8,
+          "kind": "CONST",
+          "reset": "0x8",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "BITDIAG_WORDS_LOG2",
+          "lsb": 16,
+          "width": 8,
+          "kind": "CONST",
+          "reset": "0x3",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "CLK_HZ",
+      "offset": "0x10",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "CLK_HZ",
+          "lsb": 0,
+          "width": 32,
+          "kind": "CONST",
+          "reset": "0x2FAF080",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "SOFT_RESET",
+      "offset": "0x20",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RST_ALL",
+          "lsb": 0,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "TX",
+          "lsb": 1,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "TXBIT",
+          "lsb": 2,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "RX0",
+          "lsb": 16,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "RX1",
+          "lsb": 17,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "GLOBAL_FREEZE",
+      "offset": "0x24",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "GLOBAL_FREEZE",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TS_CTRL",
+      "offset": "0x28",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "ENABLE",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x1",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "CLEAR",
+          "lsb": 1,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TS_LSB",
+      "offset": "0x2C",
+      "wr_strobe": false,
+      "rd_strobe": true,
+      "fields": [
+        {
+          "name": "TS_LSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TS_MSB",
+      "offset": "0x30",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TS_MSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_TRANSMITTER_EN",
+      "offset": "0x400",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_TRANSMITTER_EN",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_MSG_SCHED_EN",
+      "offset": "0x404",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_MSG_SCHED_EN",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_BUILDER_EN",
+      "offset": "0x408",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_BUILDER_EN",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_LABEL",
+      "offset": "0x40C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_LABEL",
+          "lsb": 0,
+          "width": 8,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_SDI",
+      "offset": "0x410",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_SDI",
+          "lsb": 0,
+          "width": 2,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_DATA",
+      "offset": "0x414",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_DATA",
+          "lsb": 0,
+          "width": 19,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_SSM",
+      "offset": "0x418",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_SSM",
+          "lsb": 0,
+          "width": 2,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_PARITY_TYPE",
+      "offset": "0x41C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_PARITY_TYPE",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x1",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_SCHED_EN",
+      "offset": "0x420",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_SCHED_EN",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_INITIAL_DELAY",
+      "offset": "0x424",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_INITIAL_DELAY",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_INTER_WORD_GAP",
+      "offset": "0x428",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_INTER_WORD_GAP",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RW",
+          "reset": "0x1",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_SEND_CMD",
+      "offset": "0x42C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "SEND",
+          "lsb": 0,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_EXT_DATA",
+      "offset": "0x430",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_EXT_DATA",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_EXT_HIGH",
+      "offset": "0x434",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_EXT_HIGH",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_EXT_LOW",
+      "offset": "0x438",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_EXT_LOW",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_CFG_SEL",
+      "offset": "0x440",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_CFG_SEL",
+          "lsb": 0,
+          "width": 2,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_CFG_APPLY",
+      "offset": "0x444",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "APPLY",
+          "lsb": 0,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_CUST_PULSE_DUR",
+      "offset": "0x448",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_CUST_PULSE_DUR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_CUST_NULL_DUR",
+      "offset": "0x44C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_CUST_NULL_DUR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_CUST_GAP_DUR",
+      "offset": "0x450",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_CUST_GAP_DUR",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_CUST_SLP",
+      "offset": "0x454",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_CUST_SLP",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_ACT_PULSE_DUR",
+      "offset": "0x460",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_ACT_PULSE_DUR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_ACT_NULL_DUR",
+      "offset": "0x464",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_ACT_NULL_DUR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_ACT_GAP_DUR",
+      "offset": "0x468",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_ACT_GAP_DUR",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_ACT_SLP",
+      "offset": "0x46C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_ACT_SLP",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_STATUS",
+      "offset": "0x480",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "BUSY",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "SCHED_ACTIVE",
+          "lsb": 1,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "ACT_CFG",
+          "lsb": 2,
+          "width": 2,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_WORD_CNT",
+      "offset": "0x484",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_WORD_CNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CTRL",
+      "offset": "0x800",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "ENABLE",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "FREEZE",
+          "lsb": 1,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "CLEAR",
+          "lsb": 2,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_STATUS",
+      "offset": "0x804",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "FROZEN",
+          "lsb": 4,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "WORD_WRAP",
+          "lsb": 5,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "ERR_WRAP",
+          "lsb": 6,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "ACT_CFG",
+          "lsb": 8,
+          "width": 2,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CFG_SEL",
+      "offset": "0x808",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_CFG_SEL",
+          "lsb": 0,
+          "width": 2,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CFG_APPLY",
+      "offset": "0x80C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "APPLY",
+          "lsb": 0,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CUST_GLITCH_FILTER_SIZE",
+      "offset": "0x840",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_CUST_GLITCH_FILTER_SIZE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CUST_MIN_PULSE",
+      "offset": "0x844",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_CUST_MIN_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CUST_MAX_PULSE",
+      "offset": "0x848",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_CUST_MAX_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CUST_MIN_BIT",
+      "offset": "0x84C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_CUST_MIN_BIT",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CUST_MAX_BIT",
+      "offset": "0x850",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_CUST_MAX_BIT",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CUST_MAX_PULSE_ERR",
+      "offset": "0x854",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_CUST_MAX_PULSE_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CUST_MAX_NULL_ERR",
+      "offset": "0x858",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_CUST_MAX_NULL_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CUST_MAX_GAP_ERR",
+      "offset": "0x85C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_CUST_MAX_GAP_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CUST_PARITY_MODE",
+      "offset": "0x860",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_CUST_PARITY_MODE",
+          "lsb": 0,
+          "width": 2,
+          "kind": "RW",
+          "reset": "0x1",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ACT_GLITCH_FILTER_SIZE",
+      "offset": "0x8A0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ACT_GLITCH_FILTER_SIZE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ACT_MIN_PULSE",
+      "offset": "0x8A4",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ACT_MIN_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ACT_MAX_PULSE",
+      "offset": "0x8A8",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ACT_MAX_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ACT_MIN_BIT",
+      "offset": "0x8AC",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ACT_MIN_BIT",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ACT_MAX_BIT",
+      "offset": "0x8B0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ACT_MAX_BIT",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ACT_MAX_PULSE_ERR",
+      "offset": "0x8B4",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ACT_MAX_PULSE_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ACT_MAX_NULL_ERR",
+      "offset": "0x8B8",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ACT_MAX_NULL_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ACT_MAX_GAP_ERR",
+      "offset": "0x8BC",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ACT_MAX_GAP_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ACT_PARITY_MODE",
+      "offset": "0x8C0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ACT_PARITY_MODE",
+          "lsb": 0,
+          "width": 2,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_WORD_CNT",
+      "offset": "0x8E0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_WORD_CNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ERR_CNT",
+      "offset": "0x8E4",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ERR_CNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_DROP_CNT",
+      "offset": "0x8E8",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_DROP_CNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_LAST_WORD",
+      "offset": "0x8EC",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_LAST_WORD",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_WORD_RADDR",
+      "offset": "0x900",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_WORD_RADDR",
+          "lsb": 0,
+          "width": 8,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_WORD_RD_TS_MSB",
+      "offset": "0x904",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_WORD_RD_TS_MSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_WORD_RD_TS_LSB",
+      "offset": "0x908",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_WORD_RD_TS_LSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_WORD_RD_DATA",
+      "offset": "0x90C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_WORD_RD_DATA",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_WORD_RD_GAP",
+      "offset": "0x910",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_WORD_RD_GAP",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_WORD_RD_GAP_ERR",
+      "offset": "0x914",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_WORD_RD_GAP_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ERR_RADDR",
+      "offset": "0x920",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ERR_RADDR",
+          "lsb": 0,
+          "width": 8,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ERR_RD_TS_MSB",
+      "offset": "0x924",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ERR_RD_TS_MSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ERR_RD_TS_LSB",
+      "offset": "0x928",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ERR_RD_TS_LSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ERR_RD_CODE",
+      "offset": "0x92C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ERR_RD_CODE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ERR_RD_ADDR",
+      "offset": "0x930",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ERR_RD_ADDR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_ERR_RD_DATA",
+      "offset": "0x934",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_ERR_RD_DATA",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_BIT_RADDR",
+      "offset": "0x940",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "BIT_IDX",
+          "lsb": 0,
+          "width": 5,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "WORD_IDX",
+          "lsb": 8,
+          "width": 3,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_BIT_RD_PULSE",
+      "offset": "0x944",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_BIT_RD_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_BIT_RD_PULSE_ERR",
+      "offset": "0x948",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_BIT_RD_PULSE_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_BIT_RD_NULL",
+      "offset": "0x94C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_BIT_RD_NULL",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_BIT_RD_NULL_ERR",
+      "offset": "0x950",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_BIT_RD_NULL_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CHK_CTRL",
+      "offset": "0x9C0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "ENABLE",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "CLEAR",
+          "lsb": 1,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CHK_TIMEOUT",
+      "offset": "0x9C4",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_CHK_TIMEOUT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CHK_OK_CNT",
+      "offset": "0x9C8",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_CHK_OK_CNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CHK_ERR_CNT",
+      "offset": "0x9CC",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TB_CHK_ERR_CNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TB_CHK_STATUS",
+      "offset": "0x9D0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "FIFO_LEVEL",
+          "lsb": 0,
+          "width": 4,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "FIFO_OVF",
+          "lsb": 4,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_CTRL",
+      "offset": "0x4000",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "ENABLE",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "FREEZE",
+          "lsb": 1,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "CLEAR",
+          "lsb": 2,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_STATUS",
+      "offset": "0x4004",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "FROZEN",
+          "lsb": 4,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "WORD_WRAP",
+          "lsb": 5,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "ERR_WRAP",
+          "lsb": 6,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "ACT_CFG",
+          "lsb": 8,
+          "width": 2,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_CFG_SEL",
+      "offset": "0x4008",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_CFG_SEL",
+          "lsb": 0,
+          "width": 2,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_CFG_APPLY",
+      "offset": "0x400C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "APPLY",
+          "lsb": 0,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_CUST_GLITCH_FILTER_SIZE",
+      "offset": "0x4040",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_CUST_GLITCH_FILTER_SIZE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_CUST_MIN_PULSE",
+      "offset": "0x4044",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_CUST_MIN_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_CUST_MAX_PULSE",
+      "offset": "0x4048",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_CUST_MAX_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_CUST_MIN_BIT",
+      "offset": "0x404C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_CUST_MIN_BIT",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_CUST_MAX_BIT",
+      "offset": "0x4050",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_CUST_MAX_BIT",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_CUST_MAX_PULSE_ERR",
+      "offset": "0x4054",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_CUST_MAX_PULSE_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_CUST_MAX_NULL_ERR",
+      "offset": "0x4058",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_CUST_MAX_NULL_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_CUST_MAX_GAP_ERR",
+      "offset": "0x405C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_CUST_MAX_GAP_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_CUST_PARITY_MODE",
+      "offset": "0x4060",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_CUST_PARITY_MODE",
+          "lsb": 0,
+          "width": 2,
+          "kind": "RW",
+          "reset": "0x1",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ACT_GLITCH_FILTER_SIZE",
+      "offset": "0x40A0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ACT_GLITCH_FILTER_SIZE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ACT_MIN_PULSE",
+      "offset": "0x40A4",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ACT_MIN_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ACT_MAX_PULSE",
+      "offset": "0x40A8",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ACT_MAX_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ACT_MIN_BIT",
+      "offset": "0x40AC",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ACT_MIN_BIT",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ACT_MAX_BIT",
+      "offset": "0x40B0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ACT_MAX_BIT",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ACT_MAX_PULSE_ERR",
+      "offset": "0x40B4",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ACT_MAX_PULSE_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ACT_MAX_NULL_ERR",
+      "offset": "0x40B8",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ACT_MAX_NULL_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ACT_MAX_GAP_ERR",
+      "offset": "0x40BC",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ACT_MAX_GAP_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ACT_PARITY_MODE",
+      "offset": "0x40C0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ACT_PARITY_MODE",
+          "lsb": 0,
+          "width": 2,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_WORD_CNT",
+      "offset": "0x40E0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_WORD_CNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ERR_CNT",
+      "offset": "0x40E4",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ERR_CNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_DROP_CNT",
+      "offset": "0x40E8",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_DROP_CNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_LAST_WORD",
+      "offset": "0x40EC",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_LAST_WORD",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_WORD_RADDR",
+      "offset": "0x4100",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_WORD_RADDR",
+          "lsb": 0,
+          "width": 8,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_WORD_RD_TS_MSB",
+      "offset": "0x4104",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_WORD_RD_TS_MSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_WORD_RD_TS_LSB",
+      "offset": "0x4108",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_WORD_RD_TS_LSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_WORD_RD_DATA",
+      "offset": "0x410C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_WORD_RD_DATA",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_WORD_RD_GAP",
+      "offset": "0x4110",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_WORD_RD_GAP",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_WORD_RD_GAP_ERR",
+      "offset": "0x4114",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_WORD_RD_GAP_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ERR_RADDR",
+      "offset": "0x4120",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ERR_RADDR",
+          "lsb": 0,
+          "width": 8,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ERR_RD_TS_MSB",
+      "offset": "0x4124",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ERR_RD_TS_MSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ERR_RD_TS_LSB",
+      "offset": "0x4128",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ERR_RD_TS_LSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ERR_RD_CODE",
+      "offset": "0x412C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ERR_RD_CODE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ERR_RD_ADDR",
+      "offset": "0x4130",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ERR_RD_ADDR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_ERR_RD_DATA",
+      "offset": "0x4134",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_ERR_RD_DATA",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_BIT_RADDR",
+      "offset": "0x4140",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "BIT_IDX",
+          "lsb": 0,
+          "width": 5,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "WORD_IDX",
+          "lsb": 8,
+          "width": 3,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_BIT_RD_PULSE",
+      "offset": "0x4144",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_BIT_RD_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_BIT_RD_PULSE_ERR",
+      "offset": "0x4148",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_BIT_RD_PULSE_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_BIT_RD_NULL",
+      "offset": "0x414C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_BIT_RD_NULL",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX0_BIT_RD_NULL_ERR",
+      "offset": "0x4150",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX0_BIT_RD_NULL_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_CTRL",
+      "offset": "0x4400",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "ENABLE",
+          "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "FREEZE",
+          "lsb": 1,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "CLEAR",
+          "lsb": 2,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_STATUS",
+      "offset": "0x4404",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "FROZEN",
+          "lsb": 4,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "WORD_WRAP",
+          "lsb": 5,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "ERR_WRAP",
+          "lsb": 6,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "ACT_CFG",
+          "lsb": 8,
+          "width": 2,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_CFG_SEL",
+      "offset": "0x4408",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_CFG_SEL",
+          "lsb": 0,
+          "width": 2,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_CFG_APPLY",
+      "offset": "0x440C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "APPLY",
+          "lsb": 0,
+          "width": 1,
+          "kind": "PULSE",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_CUST_GLITCH_FILTER_SIZE",
+      "offset": "0x4440",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_CUST_GLITCH_FILTER_SIZE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_CUST_MIN_PULSE",
+      "offset": "0x4444",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_CUST_MIN_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_CUST_MAX_PULSE",
+      "offset": "0x4448",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_CUST_MAX_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_CUST_MIN_BIT",
+      "offset": "0x444C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_CUST_MIN_BIT",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_CUST_MAX_BIT",
+      "offset": "0x4450",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_CUST_MAX_BIT",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_CUST_MAX_PULSE_ERR",
+      "offset": "0x4454",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_CUST_MAX_PULSE_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_CUST_MAX_NULL_ERR",
+      "offset": "0x4458",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_CUST_MAX_NULL_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_CUST_MAX_GAP_ERR",
+      "offset": "0x445C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_CUST_MAX_GAP_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_CUST_PARITY_MODE",
+      "offset": "0x4460",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_CUST_PARITY_MODE",
+          "lsb": 0,
+          "width": 2,
+          "kind": "RW",
+          "reset": "0x1",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ACT_GLITCH_FILTER_SIZE",
+      "offset": "0x44A0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ACT_GLITCH_FILTER_SIZE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ACT_MIN_PULSE",
+      "offset": "0x44A4",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ACT_MIN_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ACT_MAX_PULSE",
+      "offset": "0x44A8",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ACT_MAX_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ACT_MIN_BIT",
+      "offset": "0x44AC",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ACT_MIN_BIT",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ACT_MAX_BIT",
+      "offset": "0x44B0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ACT_MAX_BIT",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ACT_MAX_PULSE_ERR",
+      "offset": "0x44B4",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ACT_MAX_PULSE_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ACT_MAX_NULL_ERR",
+      "offset": "0x44B8",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ACT_MAX_NULL_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ACT_MAX_GAP_ERR",
+      "offset": "0x44BC",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ACT_MAX_GAP_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ACT_PARITY_MODE",
+      "offset": "0x44C0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ACT_PARITY_MODE",
+          "lsb": 0,
+          "width": 2,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_WORD_CNT",
+      "offset": "0x44E0",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_WORD_CNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ERR_CNT",
+      "offset": "0x44E4",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ERR_CNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_DROP_CNT",
+      "offset": "0x44E8",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_DROP_CNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_LAST_WORD",
+      "offset": "0x44EC",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_LAST_WORD",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_WORD_RADDR",
+      "offset": "0x4500",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_WORD_RADDR",
+          "lsb": 0,
+          "width": 8,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_WORD_RD_TS_MSB",
+      "offset": "0x4504",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_WORD_RD_TS_MSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_WORD_RD_TS_LSB",
+      "offset": "0x4508",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_WORD_RD_TS_LSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_WORD_RD_DATA",
+      "offset": "0x450C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_WORD_RD_DATA",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_WORD_RD_GAP",
+      "offset": "0x4510",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_WORD_RD_GAP",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_WORD_RD_GAP_ERR",
+      "offset": "0x4514",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_WORD_RD_GAP_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ERR_RADDR",
+      "offset": "0x4520",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ERR_RADDR",
+          "lsb": 0,
+          "width": 8,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ERR_RD_TS_MSB",
+      "offset": "0x4524",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ERR_RD_TS_MSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ERR_RD_TS_LSB",
+      "offset": "0x4528",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ERR_RD_TS_LSB",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ERR_RD_CODE",
+      "offset": "0x452C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ERR_RD_CODE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ERR_RD_ADDR",
+      "offset": "0x4530",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ERR_RD_ADDR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_ERR_RD_DATA",
+      "offset": "0x4534",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_ERR_RD_DATA",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_BIT_RADDR",
+      "offset": "0x4540",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "BIT_IDX",
+          "lsb": 0,
+          "width": 5,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "WORD_IDX",
+          "lsb": 8,
+          "width": 3,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_BIT_RD_PULSE",
+      "offset": "0x4544",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_BIT_RD_PULSE",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_BIT_RD_PULSE_ERR",
+      "offset": "0x4548",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_BIT_RD_PULSE_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_BIT_RD_NULL",
+      "offset": "0x454C",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_BIT_RD_NULL",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "RX1_BIT_RD_NULL_ERR",
+      "offset": "0x4550",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "RX1_BIT_RD_NULL_ERR",
+          "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    }
+  ]
+}

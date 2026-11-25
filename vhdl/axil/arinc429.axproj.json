@@ -1,0 +1,5832 @@
+{
+  "format": "axil-uart-project",
+  "version": 2,
+  "name": "ARINC 429 IP",
+  "ips": [
+    {
+      "name": "ARINC429",
+      "desc": "ARINC 429 IP (2 RX, TX=Var, TX BIT=Var, 50 MHz)",
+      "version": "1.0.0",
+      "panel": "arinc429",
+      "regspec": {
+        "format": "axil-regspec",
+        "version": 1,
+        "module": "arinc429_axil",
+        "desc": "ARINC 429 IP (2 RX, TX=Var, TX BIT=Var, 50 MHz)",
+        "packed": true,
+        "ip_version": "1.0.0",
+        "panel": "arinc429",
+        "registers": [
+          {
+            "name": "IP_ID",
+            "offset": "0x0000",
+            "desc": "ARINC 429 IP kimliği ('A429')",
+            "fields": [
+              {
+                "name": "IP_ID",
+                "lsb": 0,
+                "width": 32,
+                "kind": "CONST",
+                "reset": "0x41343239",
+                "desc": "ARINC 429 IP kimliği ('A429')"
+              }
+            ]
+          },
+          {
+            "name": "IP_VERSION",
+            "offset": "0x0004",
+            "desc": "IP sürümü (1.0.0)",
+            "fields": [
+              {
+                "name": "IP_VERSION",
+                "lsb": 0,
+                "width": 32,
+                "kind": "CONST",
+                "reset": "0x10000",
+                "desc": "IP sürümü (1.0.0)"
+              }
+            ]
+          },
+          {
+            "name": "CAPS",
+            "offset": "0x0008",
+            "desc": "Donanım yetenekleri",
+            "fields": [
+              {
+                "name": "NUM_RX",
+                "lsb": 0,
+                "width": 5,
+                "kind": "CONST",
+                "reset": "0x2",
+                "desc": "RX kanal sayısı"
+              },
+              {
+                "name": "TX",
+                "lsb": 8,
+                "width": 1,
+                "kind": "CONST",
+                "reset": "0x1",
+                "desc": "TX kanalı var"
+              },
+              {
+                "name": "TXBIT",
+                "lsb": 9,
+                "width": 1,
+                "kind": "CONST",
+                "reset": "0x1",
+                "desc": "TX BIT kanalı var"
+              },
+              {
+                "name": "RX_TEST",
+                "lsb": 10,
+                "width": 1,
+                "kind": "CONST",
+                "reset": "0x0",
+                "desc": "RX test pinleri var"
+              },
+              {
+                "name": "BITDIAG",
+                "lsb": 11,
+                "width": 1,
+                "kind": "CONST",
+                "reset": "0x1",
+                "desc": "Bit diagnostic RAM var"
+              }
+            ]
+          },
+          {
+            "name": "CAPS_MEM",
+            "offset": "0x000C",
+            "desc": "RAM derinlikleri",
+            "fields": [
+              {
+                "name": "WORD_DEPTH_LOG2",
+                "lsb": 0,
+                "width": 8,
+                "kind": "CONST",
+                "reset": "0x8",
+                "desc": "Word RAM derinliği (log2)"
+              },
+              {
+                "name": "ERR_DEPTH_LOG2",
+                "lsb": 8,
+                "width": 8,
+                "kind": "CONST",
+                "reset": "0x8",
+                "desc": "Error RAM derinliği (log2)"
+              },
+              {
+                "name": "BITDIAG_WORDS_LOG2",
+                "lsb": 16,
+                "width": 8,
+                "kind": "CONST",
+                "reset": "0x3",
+                "desc": "Bit diagnostic Word sayısı (log2)"
+              }
+            ]
+          },
+          {
+            "name": "CLK_HZ",
+            "offset": "0x0010",
+            "desc": "IP sistem saati (Hz)",
+            "fields": [
+              {
+                "name": "CLK_HZ",
+                "lsb": 0,
+                "width": 32,
+                "kind": "CONST",
+                "reset": "0x2FAF080",
+                "desc": "IP sistem saati (Hz)"
+              }
+            ]
+          },
+          {
+            "name": "SOFT_RESET",
+            "offset": "0x0020",
+            "desc": "Yumuşak reset darbeleri (self-clearing)",
+            "fields": [
+              {
+                "name": "RST_ALL",
+                "lsb": 0,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "Tüm IP yumuşak reseti"
+              },
+              {
+                "name": "TX",
+                "lsb": 1,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "TX kanalı reseti"
+              },
+              {
+                "name": "TXBIT",
+                "lsb": 2,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "TX BIT kanalı reseti"
+              },
+              {
+                "name": "RX0",
+                "lsb": 16,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "RX0 kanalı reseti"
+              },
+              {
+                "name": "RX1",
+                "lsb": 17,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "RX1 kanalı reseti"
+              }
+            ]
+          },
+          {
+            "name": "GLOBAL_FREEZE",
+            "offset": "0x0024",
+            "desc": "Tüm logger'ları eşzamanlı dondur",
+            "fields": [
+              {
+                "name": "GLOBAL_FREEZE",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Tüm logger'ları eşzamanlı dondur"
+              }
+            ]
+          },
+          {
+            "name": "TS_CTRL",
+            "offset": "0x0028",
+            "desc": "Timestamp kontrol",
+            "fields": [
+              {
+                "name": "ENABLE",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x1",
+                "desc": "64-bit timestamp sayacı etkin"
+              },
+              {
+                "name": "CLEAR",
+                "lsb": 1,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "Timestamp sayacını sıfırla"
+              }
+            ]
+          },
+          {
+            "name": "TS_LSB",
+            "offset": "0x002C",
+            "desc": "Timestamp alt 32 bit (okununca MSB latch'lenir)",
+            "fields": [
+              {
+                "name": "TS_LSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Timestamp alt 32 bit (okununca MSB latch'lenir)"
+              }
+            ],
+            "rd_strobe": true
+          },
+          {
+            "name": "TS_MSB",
+            "offset": "0x0030",
+            "desc": "Latch'lenmiş timestamp üst 32 bit",
+            "fields": [
+              {
+                "name": "TS_MSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Latch'lenmiş timestamp üst 32 bit"
+              }
+            ]
+          },
+          {
+            "name": "TX_TRANSMITTER_EN",
+            "offset": "0x0400",
+            "desc": "1: Word Transmitter, 0: EXT_HIGH/LOW override",
+            "fields": [
+              {
+                "name": "TX_TRANSMITTER_EN",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "1: Word Transmitter, 0: EXT_HIGH/LOW override"
+              }
+            ]
+          },
+          {
+            "name": "TX_MSG_SCHED_EN",
+            "offset": "0x0404",
+            "desc": "1: Message Scheduler, 0: SEND_CMD tek gönderim",
+            "fields": [
+              {
+                "name": "TX_MSG_SCHED_EN",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "1: Message Scheduler, 0: SEND_CMD tek gönderim"
+              }
+            ]
+          },
+          {
+            "name": "TX_BUILDER_EN",
+            "offset": "0x0408",
+            "desc": "1: Word Builder alanları, 0: EXT_DATA",
+            "fields": [
+              {
+                "name": "TX_BUILDER_EN",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "1: Word Builder alanları, 0: EXT_DATA"
+              }
+            ]
+          },
+          {
+            "name": "TX_LABEL",
+            "offset": "0x040C",
+            "desc": "ARINC 429 Label (octal 000-377)",
+            "fields": [
+              {
+                "name": "TX_LABEL",
+                "lsb": 0,
+                "width": 8,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "ARINC 429 Label (octal 000-377)"
+              }
+            ]
+          },
+          {
+            "name": "TX_SDI",
+            "offset": "0x0410",
+            "desc": "SDI (0-3)",
+            "fields": [
+              {
+                "name": "TX_SDI",
+                "lsb": 0,
+                "width": 2,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "SDI (0-3)"
+              }
+            ]
+          },
+          {
+            "name": "TX_DATA",
+            "offset": "0x0414",
+            "desc": "Data (19-bit)",
+            "fields": [
+              {
+                "name": "TX_DATA",
+                "lsb": 0,
+                "width": 19,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Data (19-bit)"
+              }
+            ]
+          },
+          {
+            "name": "TX_SSM",
+            "offset": "0x0418",
+            "desc": "SSM (0-3)",
+            "fields": [
+              {
+                "name": "TX_SSM",
+                "lsb": 0,
+                "width": 2,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "SSM (0-3)"
+              }
+            ]
+          },
+          {
+            "name": "TX_PARITY_TYPE",
+            "offset": "0x041C",
+            "desc": "Parity tipi (1: Odd, 0: Even)",
+            "fields": [
+              {
+                "name": "TX_PARITY_TYPE",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x1",
+                "desc": "Parity tipi (1: Odd, 0: Even)"
+              }
+            ]
+          },
+          {
+            "name": "TX_SCHED_EN",
+            "offset": "0x0420",
+            "desc": "Message Scheduler başlat/durdur",
+            "fields": [
+              {
+                "name": "TX_SCHED_EN",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Message Scheduler başlat/durdur"
+              }
+            ]
+          },
+          {
+            "name": "TX_INITIAL_DELAY",
+            "offset": "0x0424",
+            "desc": "Scheduler başlangıç gecikmesi (clk)",
+            "fields": [
+              {
+                "name": "TX_INITIAL_DELAY",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Scheduler başlangıç gecikmesi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TX_INTER_WORD_GAP",
+            "offset": "0x0428",
+            "desc": "Scheduler Word arası ekstra bekleme (clk, >=1)",
+            "fields": [
+              {
+                "name": "TX_INTER_WORD_GAP",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RW",
+                "reset": "0x1",
+                "desc": "Scheduler Word arası ekstra bekleme (clk, >=1)"
+              }
+            ]
+          },
+          {
+            "name": "TX_SEND_CMD",
+            "offset": "0x042C",
+            "desc": "Tek gönderim darbesi",
+            "fields": [
+              {
+                "name": "SEND",
+                "lsb": 0,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "Tek Word gönderim tetiği"
+              }
+            ]
+          },
+          {
+            "name": "TX_EXT_DATA",
+            "offset": "0x0430",
+            "desc": "Hazır 32-bit Word",
+            "fields": [
+              {
+                "name": "TX_EXT_DATA",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Hazır 32-bit Word"
+              }
+            ]
+          },
+          {
+            "name": "TX_EXT_HIGH",
+            "offset": "0x0434",
+            "desc": "Hat override HIGH çıkışı",
+            "fields": [
+              {
+                "name": "TX_EXT_HIGH",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Hat override HIGH çıkışı"
+              }
+            ]
+          },
+          {
+            "name": "TX_EXT_LOW",
+            "offset": "0x0438",
+            "desc": "Hat override LOW çıkışı",
+            "fields": [
+              {
+                "name": "TX_EXT_LOW",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Hat override LOW çıkışı"
+              }
+            ]
+          },
+          {
+            "name": "TX_CFG_SEL",
+            "offset": "0x0440",
+            "desc": "Config seçimi (0: HS Preset, 1: LS Preset, 2: Custom)",
+            "fields": [
+              {
+                "name": "TX_CFG_SEL",
+                "lsb": 0,
+                "width": 2,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Config seçimi (0: HS Preset, 1: LS Preset, 2: Custom)"
+              }
+            ]
+          },
+          {
+            "name": "TX_CFG_APPLY",
+            "offset": "0x0444",
+            "desc": "TX Config uygula",
+            "fields": [
+              {
+                "name": "APPLY",
+                "lsb": 0,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "Seçili TX config'i etkinleştir"
+              }
+            ]
+          },
+          {
+            "name": "TX_CUST_PULSE_DUR",
+            "offset": "0x0448",
+            "desc": "Custom Pulse süresi (clk)",
+            "fields": [
+              {
+                "name": "TX_CUST_PULSE_DUR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Pulse süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TX_CUST_NULL_DUR",
+            "offset": "0x044C",
+            "desc": "Custom Null süresi (clk)",
+            "fields": [
+              {
+                "name": "TX_CUST_NULL_DUR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Null süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TX_CUST_GAP_DUR",
+            "offset": "0x0450",
+            "desc": "Custom Word Gap süresi (clk)",
+            "fields": [
+              {
+                "name": "TX_CUST_GAP_DUR",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Word Gap süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TX_CUST_SLP",
+            "offset": "0x0454",
+            "desc": "Custom SLP eğim çıkışı (1: HS, 0: LS)",
+            "fields": [
+              {
+                "name": "TX_CUST_SLP",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom SLP eğim çıkışı (1: HS, 0: LS)"
+              }
+            ]
+          },
+          {
+            "name": "TX_ACT_PULSE_DUR",
+            "offset": "0x0460",
+            "desc": "Aktif Pulse süresi (clk)",
+            "fields": [
+              {
+                "name": "TX_ACT_PULSE_DUR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Pulse süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TX_ACT_NULL_DUR",
+            "offset": "0x0464",
+            "desc": "Aktif Null süresi (clk)",
+            "fields": [
+              {
+                "name": "TX_ACT_NULL_DUR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Null süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TX_ACT_GAP_DUR",
+            "offset": "0x0468",
+            "desc": "Aktif Word Gap süresi (clk)",
+            "fields": [
+              {
+                "name": "TX_ACT_GAP_DUR",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Word Gap süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TX_ACT_SLP",
+            "offset": "0x046C",
+            "desc": "Aktif SLP eğim çıkışı",
+            "fields": [
+              {
+                "name": "TX_ACT_SLP",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif SLP eğim çıkışı"
+              }
+            ]
+          },
+          {
+            "name": "TX_STATUS",
+            "offset": "0x0480",
+            "desc": "TX durum register'ı",
+            "fields": [
+              {
+                "name": "BUSY",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "TX gönderim yapıyor"
+              },
+              {
+                "name": "SCHED_ACTIVE",
+                "lsb": 1,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Scheduler aktif"
+              },
+              {
+                "name": "ACT_CFG",
+                "lsb": 2,
+                "width": 2,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif TX config modu (0:HS, 1:LS, 2:Custom)"
+              }
+            ]
+          },
+          {
+            "name": "TX_WORD_CNT",
+            "offset": "0x0484",
+            "desc": "Gönderilen toplam Word sayısı",
+            "fields": [
+              {
+                "name": "TX_WORD_CNT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Gönderilen toplam Word sayısı"
+              }
+            ]
+          },
+          {
+            "name": "TB_CTRL",
+            "offset": "0x0800",
+            "desc": "TB_ kanal kontrolü",
+            "fields": [
+              {
+                "name": "ENABLE",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Logger kayıt etkin"
+              },
+              {
+                "name": "FREEZE",
+                "lsb": 1,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "RAM okuma için dondur"
+              },
+              {
+                "name": "CLEAR",
+                "lsb": 2,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "Sayaç ve RAM pointer'larını temizle"
+              }
+            ]
+          },
+          {
+            "name": "TB_STATUS",
+            "offset": "0x0804",
+            "desc": "TB_ kanal durumu",
+            "fields": [
+              {
+                "name": "FROZEN",
+                "lsb": 4,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Logger donduruldu"
+              },
+              {
+                "name": "WORD_WRAP",
+                "lsb": 5,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word RAM taştı/döndü"
+              },
+              {
+                "name": "ERR_WRAP",
+                "lsb": 6,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error RAM taştı/döndü"
+              },
+              {
+                "name": "ACT_CFG",
+                "lsb": 8,
+                "width": 2,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif RX config modu (0:HS, 1:LS, 2:Custom)"
+              }
+            ]
+          },
+          {
+            "name": "TB_CFG_SEL",
+            "offset": "0x0808",
+            "desc": "Config seçimi (0: HS, 1: LS, 2: Custom)",
+            "fields": [
+              {
+                "name": "TB_CFG_SEL",
+                "lsb": 0,
+                "width": 2,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Config seçimi (0: HS, 1: LS, 2: Custom)"
+              }
+            ]
+          },
+          {
+            "name": "TB_CFG_APPLY",
+            "offset": "0x080C",
+            "desc": "RX Config uygula",
+            "fields": [
+              {
+                "name": "APPLY",
+                "lsb": 0,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "Seçili RX config'i uygula"
+              }
+            ]
+          },
+          {
+            "name": "TB_CUST_GLITCH_FILTER_SIZE",
+            "offset": "0x0840",
+            "desc": "Custom Glitch Filter boyu (clk)",
+            "fields": [
+              {
+                "name": "TB_CUST_GLITCH_FILTER_SIZE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Glitch Filter boyu (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TB_CUST_MIN_PULSE",
+            "offset": "0x0844",
+            "desc": "Custom Min Pulse (clk)",
+            "fields": [
+              {
+                "name": "TB_CUST_MIN_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Min Pulse (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TB_CUST_MAX_PULSE",
+            "offset": "0x0848",
+            "desc": "Custom Max Pulse (clk)",
+            "fields": [
+              {
+                "name": "TB_CUST_MAX_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Pulse (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TB_CUST_MIN_BIT",
+            "offset": "0x084C",
+            "desc": "Custom Min Bit (clk)",
+            "fields": [
+              {
+                "name": "TB_CUST_MIN_BIT",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Min Bit (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TB_CUST_MAX_BIT",
+            "offset": "0x0850",
+            "desc": "Custom Max Bit (clk)",
+            "fields": [
+              {
+                "name": "TB_CUST_MAX_BIT",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Bit (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TB_CUST_MAX_PULSE_ERR",
+            "offset": "0x0854",
+            "desc": "Custom Max Pulse Glitch Error",
+            "fields": [
+              {
+                "name": "TB_CUST_MAX_PULSE_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Pulse Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "TB_CUST_MAX_NULL_ERR",
+            "offset": "0x0858",
+            "desc": "Custom Max Null Glitch Error",
+            "fields": [
+              {
+                "name": "TB_CUST_MAX_NULL_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Null Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "TB_CUST_MAX_GAP_ERR",
+            "offset": "0x085C",
+            "desc": "Custom Max Gap Glitch Error",
+            "fields": [
+              {
+                "name": "TB_CUST_MAX_GAP_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Gap Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "TB_CUST_PARITY_MODE",
+            "offset": "0x0860",
+            "desc": "Custom Parity modu (0:Kapalı, 1:Odd, 2:Even)",
+            "fields": [
+              {
+                "name": "TB_CUST_PARITY_MODE",
+                "lsb": 0,
+                "width": 2,
+                "kind": "RW",
+                "reset": "0x1",
+                "desc": "Custom Parity modu (0:Kapalı, 1:Odd, 2:Even)"
+              }
+            ]
+          },
+          {
+            "name": "TB_ACT_GLITCH_FILTER_SIZE",
+            "offset": "0x08A0",
+            "desc": "Aktif Glitch Filter boyu (clk)",
+            "fields": [
+              {
+                "name": "TB_ACT_GLITCH_FILTER_SIZE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Glitch Filter boyu (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TB_ACT_MIN_PULSE",
+            "offset": "0x08A4",
+            "desc": "Aktif Min Pulse (clk)",
+            "fields": [
+              {
+                "name": "TB_ACT_MIN_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Min Pulse (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TB_ACT_MAX_PULSE",
+            "offset": "0x08A8",
+            "desc": "Aktif Max Pulse (clk)",
+            "fields": [
+              {
+                "name": "TB_ACT_MAX_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Pulse (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TB_ACT_MIN_BIT",
+            "offset": "0x08AC",
+            "desc": "Aktif Min Bit (clk)",
+            "fields": [
+              {
+                "name": "TB_ACT_MIN_BIT",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Min Bit (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TB_ACT_MAX_BIT",
+            "offset": "0x08B0",
+            "desc": "Aktif Max Bit (clk)",
+            "fields": [
+              {
+                "name": "TB_ACT_MAX_BIT",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Bit (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TB_ACT_MAX_PULSE_ERR",
+            "offset": "0x08B4",
+            "desc": "Aktif Max Pulse Glitch Error",
+            "fields": [
+              {
+                "name": "TB_ACT_MAX_PULSE_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Pulse Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "TB_ACT_MAX_NULL_ERR",
+            "offset": "0x08B8",
+            "desc": "Aktif Max Null Glitch Error",
+            "fields": [
+              {
+                "name": "TB_ACT_MAX_NULL_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Null Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "TB_ACT_MAX_GAP_ERR",
+            "offset": "0x08BC",
+            "desc": "Aktif Max Gap Glitch Error",
+            "fields": [
+              {
+                "name": "TB_ACT_MAX_GAP_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Gap Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "TB_ACT_PARITY_MODE",
+            "offset": "0x08C0",
+            "desc": "Aktif Parity modu",
+            "fields": [
+              {
+                "name": "TB_ACT_PARITY_MODE",
+                "lsb": 0,
+                "width": 2,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Parity modu"
+              }
+            ]
+          },
+          {
+            "name": "TB_WORD_CNT",
+            "offset": "0x08E0",
+            "desc": "Geçerli Word sayısı",
+            "fields": [
+              {
+                "name": "TB_WORD_CNT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Geçerli Word sayısı"
+              }
+            ]
+          },
+          {
+            "name": "TB_ERR_CNT",
+            "offset": "0x08E4",
+            "desc": "Hata kaydı sayısı",
+            "fields": [
+              {
+                "name": "TB_ERR_CNT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Hata kaydı sayısı"
+              }
+            ]
+          },
+          {
+            "name": "TB_DROP_CNT",
+            "offset": "0x08E8",
+            "desc": "Freeze sırasında atılan kayıt sayısı",
+            "fields": [
+              {
+                "name": "TB_DROP_CNT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Freeze sırasında atılan kayıt sayısı"
+              }
+            ]
+          },
+          {
+            "name": "TB_LAST_WORD",
+            "offset": "0x08EC",
+            "desc": "Alınan son geçerli Word",
+            "fields": [
+              {
+                "name": "TB_LAST_WORD",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Alınan son geçerli Word"
+              }
+            ]
+          },
+          {
+            "name": "TB_WORD_RADDR",
+            "offset": "0x0900",
+            "desc": "Word RAM okuma adresi",
+            "fields": [
+              {
+                "name": "TB_WORD_RADDR",
+                "lsb": 0,
+                "width": 8,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Word RAM okuma adresi"
+              }
+            ]
+          },
+          {
+            "name": "TB_WORD_RD_TS_MSB",
+            "offset": "0x0904",
+            "desc": "Word kaydı Timestamp MSB",
+            "fields": [
+              {
+                "name": "TB_WORD_RD_TS_MSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı Timestamp MSB"
+              }
+            ]
+          },
+          {
+            "name": "TB_WORD_RD_TS_LSB",
+            "offset": "0x0908",
+            "desc": "Word kaydı Timestamp LSB",
+            "fields": [
+              {
+                "name": "TB_WORD_RD_TS_LSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı Timestamp LSB"
+              }
+            ]
+          },
+          {
+            "name": "TB_WORD_RD_DATA",
+            "offset": "0x090C",
+            "desc": "Word kaydı 32-bit veri",
+            "fields": [
+              {
+                "name": "TB_WORD_RD_DATA",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı 32-bit veri"
+              }
+            ]
+          },
+          {
+            "name": "TB_WORD_RD_GAP",
+            "offset": "0x0910",
+            "desc": "Word kaydı önceki Gap süresi (clk)",
+            "fields": [
+              {
+                "name": "TB_WORD_RD_GAP",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı önceki Gap süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TB_WORD_RD_GAP_ERR",
+            "offset": "0x0914",
+            "desc": "Word kaydı Gap gürültü sayısı",
+            "fields": [
+              {
+                "name": "TB_WORD_RD_GAP_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı Gap gürültü sayısı"
+              }
+            ]
+          },
+          {
+            "name": "TB_ERR_RADDR",
+            "offset": "0x0920",
+            "desc": "Error RAM okuma adresi",
+            "fields": [
+              {
+                "name": "TB_ERR_RADDR",
+                "lsb": 0,
+                "width": 8,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Error RAM okuma adresi"
+              }
+            ]
+          },
+          {
+            "name": "TB_ERR_RD_TS_MSB",
+            "offset": "0x0924",
+            "desc": "Error kaydı Timestamp MSB",
+            "fields": [
+              {
+                "name": "TB_ERR_RD_TS_MSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı Timestamp MSB"
+              }
+            ]
+          },
+          {
+            "name": "TB_ERR_RD_TS_LSB",
+            "offset": "0x0928",
+            "desc": "Error kaydı Timestamp LSB",
+            "fields": [
+              {
+                "name": "TB_ERR_RD_TS_LSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı Timestamp LSB"
+              }
+            ]
+          },
+          {
+            "name": "TB_ERR_RD_CODE",
+            "offset": "0x092C",
+            "desc": "Error kaydı hata kodu bitmask",
+            "fields": [
+              {
+                "name": "TB_ERR_RD_CODE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı hata kodu bitmask"
+              }
+            ]
+          },
+          {
+            "name": "TB_ERR_RD_ADDR",
+            "offset": "0x0930",
+            "desc": "Error kaydı konum/bit/FIFO adresi",
+            "fields": [
+              {
+                "name": "TB_ERR_RD_ADDR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı konum/bit/FIFO adresi"
+              }
+            ]
+          },
+          {
+            "name": "TB_ERR_RD_DATA",
+            "offset": "0x0934",
+            "desc": "Error kaydı ölçüm/beklenen veri",
+            "fields": [
+              {
+                "name": "TB_ERR_RD_DATA",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı ölçüm/beklenen veri"
+              }
+            ]
+          },
+          {
+            "name": "TB_BIT_RADDR",
+            "offset": "0x0940",
+            "desc": "Bit Diagnostic RAM okuma adresi",
+            "fields": [
+              {
+                "name": "BIT_IDX",
+                "lsb": 0,
+                "width": 5,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Bit indeksi (0-31)"
+              },
+              {
+                "name": "WORD_IDX",
+                "lsb": 8,
+                "width": 3,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Bit Diagnostic Word indeksi"
+              }
+            ]
+          },
+          {
+            "name": "TB_BIT_RD_PULSE",
+            "offset": "0x0944",
+            "desc": "Bit Pulse süresi (clk)",
+            "fields": [
+              {
+                "name": "TB_BIT_RD_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Bit Pulse süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TB_BIT_RD_PULSE_ERR",
+            "offset": "0x0948",
+            "desc": "Bit Pulse gürültü sayısı",
+            "fields": [
+              {
+                "name": "TB_BIT_RD_PULSE_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Bit Pulse gürültü sayısı"
+              }
+            ]
+          },
+          {
+            "name": "TB_BIT_RD_NULL",
+            "offset": "0x094C",
+            "desc": "Bit Null süresi (clk)",
+            "fields": [
+              {
+                "name": "TB_BIT_RD_NULL",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Bit Null süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "TB_BIT_RD_NULL_ERR",
+            "offset": "0x0950",
+            "desc": "Bit Null gürültü sayısı",
+            "fields": [
+              {
+                "name": "TB_BIT_RD_NULL_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Bit Null gürültü sayısı"
+              }
+            ]
+          },
+          {
+            "name": "TB_CHK_CTRL",
+            "offset": "0x09C0",
+            "desc": "TX BIT Word Checker kontrol",
+            "fields": [
+              {
+                "name": "ENABLE",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Word Checker etkin"
+              },
+              {
+                "name": "CLEAR",
+                "lsb": 1,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "Checker FIFO ve sayaçlarını temizle"
+              }
+            ]
+          },
+          {
+            "name": "TB_CHK_TIMEOUT",
+            "offset": "0x09C4",
+            "desc": "Echo zaman aşımı (clk, 0=kapalı)",
+            "fields": [
+              {
+                "name": "TB_CHK_TIMEOUT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Echo zaman aşımı (clk, 0=kapalı)"
+              }
+            ]
+          },
+          {
+            "name": "TB_CHK_OK_CNT",
+            "offset": "0x09C8",
+            "desc": "Eşleşen Word sayısı",
+            "fields": [
+              {
+                "name": "TB_CHK_OK_CNT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Eşleşen Word sayısı"
+              }
+            ]
+          },
+          {
+            "name": "TB_CHK_ERR_CNT",
+            "offset": "0x09CC",
+            "desc": "Checker hata sayısı",
+            "fields": [
+              {
+                "name": "TB_CHK_ERR_CNT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Checker hata sayısı"
+              }
+            ]
+          },
+          {
+            "name": "TB_CHK_STATUS",
+            "offset": "0x09D0",
+            "desc": "TX BIT Checker FIFO durumu",
+            "fields": [
+              {
+                "name": "FIFO_LEVEL",
+                "lsb": 0,
+                "width": 4,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Beklenen Word FIFO doluluğu"
+              },
+              {
+                "name": "FIFO_OVF",
+                "lsb": 4,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "FIFO taşma bayrağı"
+              }
+            ]
+          },
+          {
+            "name": "RX0_CTRL",
+            "offset": "0x4000",
+            "desc": "RX0_ kanal kontrolü",
+            "fields": [
+              {
+                "name": "ENABLE",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Logger kayıt etkin"
+              },
+              {
+                "name": "FREEZE",
+                "lsb": 1,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "RAM okuma için dondur"
+              },
+              {
+                "name": "CLEAR",
+                "lsb": 2,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "Sayaç ve RAM pointer'larını temizle"
+              }
+            ]
+          },
+          {
+            "name": "RX0_STATUS",
+            "offset": "0x4004",
+            "desc": "RX0_ kanal durumu",
+            "fields": [
+              {
+                "name": "FROZEN",
+                "lsb": 4,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Logger donduruldu"
+              },
+              {
+                "name": "WORD_WRAP",
+                "lsb": 5,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word RAM taştı/döndü"
+              },
+              {
+                "name": "ERR_WRAP",
+                "lsb": 6,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error RAM taştı/döndü"
+              },
+              {
+                "name": "ACT_CFG",
+                "lsb": 8,
+                "width": 2,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif RX config modu (0:HS, 1:LS, 2:Custom)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_CFG_SEL",
+            "offset": "0x4008",
+            "desc": "Config seçimi (0: HS, 1: LS, 2: Custom)",
+            "fields": [
+              {
+                "name": "RX0_CFG_SEL",
+                "lsb": 0,
+                "width": 2,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Config seçimi (0: HS, 1: LS, 2: Custom)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_CFG_APPLY",
+            "offset": "0x400C",
+            "desc": "RX Config uygula",
+            "fields": [
+              {
+                "name": "APPLY",
+                "lsb": 0,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "Seçili RX config'i uygula"
+              }
+            ]
+          },
+          {
+            "name": "RX0_CUST_GLITCH_FILTER_SIZE",
+            "offset": "0x4040",
+            "desc": "Custom Glitch Filter boyu (clk)",
+            "fields": [
+              {
+                "name": "RX0_CUST_GLITCH_FILTER_SIZE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Glitch Filter boyu (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_CUST_MIN_PULSE",
+            "offset": "0x4044",
+            "desc": "Custom Min Pulse (clk)",
+            "fields": [
+              {
+                "name": "RX0_CUST_MIN_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Min Pulse (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_CUST_MAX_PULSE",
+            "offset": "0x4048",
+            "desc": "Custom Max Pulse (clk)",
+            "fields": [
+              {
+                "name": "RX0_CUST_MAX_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Pulse (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_CUST_MIN_BIT",
+            "offset": "0x404C",
+            "desc": "Custom Min Bit (clk)",
+            "fields": [
+              {
+                "name": "RX0_CUST_MIN_BIT",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Min Bit (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_CUST_MAX_BIT",
+            "offset": "0x4050",
+            "desc": "Custom Max Bit (clk)",
+            "fields": [
+              {
+                "name": "RX0_CUST_MAX_BIT",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Bit (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_CUST_MAX_PULSE_ERR",
+            "offset": "0x4054",
+            "desc": "Custom Max Pulse Glitch Error",
+            "fields": [
+              {
+                "name": "RX0_CUST_MAX_PULSE_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Pulse Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "RX0_CUST_MAX_NULL_ERR",
+            "offset": "0x4058",
+            "desc": "Custom Max Null Glitch Error",
+            "fields": [
+              {
+                "name": "RX0_CUST_MAX_NULL_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Null Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "RX0_CUST_MAX_GAP_ERR",
+            "offset": "0x405C",
+            "desc": "Custom Max Gap Glitch Error",
+            "fields": [
+              {
+                "name": "RX0_CUST_MAX_GAP_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Gap Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "RX0_CUST_PARITY_MODE",
+            "offset": "0x4060",
+            "desc": "Custom Parity modu (0:Kapalı, 1:Odd, 2:Even)",
+            "fields": [
+              {
+                "name": "RX0_CUST_PARITY_MODE",
+                "lsb": 0,
+                "width": 2,
+                "kind": "RW",
+                "reset": "0x1",
+                "desc": "Custom Parity modu (0:Kapalı, 1:Odd, 2:Even)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ACT_GLITCH_FILTER_SIZE",
+            "offset": "0x40A0",
+            "desc": "Aktif Glitch Filter boyu (clk)",
+            "fields": [
+              {
+                "name": "RX0_ACT_GLITCH_FILTER_SIZE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Glitch Filter boyu (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ACT_MIN_PULSE",
+            "offset": "0x40A4",
+            "desc": "Aktif Min Pulse (clk)",
+            "fields": [
+              {
+                "name": "RX0_ACT_MIN_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Min Pulse (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ACT_MAX_PULSE",
+            "offset": "0x40A8",
+            "desc": "Aktif Max Pulse (clk)",
+            "fields": [
+              {
+                "name": "RX0_ACT_MAX_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Pulse (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ACT_MIN_BIT",
+            "offset": "0x40AC",
+            "desc": "Aktif Min Bit (clk)",
+            "fields": [
+              {
+                "name": "RX0_ACT_MIN_BIT",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Min Bit (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ACT_MAX_BIT",
+            "offset": "0x40B0",
+            "desc": "Aktif Max Bit (clk)",
+            "fields": [
+              {
+                "name": "RX0_ACT_MAX_BIT",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Bit (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ACT_MAX_PULSE_ERR",
+            "offset": "0x40B4",
+            "desc": "Aktif Max Pulse Glitch Error",
+            "fields": [
+              {
+                "name": "RX0_ACT_MAX_PULSE_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Pulse Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ACT_MAX_NULL_ERR",
+            "offset": "0x40B8",
+            "desc": "Aktif Max Null Glitch Error",
+            "fields": [
+              {
+                "name": "RX0_ACT_MAX_NULL_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Null Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ACT_MAX_GAP_ERR",
+            "offset": "0x40BC",
+            "desc": "Aktif Max Gap Glitch Error",
+            "fields": [
+              {
+                "name": "RX0_ACT_MAX_GAP_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Gap Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ACT_PARITY_MODE",
+            "offset": "0x40C0",
+            "desc": "Aktif Parity modu",
+            "fields": [
+              {
+                "name": "RX0_ACT_PARITY_MODE",
+                "lsb": 0,
+                "width": 2,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Parity modu"
+              }
+            ]
+          },
+          {
+            "name": "RX0_WORD_CNT",
+            "offset": "0x40E0",
+            "desc": "Geçerli Word sayısı",
+            "fields": [
+              {
+                "name": "RX0_WORD_CNT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Geçerli Word sayısı"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ERR_CNT",
+            "offset": "0x40E4",
+            "desc": "Hata kaydı sayısı",
+            "fields": [
+              {
+                "name": "RX0_ERR_CNT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Hata kaydı sayısı"
+              }
+            ]
+          },
+          {
+            "name": "RX0_DROP_CNT",
+            "offset": "0x40E8",
+            "desc": "Freeze sırasında atılan kayıt sayısı",
+            "fields": [
+              {
+                "name": "RX0_DROP_CNT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Freeze sırasında atılan kayıt sayısı"
+              }
+            ]
+          },
+          {
+            "name": "RX0_LAST_WORD",
+            "offset": "0x40EC",
+            "desc": "Alınan son geçerli Word",
+            "fields": [
+              {
+                "name": "RX0_LAST_WORD",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Alınan son geçerli Word"
+              }
+            ]
+          },
+          {
+            "name": "RX0_WORD_RADDR",
+            "offset": "0x4100",
+            "desc": "Word RAM okuma adresi",
+            "fields": [
+              {
+                "name": "RX0_WORD_RADDR",
+                "lsb": 0,
+                "width": 8,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Word RAM okuma adresi"
+              }
+            ]
+          },
+          {
+            "name": "RX0_WORD_RD_TS_MSB",
+            "offset": "0x4104",
+            "desc": "Word kaydı Timestamp MSB",
+            "fields": [
+              {
+                "name": "RX0_WORD_RD_TS_MSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı Timestamp MSB"
+              }
+            ]
+          },
+          {
+            "name": "RX0_WORD_RD_TS_LSB",
+            "offset": "0x4108",
+            "desc": "Word kaydı Timestamp LSB",
+            "fields": [
+              {
+                "name": "RX0_WORD_RD_TS_LSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı Timestamp LSB"
+              }
+            ]
+          },
+          {
+            "name": "RX0_WORD_RD_DATA",
+            "offset": "0x410C",
+            "desc": "Word kaydı 32-bit veri",
+            "fields": [
+              {
+                "name": "RX0_WORD_RD_DATA",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı 32-bit veri"
+              }
+            ]
+          },
+          {
+            "name": "RX0_WORD_RD_GAP",
+            "offset": "0x4110",
+            "desc": "Word kaydı önceki Gap süresi (clk)",
+            "fields": [
+              {
+                "name": "RX0_WORD_RD_GAP",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı önceki Gap süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_WORD_RD_GAP_ERR",
+            "offset": "0x4114",
+            "desc": "Word kaydı Gap gürültü sayısı",
+            "fields": [
+              {
+                "name": "RX0_WORD_RD_GAP_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı Gap gürültü sayısı"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ERR_RADDR",
+            "offset": "0x4120",
+            "desc": "Error RAM okuma adresi",
+            "fields": [
+              {
+                "name": "RX0_ERR_RADDR",
+                "lsb": 0,
+                "width": 8,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Error RAM okuma adresi"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ERR_RD_TS_MSB",
+            "offset": "0x4124",
+            "desc": "Error kaydı Timestamp MSB",
+            "fields": [
+              {
+                "name": "RX0_ERR_RD_TS_MSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı Timestamp MSB"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ERR_RD_TS_LSB",
+            "offset": "0x4128",
+            "desc": "Error kaydı Timestamp LSB",
+            "fields": [
+              {
+                "name": "RX0_ERR_RD_TS_LSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı Timestamp LSB"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ERR_RD_CODE",
+            "offset": "0x412C",
+            "desc": "Error kaydı hata kodu bitmask",
+            "fields": [
+              {
+                "name": "RX0_ERR_RD_CODE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı hata kodu bitmask"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ERR_RD_ADDR",
+            "offset": "0x4130",
+            "desc": "Error kaydı konum/bit/FIFO adresi",
+            "fields": [
+              {
+                "name": "RX0_ERR_RD_ADDR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı konum/bit/FIFO adresi"
+              }
+            ]
+          },
+          {
+            "name": "RX0_ERR_RD_DATA",
+            "offset": "0x4134",
+            "desc": "Error kaydı ölçüm/beklenen veri",
+            "fields": [
+              {
+                "name": "RX0_ERR_RD_DATA",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı ölçüm/beklenen veri"
+              }
+            ]
+          },
+          {
+            "name": "RX0_BIT_RADDR",
+            "offset": "0x4140",
+            "desc": "Bit Diagnostic RAM okuma adresi",
+            "fields": [
+              {
+                "name": "BIT_IDX",
+                "lsb": 0,
+                "width": 5,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Bit indeksi (0-31)"
+              },
+              {
+                "name": "WORD_IDX",
+                "lsb": 8,
+                "width": 3,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Bit Diagnostic Word indeksi"
+              }
+            ]
+          },
+          {
+            "name": "RX0_BIT_RD_PULSE",
+            "offset": "0x4144",
+            "desc": "Bit Pulse süresi (clk)",
+            "fields": [
+              {
+                "name": "RX0_BIT_RD_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Bit Pulse süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_BIT_RD_PULSE_ERR",
+            "offset": "0x4148",
+            "desc": "Bit Pulse gürültü sayısı",
+            "fields": [
+              {
+                "name": "RX0_BIT_RD_PULSE_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Bit Pulse gürültü sayısı"
+              }
+            ]
+          },
+          {
+            "name": "RX0_BIT_RD_NULL",
+            "offset": "0x414C",
+            "desc": "Bit Null süresi (clk)",
+            "fields": [
+              {
+                "name": "RX0_BIT_RD_NULL",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Bit Null süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX0_BIT_RD_NULL_ERR",
+            "offset": "0x4150",
+            "desc": "Bit Null gürültü sayısı",
+            "fields": [
+              {
+                "name": "RX0_BIT_RD_NULL_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Bit Null gürültü sayısı"
+              }
+            ]
+          },
+          {
+            "name": "RX1_CTRL",
+            "offset": "0x4400",
+            "desc": "RX1_ kanal kontrolü",
+            "fields": [
+              {
+                "name": "ENABLE",
+                "lsb": 0,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Logger kayıt etkin"
+              },
+              {
+                "name": "FREEZE",
+                "lsb": 1,
+                "width": 1,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "RAM okuma için dondur"
+              },
+              {
+                "name": "CLEAR",
+                "lsb": 2,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "Sayaç ve RAM pointer'larını temizle"
+              }
+            ]
+          },
+          {
+            "name": "RX1_STATUS",
+            "offset": "0x4404",
+            "desc": "RX1_ kanal durumu",
+            "fields": [
+              {
+                "name": "FROZEN",
+                "lsb": 4,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Logger donduruldu"
+              },
+              {
+                "name": "WORD_WRAP",
+                "lsb": 5,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word RAM taştı/döndü"
+              },
+              {
+                "name": "ERR_WRAP",
+                "lsb": 6,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error RAM taştı/döndü"
+              },
+              {
+                "name": "ACT_CFG",
+                "lsb": 8,
+                "width": 2,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif RX config modu (0:HS, 1:LS, 2:Custom)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_CFG_SEL",
+            "offset": "0x4408",
+            "desc": "Config seçimi (0: HS, 1: LS, 2: Custom)",
+            "fields": [
+              {
+                "name": "RX1_CFG_SEL",
+                "lsb": 0,
+                "width": 2,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Config seçimi (0: HS, 1: LS, 2: Custom)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_CFG_APPLY",
+            "offset": "0x440C",
+            "desc": "RX Config uygula",
+            "fields": [
+              {
+                "name": "APPLY",
+                "lsb": 0,
+                "width": 1,
+                "kind": "PULSE",
+                "reset": "0x0",
+                "desc": "Seçili RX config'i uygula"
+              }
+            ]
+          },
+          {
+            "name": "RX1_CUST_GLITCH_FILTER_SIZE",
+            "offset": "0x4440",
+            "desc": "Custom Glitch Filter boyu (clk)",
+            "fields": [
+              {
+                "name": "RX1_CUST_GLITCH_FILTER_SIZE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Glitch Filter boyu (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_CUST_MIN_PULSE",
+            "offset": "0x4444",
+            "desc": "Custom Min Pulse (clk)",
+            "fields": [
+              {
+                "name": "RX1_CUST_MIN_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Min Pulse (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_CUST_MAX_PULSE",
+            "offset": "0x4448",
+            "desc": "Custom Max Pulse (clk)",
+            "fields": [
+              {
+                "name": "RX1_CUST_MAX_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Pulse (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_CUST_MIN_BIT",
+            "offset": "0x444C",
+            "desc": "Custom Min Bit (clk)",
+            "fields": [
+              {
+                "name": "RX1_CUST_MIN_BIT",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Min Bit (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_CUST_MAX_BIT",
+            "offset": "0x4450",
+            "desc": "Custom Max Bit (clk)",
+            "fields": [
+              {
+                "name": "RX1_CUST_MAX_BIT",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Bit (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_CUST_MAX_PULSE_ERR",
+            "offset": "0x4454",
+            "desc": "Custom Max Pulse Glitch Error",
+            "fields": [
+              {
+                "name": "RX1_CUST_MAX_PULSE_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Pulse Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "RX1_CUST_MAX_NULL_ERR",
+            "offset": "0x4458",
+            "desc": "Custom Max Null Glitch Error",
+            "fields": [
+              {
+                "name": "RX1_CUST_MAX_NULL_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Null Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "RX1_CUST_MAX_GAP_ERR",
+            "offset": "0x445C",
+            "desc": "Custom Max Gap Glitch Error",
+            "fields": [
+              {
+                "name": "RX1_CUST_MAX_GAP_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Custom Max Gap Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "RX1_CUST_PARITY_MODE",
+            "offset": "0x4460",
+            "desc": "Custom Parity modu (0:Kapalı, 1:Odd, 2:Even)",
+            "fields": [
+              {
+                "name": "RX1_CUST_PARITY_MODE",
+                "lsb": 0,
+                "width": 2,
+                "kind": "RW",
+                "reset": "0x1",
+                "desc": "Custom Parity modu (0:Kapalı, 1:Odd, 2:Even)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ACT_GLITCH_FILTER_SIZE",
+            "offset": "0x44A0",
+            "desc": "Aktif Glitch Filter boyu (clk)",
+            "fields": [
+              {
+                "name": "RX1_ACT_GLITCH_FILTER_SIZE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Glitch Filter boyu (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ACT_MIN_PULSE",
+            "offset": "0x44A4",
+            "desc": "Aktif Min Pulse (clk)",
+            "fields": [
+              {
+                "name": "RX1_ACT_MIN_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Min Pulse (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ACT_MAX_PULSE",
+            "offset": "0x44A8",
+            "desc": "Aktif Max Pulse (clk)",
+            "fields": [
+              {
+                "name": "RX1_ACT_MAX_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Pulse (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ACT_MIN_BIT",
+            "offset": "0x44AC",
+            "desc": "Aktif Min Bit (clk)",
+            "fields": [
+              {
+                "name": "RX1_ACT_MIN_BIT",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Min Bit (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ACT_MAX_BIT",
+            "offset": "0x44B0",
+            "desc": "Aktif Max Bit (clk)",
+            "fields": [
+              {
+                "name": "RX1_ACT_MAX_BIT",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Bit (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ACT_MAX_PULSE_ERR",
+            "offset": "0x44B4",
+            "desc": "Aktif Max Pulse Glitch Error",
+            "fields": [
+              {
+                "name": "RX1_ACT_MAX_PULSE_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Pulse Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ACT_MAX_NULL_ERR",
+            "offset": "0x44B8",
+            "desc": "Aktif Max Null Glitch Error",
+            "fields": [
+              {
+                "name": "RX1_ACT_MAX_NULL_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Null Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ACT_MAX_GAP_ERR",
+            "offset": "0x44BC",
+            "desc": "Aktif Max Gap Glitch Error",
+            "fields": [
+              {
+                "name": "RX1_ACT_MAX_GAP_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Max Gap Glitch Error"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ACT_PARITY_MODE",
+            "offset": "0x44C0",
+            "desc": "Aktif Parity modu",
+            "fields": [
+              {
+                "name": "RX1_ACT_PARITY_MODE",
+                "lsb": 0,
+                "width": 2,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Aktif Parity modu"
+              }
+            ]
+          },
+          {
+            "name": "RX1_WORD_CNT",
+            "offset": "0x44E0",
+            "desc": "Geçerli Word sayısı",
+            "fields": [
+              {
+                "name": "RX1_WORD_CNT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Geçerli Word sayısı"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ERR_CNT",
+            "offset": "0x44E4",
+            "desc": "Hata kaydı sayısı",
+            "fields": [
+              {
+                "name": "RX1_ERR_CNT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Hata kaydı sayısı"
+              }
+            ]
+          },
+          {
+            "name": "RX1_DROP_CNT",
+            "offset": "0x44E8",
+            "desc": "Freeze sırasında atılan kayıt sayısı",
+            "fields": [
+              {
+                "name": "RX1_DROP_CNT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Freeze sırasında atılan kayıt sayısı"
+              }
+            ]
+          },
+          {
+            "name": "RX1_LAST_WORD",
+            "offset": "0x44EC",
+            "desc": "Alınan son geçerli Word",
+            "fields": [
+              {
+                "name": "RX1_LAST_WORD",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Alınan son geçerli Word"
+              }
+            ]
+          },
+          {
+            "name": "RX1_WORD_RADDR",
+            "offset": "0x4500",
+            "desc": "Word RAM okuma adresi",
+            "fields": [
+              {
+                "name": "RX1_WORD_RADDR",
+                "lsb": 0,
+                "width": 8,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Word RAM okuma adresi"
+              }
+            ]
+          },
+          {
+            "name": "RX1_WORD_RD_TS_MSB",
+            "offset": "0x4504",
+            "desc": "Word kaydı Timestamp MSB",
+            "fields": [
+              {
+                "name": "RX1_WORD_RD_TS_MSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı Timestamp MSB"
+              }
+            ]
+          },
+          {
+            "name": "RX1_WORD_RD_TS_LSB",
+            "offset": "0x4508",
+            "desc": "Word kaydı Timestamp LSB",
+            "fields": [
+              {
+                "name": "RX1_WORD_RD_TS_LSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı Timestamp LSB"
+              }
+            ]
+          },
+          {
+            "name": "RX1_WORD_RD_DATA",
+            "offset": "0x450C",
+            "desc": "Word kaydı 32-bit veri",
+            "fields": [
+              {
+                "name": "RX1_WORD_RD_DATA",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı 32-bit veri"
+              }
+            ]
+          },
+          {
+            "name": "RX1_WORD_RD_GAP",
+            "offset": "0x4510",
+            "desc": "Word kaydı önceki Gap süresi (clk)",
+            "fields": [
+              {
+                "name": "RX1_WORD_RD_GAP",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı önceki Gap süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_WORD_RD_GAP_ERR",
+            "offset": "0x4514",
+            "desc": "Word kaydı Gap gürültü sayısı",
+            "fields": [
+              {
+                "name": "RX1_WORD_RD_GAP_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Word kaydı Gap gürültü sayısı"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ERR_RADDR",
+            "offset": "0x4520",
+            "desc": "Error RAM okuma adresi",
+            "fields": [
+              {
+                "name": "RX1_ERR_RADDR",
+                "lsb": 0,
+                "width": 8,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Error RAM okuma adresi"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ERR_RD_TS_MSB",
+            "offset": "0x4524",
+            "desc": "Error kaydı Timestamp MSB",
+            "fields": [
+              {
+                "name": "RX1_ERR_RD_TS_MSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı Timestamp MSB"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ERR_RD_TS_LSB",
+            "offset": "0x4528",
+            "desc": "Error kaydı Timestamp LSB",
+            "fields": [
+              {
+                "name": "RX1_ERR_RD_TS_LSB",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı Timestamp LSB"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ERR_RD_CODE",
+            "offset": "0x452C",
+            "desc": "Error kaydı hata kodu bitmask",
+            "fields": [
+              {
+                "name": "RX1_ERR_RD_CODE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı hata kodu bitmask"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ERR_RD_ADDR",
+            "offset": "0x4530",
+            "desc": "Error kaydı konum/bit/FIFO adresi",
+            "fields": [
+              {
+                "name": "RX1_ERR_RD_ADDR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı konum/bit/FIFO adresi"
+              }
+            ]
+          },
+          {
+            "name": "RX1_ERR_RD_DATA",
+            "offset": "0x4534",
+            "desc": "Error kaydı ölçüm/beklenen veri",
+            "fields": [
+              {
+                "name": "RX1_ERR_RD_DATA",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Error kaydı ölçüm/beklenen veri"
+              }
+            ]
+          },
+          {
+            "name": "RX1_BIT_RADDR",
+            "offset": "0x4540",
+            "desc": "Bit Diagnostic RAM okuma adresi",
+            "fields": [
+              {
+                "name": "BIT_IDX",
+                "lsb": 0,
+                "width": 5,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Bit indeksi (0-31)"
+              },
+              {
+                "name": "WORD_IDX",
+                "lsb": 8,
+                "width": 3,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Bit Diagnostic Word indeksi"
+              }
+            ]
+          },
+          {
+            "name": "RX1_BIT_RD_PULSE",
+            "offset": "0x4544",
+            "desc": "Bit Pulse süresi (clk)",
+            "fields": [
+              {
+                "name": "RX1_BIT_RD_PULSE",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Bit Pulse süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_BIT_RD_PULSE_ERR",
+            "offset": "0x4548",
+            "desc": "Bit Pulse gürültü sayısı",
+            "fields": [
+              {
+                "name": "RX1_BIT_RD_PULSE_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Bit Pulse gürültü sayısı"
+              }
+            ]
+          },
+          {
+            "name": "RX1_BIT_RD_NULL",
+            "offset": "0x454C",
+            "desc": "Bit Null süresi (clk)",
+            "fields": [
+              {
+                "name": "RX1_BIT_RD_NULL",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Bit Null süresi (clk)"
+              }
+            ]
+          },
+          {
+            "name": "RX1_BIT_RD_NULL_ERR",
+            "offset": "0x4550",
+            "desc": "Bit Null gürültü sayısı",
+            "fields": [
+              {
+                "name": "RX1_BIT_RD_NULL_ERR",
+                "lsb": 0,
+                "width": 16,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Bit Null gürültü sayısı"
+              }
+            ]
+          }
+        ]
+      },
+      "registers": [
+        {
+          "name": "IP_ID",
+          "offset": "0x00000000",
+          "access": "RO",
+          "reset": "0x41343239",
+          "desc": "ARINC 429 IP kimliği ('A429')",
+          "fields": [
+            {
+              "name": "IP_ID",
+              "lsb": 0,
+              "width": 32,
+              "desc": "ARINC 429 IP kimliği ('A429')",
+              "kind": "CONST"
+            }
+          ]
+        },
+        {
+          "name": "IP_VERSION",
+          "offset": "0x00000004",
+          "access": "RO",
+          "reset": "0x00010000",
+          "desc": "IP sürümü (1.0.0)",
+          "fields": [
+            {
+              "name": "IP_VERSION",
+              "lsb": 0,
+              "width": 32,
+              "desc": "IP sürümü (1.0.0)",
+              "kind": "CONST"
+            }
+          ]
+        },
+        {
+          "name": "CAPS",
+          "offset": "0x00000008",
+          "access": "RO",
+          "reset": "0x00000B02",
+          "desc": "Donanım yetenekleri",
+          "fields": [
+            {
+              "name": "NUM_RX",
+              "lsb": 0,
+              "width": 5,
+              "desc": "RX kanal sayısı",
+              "kind": "CONST"
+            },
+            {
+              "name": "TX",
+              "lsb": 8,
+              "width": 1,
+              "desc": "TX kanalı var",
+              "kind": "CONST"
+            },
+            {
+              "name": "TXBIT",
+              "lsb": 9,
+              "width": 1,
+              "desc": "TX BIT kanalı var",
+              "kind": "CONST"
+            },
+            {
+              "name": "RX_TEST",
+              "lsb": 10,
+              "width": 1,
+              "desc": "RX test pinleri var",
+              "kind": "CONST"
+            },
+            {
+              "name": "BITDIAG",
+              "lsb": 11,
+              "width": 1,
+              "desc": "Bit diagnostic RAM var",
+              "kind": "CONST"
+            }
+          ]
+        },
+        {
+          "name": "CAPS_MEM",
+          "offset": "0x0000000C",
+          "access": "RO",
+          "reset": "0x00030808",
+          "desc": "RAM derinlikleri",
+          "fields": [
+            {
+              "name": "WORD_DEPTH_LOG2",
+              "lsb": 0,
+              "width": 8,
+              "desc": "Word RAM derinliği (log2)",
+              "kind": "CONST"
+            },
+            {
+              "name": "ERR_DEPTH_LOG2",
+              "lsb": 8,
+              "width": 8,
+              "desc": "Error RAM derinliği (log2)",
+              "kind": "CONST"
+            },
+            {
+              "name": "BITDIAG_WORDS_LOG2",
+              "lsb": 16,
+              "width": 8,
+              "desc": "Bit diagnostic Word sayısı (log2)",
+              "kind": "CONST"
+            }
+          ]
+        },
+        {
+          "name": "CLK_HZ",
+          "offset": "0x00000010",
+          "access": "RO",
+          "reset": "0x02FAF080",
+          "desc": "IP sistem saati (Hz)",
+          "fields": [
+            {
+              "name": "CLK_HZ",
+              "lsb": 0,
+              "width": 32,
+              "desc": "IP sistem saati (Hz)",
+              "kind": "CONST"
+            }
+          ]
+        },
+        {
+          "name": "SOFT_RESET",
+          "offset": "0x00000020",
+          "access": "WO",
+          "reset": "0x00000000",
+          "desc": "Yumuşak reset darbeleri (self-clearing)",
+          "fields": [
+            {
+              "name": "RST_ALL",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Tüm IP yumuşak reseti",
+              "kind": "PULSE"
+            },
+            {
+              "name": "TX",
+              "lsb": 1,
+              "width": 1,
+              "desc": "TX kanalı reseti",
+              "kind": "PULSE"
+            },
+            {
+              "name": "TXBIT",
+              "lsb": 2,
+              "width": 1,
+              "desc": "TX BIT kanalı reseti",
+              "kind": "PULSE"
+            },
+            {
+              "name": "RX0",
+              "lsb": 16,
+              "width": 1,
+              "desc": "RX0 kanalı reseti",
+              "kind": "PULSE"
+            },
+            {
+              "name": "RX1",
+              "lsb": 17,
+              "width": 1,
+              "desc": "RX1 kanalı reseti",
+              "kind": "PULSE"
+            }
+          ]
+        },
+        {
+          "name": "GLOBAL_FREEZE",
+          "offset": "0x00000024",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Tüm logger'ları eşzamanlı dondur",
+          "fields": [
+            {
+              "name": "GLOBAL_FREEZE",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Tüm logger'ları eşzamanlı dondur",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TS_CTRL",
+          "offset": "0x00000028",
+          "access": "RW",
+          "reset": "0x00000001",
+          "desc": "Timestamp kontrol",
+          "fields": [
+            {
+              "name": "ENABLE",
+              "lsb": 0,
+              "width": 1,
+              "desc": "64-bit timestamp sayacı etkin",
+              "kind": "RW"
+            },
+            {
+              "name": "CLEAR",
+              "lsb": 1,
+              "width": 1,
+              "desc": "Timestamp sayacını sıfırla",
+              "kind": "PULSE"
+            }
+          ]
+        },
+        {
+          "name": "TS_LSB",
+          "offset": "0x0000002C",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Timestamp alt 32 bit (okununca MSB latch'lenir)",
+          "fields": [
+            {
+              "name": "TS_LSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Timestamp alt 32 bit (okununca MSB latch'lenir)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TS_MSB",
+          "offset": "0x00000030",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Latch'lenmiş timestamp üst 32 bit",
+          "fields": [
+            {
+              "name": "TS_MSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Latch'lenmiş timestamp üst 32 bit",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TX_TRANSMITTER_EN",
+          "offset": "0x00000400",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "1: Word Transmitter, 0: EXT_HIGH/LOW override",
+          "fields": [
+            {
+              "name": "TX_TRANSMITTER_EN",
+              "lsb": 0,
+              "width": 1,
+              "desc": "1: Word Transmitter, 0: EXT_HIGH/LOW override",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_MSG_SCHED_EN",
+          "offset": "0x00000404",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "1: Message Scheduler, 0: SEND_CMD tek gönderim",
+          "fields": [
+            {
+              "name": "TX_MSG_SCHED_EN",
+              "lsb": 0,
+              "width": 1,
+              "desc": "1: Message Scheduler, 0: SEND_CMD tek gönderim",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_BUILDER_EN",
+          "offset": "0x00000408",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "1: Word Builder alanları, 0: EXT_DATA",
+          "fields": [
+            {
+              "name": "TX_BUILDER_EN",
+              "lsb": 0,
+              "width": 1,
+              "desc": "1: Word Builder alanları, 0: EXT_DATA",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_LABEL",
+          "offset": "0x0000040C",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "ARINC 429 Label (octal 000-377)",
+          "fields": [
+            {
+              "name": "TX_LABEL",
+              "lsb": 0,
+              "width": 8,
+              "desc": "ARINC 429 Label (octal 000-377)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_SDI",
+          "offset": "0x00000410",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "SDI (0-3)",
+          "fields": [
+            {
+              "name": "TX_SDI",
+              "lsb": 0,
+              "width": 2,
+              "desc": "SDI (0-3)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_DATA",
+          "offset": "0x00000414",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Data (19-bit)",
+          "fields": [
+            {
+              "name": "TX_DATA",
+              "lsb": 0,
+              "width": 19,
+              "desc": "Data (19-bit)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_SSM",
+          "offset": "0x00000418",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "SSM (0-3)",
+          "fields": [
+            {
+              "name": "TX_SSM",
+              "lsb": 0,
+              "width": 2,
+              "desc": "SSM (0-3)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_PARITY_TYPE",
+          "offset": "0x0000041C",
+          "access": "RW",
+          "reset": "0x00000001",
+          "desc": "Parity tipi (1: Odd, 0: Even)",
+          "fields": [
+            {
+              "name": "TX_PARITY_TYPE",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Parity tipi (1: Odd, 0: Even)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_SCHED_EN",
+          "offset": "0x00000420",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Message Scheduler başlat/durdur",
+          "fields": [
+            {
+              "name": "TX_SCHED_EN",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Message Scheduler başlat/durdur",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_INITIAL_DELAY",
+          "offset": "0x00000424",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Scheduler başlangıç gecikmesi (clk)",
+          "fields": [
+            {
+              "name": "TX_INITIAL_DELAY",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Scheduler başlangıç gecikmesi (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_INTER_WORD_GAP",
+          "offset": "0x00000428",
+          "access": "RW",
+          "reset": "0x00000001",
+          "desc": "Scheduler Word arası ekstra bekleme (clk, >=1)",
+          "fields": [
+            {
+              "name": "TX_INTER_WORD_GAP",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Scheduler Word arası ekstra bekleme (clk, >=1)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_SEND_CMD",
+          "offset": "0x0000042C",
+          "access": "WO",
+          "reset": "0x00000000",
+          "desc": "Tek gönderim darbesi",
+          "fields": [
+            {
+              "name": "SEND",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Tek Word gönderim tetiği",
+              "kind": "PULSE"
+            }
+          ]
+        },
+        {
+          "name": "TX_EXT_DATA",
+          "offset": "0x00000430",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Hazır 32-bit Word",
+          "fields": [
+            {
+              "name": "TX_EXT_DATA",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Hazır 32-bit Word",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_EXT_HIGH",
+          "offset": "0x00000434",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Hat override HIGH çıkışı",
+          "fields": [
+            {
+              "name": "TX_EXT_HIGH",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Hat override HIGH çıkışı",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_EXT_LOW",
+          "offset": "0x00000438",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Hat override LOW çıkışı",
+          "fields": [
+            {
+              "name": "TX_EXT_LOW",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Hat override LOW çıkışı",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_CFG_SEL",
+          "offset": "0x00000440",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Config seçimi (0: HS Preset, 1: LS Preset, 2: Custom)",
+          "fields": [
+            {
+              "name": "TX_CFG_SEL",
+              "lsb": 0,
+              "width": 2,
+              "desc": "Config seçimi (0: HS Preset, 1: LS Preset, 2: Custom)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_CFG_APPLY",
+          "offset": "0x00000444",
+          "access": "WO",
+          "reset": "0x00000000",
+          "desc": "TX Config uygula",
+          "fields": [
+            {
+              "name": "APPLY",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Seçili TX config'i etkinleştir",
+              "kind": "PULSE"
+            }
+          ]
+        },
+        {
+          "name": "TX_CUST_PULSE_DUR",
+          "offset": "0x00000448",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Pulse süresi (clk)",
+          "fields": [
+            {
+              "name": "TX_CUST_PULSE_DUR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Pulse süresi (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_CUST_NULL_DUR",
+          "offset": "0x0000044C",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Null süresi (clk)",
+          "fields": [
+            {
+              "name": "TX_CUST_NULL_DUR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Null süresi (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_CUST_GAP_DUR",
+          "offset": "0x00000450",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Word Gap süresi (clk)",
+          "fields": [
+            {
+              "name": "TX_CUST_GAP_DUR",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Custom Word Gap süresi (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_CUST_SLP",
+          "offset": "0x00000454",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom SLP eğim çıkışı (1: HS, 0: LS)",
+          "fields": [
+            {
+              "name": "TX_CUST_SLP",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Custom SLP eğim çıkışı (1: HS, 0: LS)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TX_ACT_PULSE_DUR",
+          "offset": "0x00000460",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Pulse süresi (clk)",
+          "fields": [
+            {
+              "name": "TX_ACT_PULSE_DUR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Pulse süresi (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TX_ACT_NULL_DUR",
+          "offset": "0x00000464",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Null süresi (clk)",
+          "fields": [
+            {
+              "name": "TX_ACT_NULL_DUR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Null süresi (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TX_ACT_GAP_DUR",
+          "offset": "0x00000468",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Word Gap süresi (clk)",
+          "fields": [
+            {
+              "name": "TX_ACT_GAP_DUR",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Aktif Word Gap süresi (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TX_ACT_SLP",
+          "offset": "0x0000046C",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif SLP eğim çıkışı",
+          "fields": [
+            {
+              "name": "TX_ACT_SLP",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Aktif SLP eğim çıkışı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TX_STATUS",
+          "offset": "0x00000480",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "TX durum register'ı",
+          "fields": [
+            {
+              "name": "BUSY",
+              "lsb": 0,
+              "width": 1,
+              "desc": "TX gönderim yapıyor",
+              "kind": "RO"
+            },
+            {
+              "name": "SCHED_ACTIVE",
+              "lsb": 1,
+              "width": 1,
+              "desc": "Scheduler aktif",
+              "kind": "RO"
+            },
+            {
+              "name": "ACT_CFG",
+              "lsb": 2,
+              "width": 2,
+              "desc": "Aktif TX config modu (0:HS, 1:LS, 2:Custom)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TX_WORD_CNT",
+          "offset": "0x00000484",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Gönderilen toplam Word sayısı",
+          "fields": [
+            {
+              "name": "TX_WORD_CNT",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Gönderilen toplam Word sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_CTRL",
+          "offset": "0x00000800",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "TB_ kanal kontrolü",
+          "fields": [
+            {
+              "name": "ENABLE",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Logger kayıt etkin",
+              "kind": "RW"
+            },
+            {
+              "name": "FREEZE",
+              "lsb": 1,
+              "width": 1,
+              "desc": "RAM okuma için dondur",
+              "kind": "RW"
+            },
+            {
+              "name": "CLEAR",
+              "lsb": 2,
+              "width": 1,
+              "desc": "Sayaç ve RAM pointer'larını temizle",
+              "kind": "PULSE"
+            }
+          ]
+        },
+        {
+          "name": "TB_STATUS",
+          "offset": "0x00000804",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "TB_ kanal durumu",
+          "fields": [
+            {
+              "name": "FROZEN",
+              "lsb": 4,
+              "width": 1,
+              "desc": "Logger donduruldu",
+              "kind": "RO"
+            },
+            {
+              "name": "WORD_WRAP",
+              "lsb": 5,
+              "width": 1,
+              "desc": "Word RAM taştı/döndü",
+              "kind": "RO"
+            },
+            {
+              "name": "ERR_WRAP",
+              "lsb": 6,
+              "width": 1,
+              "desc": "Error RAM taştı/döndü",
+              "kind": "RO"
+            },
+            {
+              "name": "ACT_CFG",
+              "lsb": 8,
+              "width": 2,
+              "desc": "Aktif RX config modu (0:HS, 1:LS, 2:Custom)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_CFG_SEL",
+          "offset": "0x00000808",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Config seçimi (0: HS, 1: LS, 2: Custom)",
+          "fields": [
+            {
+              "name": "TB_CFG_SEL",
+              "lsb": 0,
+              "width": 2,
+              "desc": "Config seçimi (0: HS, 1: LS, 2: Custom)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_CFG_APPLY",
+          "offset": "0x0000080C",
+          "access": "WO",
+          "reset": "0x00000000",
+          "desc": "RX Config uygula",
+          "fields": [
+            {
+              "name": "APPLY",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Seçili RX config'i uygula",
+              "kind": "PULSE"
+            }
+          ]
+        },
+        {
+          "name": "TB_CUST_GLITCH_FILTER_SIZE",
+          "offset": "0x00000840",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Glitch Filter boyu (clk)",
+          "fields": [
+            {
+              "name": "TB_CUST_GLITCH_FILTER_SIZE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Glitch Filter boyu (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_CUST_MIN_PULSE",
+          "offset": "0x00000844",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Min Pulse (clk)",
+          "fields": [
+            {
+              "name": "TB_CUST_MIN_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Min Pulse (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_CUST_MAX_PULSE",
+          "offset": "0x00000848",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Pulse (clk)",
+          "fields": [
+            {
+              "name": "TB_CUST_MAX_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Pulse (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_CUST_MIN_BIT",
+          "offset": "0x0000084C",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Min Bit (clk)",
+          "fields": [
+            {
+              "name": "TB_CUST_MIN_BIT",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Min Bit (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_CUST_MAX_BIT",
+          "offset": "0x00000850",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Bit (clk)",
+          "fields": [
+            {
+              "name": "TB_CUST_MAX_BIT",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Bit (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_CUST_MAX_PULSE_ERR",
+          "offset": "0x00000854",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Pulse Glitch Error",
+          "fields": [
+            {
+              "name": "TB_CUST_MAX_PULSE_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Pulse Glitch Error",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_CUST_MAX_NULL_ERR",
+          "offset": "0x00000858",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Null Glitch Error",
+          "fields": [
+            {
+              "name": "TB_CUST_MAX_NULL_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Null Glitch Error",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_CUST_MAX_GAP_ERR",
+          "offset": "0x0000085C",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Gap Glitch Error",
+          "fields": [
+            {
+              "name": "TB_CUST_MAX_GAP_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Gap Glitch Error",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_CUST_PARITY_MODE",
+          "offset": "0x00000860",
+          "access": "RW",
+          "reset": "0x00000001",
+          "desc": "Custom Parity modu (0:Kapalı, 1:Odd, 2:Even)",
+          "fields": [
+            {
+              "name": "TB_CUST_PARITY_MODE",
+              "lsb": 0,
+              "width": 2,
+              "desc": "Custom Parity modu (0:Kapalı, 1:Odd, 2:Even)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_ACT_GLITCH_FILTER_SIZE",
+          "offset": "0x000008A0",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Glitch Filter boyu (clk)",
+          "fields": [
+            {
+              "name": "TB_ACT_GLITCH_FILTER_SIZE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Glitch Filter boyu (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ACT_MIN_PULSE",
+          "offset": "0x000008A4",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Min Pulse (clk)",
+          "fields": [
+            {
+              "name": "TB_ACT_MIN_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Min Pulse (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ACT_MAX_PULSE",
+          "offset": "0x000008A8",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Pulse (clk)",
+          "fields": [
+            {
+              "name": "TB_ACT_MAX_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Pulse (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ACT_MIN_BIT",
+          "offset": "0x000008AC",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Min Bit (clk)",
+          "fields": [
+            {
+              "name": "TB_ACT_MIN_BIT",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Min Bit (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ACT_MAX_BIT",
+          "offset": "0x000008B0",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Bit (clk)",
+          "fields": [
+            {
+              "name": "TB_ACT_MAX_BIT",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Bit (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ACT_MAX_PULSE_ERR",
+          "offset": "0x000008B4",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Pulse Glitch Error",
+          "fields": [
+            {
+              "name": "TB_ACT_MAX_PULSE_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Pulse Glitch Error",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ACT_MAX_NULL_ERR",
+          "offset": "0x000008B8",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Null Glitch Error",
+          "fields": [
+            {
+              "name": "TB_ACT_MAX_NULL_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Null Glitch Error",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ACT_MAX_GAP_ERR",
+          "offset": "0x000008BC",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Gap Glitch Error",
+          "fields": [
+            {
+              "name": "TB_ACT_MAX_GAP_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Gap Glitch Error",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ACT_PARITY_MODE",
+          "offset": "0x000008C0",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Parity modu",
+          "fields": [
+            {
+              "name": "TB_ACT_PARITY_MODE",
+              "lsb": 0,
+              "width": 2,
+              "desc": "Aktif Parity modu",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_WORD_CNT",
+          "offset": "0x000008E0",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Geçerli Word sayısı",
+          "fields": [
+            {
+              "name": "TB_WORD_CNT",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Geçerli Word sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ERR_CNT",
+          "offset": "0x000008E4",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Hata kaydı sayısı",
+          "fields": [
+            {
+              "name": "TB_ERR_CNT",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Hata kaydı sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_DROP_CNT",
+          "offset": "0x000008E8",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Freeze sırasında atılan kayıt sayısı",
+          "fields": [
+            {
+              "name": "TB_DROP_CNT",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Freeze sırasında atılan kayıt sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_LAST_WORD",
+          "offset": "0x000008EC",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Alınan son geçerli Word",
+          "fields": [
+            {
+              "name": "TB_LAST_WORD",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Alınan son geçerli Word",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_WORD_RADDR",
+          "offset": "0x00000900",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Word RAM okuma adresi",
+          "fields": [
+            {
+              "name": "TB_WORD_RADDR",
+              "lsb": 0,
+              "width": 8,
+              "desc": "Word RAM okuma adresi",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_WORD_RD_TS_MSB",
+          "offset": "0x00000904",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı Timestamp MSB",
+          "fields": [
+            {
+              "name": "TB_WORD_RD_TS_MSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Word kaydı Timestamp MSB",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_WORD_RD_TS_LSB",
+          "offset": "0x00000908",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı Timestamp LSB",
+          "fields": [
+            {
+              "name": "TB_WORD_RD_TS_LSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Word kaydı Timestamp LSB",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_WORD_RD_DATA",
+          "offset": "0x0000090C",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı 32-bit veri",
+          "fields": [
+            {
+              "name": "TB_WORD_RD_DATA",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Word kaydı 32-bit veri",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_WORD_RD_GAP",
+          "offset": "0x00000910",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı önceki Gap süresi (clk)",
+          "fields": [
+            {
+              "name": "TB_WORD_RD_GAP",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Word kaydı önceki Gap süresi (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_WORD_RD_GAP_ERR",
+          "offset": "0x00000914",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı Gap gürültü sayısı",
+          "fields": [
+            {
+              "name": "TB_WORD_RD_GAP_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Word kaydı Gap gürültü sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ERR_RADDR",
+          "offset": "0x00000920",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Error RAM okuma adresi",
+          "fields": [
+            {
+              "name": "TB_ERR_RADDR",
+              "lsb": 0,
+              "width": 8,
+              "desc": "Error RAM okuma adresi",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_ERR_RD_TS_MSB",
+          "offset": "0x00000924",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı Timestamp MSB",
+          "fields": [
+            {
+              "name": "TB_ERR_RD_TS_MSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Error kaydı Timestamp MSB",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ERR_RD_TS_LSB",
+          "offset": "0x00000928",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı Timestamp LSB",
+          "fields": [
+            {
+              "name": "TB_ERR_RD_TS_LSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Error kaydı Timestamp LSB",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ERR_RD_CODE",
+          "offset": "0x0000092C",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı hata kodu bitmask",
+          "fields": [
+            {
+              "name": "TB_ERR_RD_CODE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Error kaydı hata kodu bitmask",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ERR_RD_ADDR",
+          "offset": "0x00000930",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı konum/bit/FIFO adresi",
+          "fields": [
+            {
+              "name": "TB_ERR_RD_ADDR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Error kaydı konum/bit/FIFO adresi",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_ERR_RD_DATA",
+          "offset": "0x00000934",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı ölçüm/beklenen veri",
+          "fields": [
+            {
+              "name": "TB_ERR_RD_DATA",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Error kaydı ölçüm/beklenen veri",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_BIT_RADDR",
+          "offset": "0x00000940",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Bit Diagnostic RAM okuma adresi",
+          "fields": [
+            {
+              "name": "BIT_IDX",
+              "lsb": 0,
+              "width": 5,
+              "desc": "Bit indeksi (0-31)",
+              "kind": "RW"
+            },
+            {
+              "name": "WORD_IDX",
+              "lsb": 8,
+              "width": 3,
+              "desc": "Bit Diagnostic Word indeksi",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_BIT_RD_PULSE",
+          "offset": "0x00000944",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Bit Pulse süresi (clk)",
+          "fields": [
+            {
+              "name": "TB_BIT_RD_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Bit Pulse süresi (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_BIT_RD_PULSE_ERR",
+          "offset": "0x00000948",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Bit Pulse gürültü sayısı",
+          "fields": [
+            {
+              "name": "TB_BIT_RD_PULSE_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Bit Pulse gürültü sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_BIT_RD_NULL",
+          "offset": "0x0000094C",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Bit Null süresi (clk)",
+          "fields": [
+            {
+              "name": "TB_BIT_RD_NULL",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Bit Null süresi (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_BIT_RD_NULL_ERR",
+          "offset": "0x00000950",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Bit Null gürültü sayısı",
+          "fields": [
+            {
+              "name": "TB_BIT_RD_NULL_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Bit Null gürültü sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_CHK_CTRL",
+          "offset": "0x000009C0",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "TX BIT Word Checker kontrol",
+          "fields": [
+            {
+              "name": "ENABLE",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Word Checker etkin",
+              "kind": "RW"
+            },
+            {
+              "name": "CLEAR",
+              "lsb": 1,
+              "width": 1,
+              "desc": "Checker FIFO ve sayaçlarını temizle",
+              "kind": "PULSE"
+            }
+          ]
+        },
+        {
+          "name": "TB_CHK_TIMEOUT",
+          "offset": "0x000009C4",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Echo zaman aşımı (clk, 0=kapalı)",
+          "fields": [
+            {
+              "name": "TB_CHK_TIMEOUT",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Echo zaman aşımı (clk, 0=kapalı)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "TB_CHK_OK_CNT",
+          "offset": "0x000009C8",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Eşleşen Word sayısı",
+          "fields": [
+            {
+              "name": "TB_CHK_OK_CNT",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Eşleşen Word sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_CHK_ERR_CNT",
+          "offset": "0x000009CC",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Checker hata sayısı",
+          "fields": [
+            {
+              "name": "TB_CHK_ERR_CNT",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Checker hata sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "TB_CHK_STATUS",
+          "offset": "0x000009D0",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "TX BIT Checker FIFO durumu",
+          "fields": [
+            {
+              "name": "FIFO_LEVEL",
+              "lsb": 0,
+              "width": 4,
+              "desc": "Beklenen Word FIFO doluluğu",
+              "kind": "RO"
+            },
+            {
+              "name": "FIFO_OVF",
+              "lsb": 4,
+              "width": 1,
+              "desc": "FIFO taşma bayrağı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_CTRL",
+          "offset": "0x00004000",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "RX0_ kanal kontrolü",
+          "fields": [
+            {
+              "name": "ENABLE",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Logger kayıt etkin",
+              "kind": "RW"
+            },
+            {
+              "name": "FREEZE",
+              "lsb": 1,
+              "width": 1,
+              "desc": "RAM okuma için dondur",
+              "kind": "RW"
+            },
+            {
+              "name": "CLEAR",
+              "lsb": 2,
+              "width": 1,
+              "desc": "Sayaç ve RAM pointer'larını temizle",
+              "kind": "PULSE"
+            }
+          ]
+        },
+        {
+          "name": "RX0_STATUS",
+          "offset": "0x00004004",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "RX0_ kanal durumu",
+          "fields": [
+            {
+              "name": "FROZEN",
+              "lsb": 4,
+              "width": 1,
+              "desc": "Logger donduruldu",
+              "kind": "RO"
+            },
+            {
+              "name": "WORD_WRAP",
+              "lsb": 5,
+              "width": 1,
+              "desc": "Word RAM taştı/döndü",
+              "kind": "RO"
+            },
+            {
+              "name": "ERR_WRAP",
+              "lsb": 6,
+              "width": 1,
+              "desc": "Error RAM taştı/döndü",
+              "kind": "RO"
+            },
+            {
+              "name": "ACT_CFG",
+              "lsb": 8,
+              "width": 2,
+              "desc": "Aktif RX config modu (0:HS, 1:LS, 2:Custom)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_CFG_SEL",
+          "offset": "0x00004008",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Config seçimi (0: HS, 1: LS, 2: Custom)",
+          "fields": [
+            {
+              "name": "RX0_CFG_SEL",
+              "lsb": 0,
+              "width": 2,
+              "desc": "Config seçimi (0: HS, 1: LS, 2: Custom)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX0_CFG_APPLY",
+          "offset": "0x0000400C",
+          "access": "WO",
+          "reset": "0x00000000",
+          "desc": "RX Config uygula",
+          "fields": [
+            {
+              "name": "APPLY",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Seçili RX config'i uygula",
+              "kind": "PULSE"
+            }
+          ]
+        },
+        {
+          "name": "RX0_CUST_GLITCH_FILTER_SIZE",
+          "offset": "0x00004040",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Glitch Filter boyu (clk)",
+          "fields": [
+            {
+              "name": "RX0_CUST_GLITCH_FILTER_SIZE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Glitch Filter boyu (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX0_CUST_MIN_PULSE",
+          "offset": "0x00004044",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Min Pulse (clk)",
+          "fields": [
+            {
+              "name": "RX0_CUST_MIN_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Min Pulse (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX0_CUST_MAX_PULSE",
+          "offset": "0x00004048",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Pulse (clk)",
+          "fields": [
+            {
+              "name": "RX0_CUST_MAX_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Pulse (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX0_CUST_MIN_BIT",
+          "offset": "0x0000404C",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Min Bit (clk)",
+          "fields": [
+            {
+              "name": "RX0_CUST_MIN_BIT",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Min Bit (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX0_CUST_MAX_BIT",
+          "offset": "0x00004050",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Bit (clk)",
+          "fields": [
+            {
+              "name": "RX0_CUST_MAX_BIT",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Bit (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX0_CUST_MAX_PULSE_ERR",
+          "offset": "0x00004054",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Pulse Glitch Error",
+          "fields": [
+            {
+              "name": "RX0_CUST_MAX_PULSE_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Pulse Glitch Error",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX0_CUST_MAX_NULL_ERR",
+          "offset": "0x00004058",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Null Glitch Error",
+          "fields": [
+            {
+              "name": "RX0_CUST_MAX_NULL_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Null Glitch Error",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX0_CUST_MAX_GAP_ERR",
+          "offset": "0x0000405C",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Gap Glitch Error",
+          "fields": [
+            {
+              "name": "RX0_CUST_MAX_GAP_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Gap Glitch Error",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX0_CUST_PARITY_MODE",
+          "offset": "0x00004060",
+          "access": "RW",
+          "reset": "0x00000001",
+          "desc": "Custom Parity modu (0:Kapalı, 1:Odd, 2:Even)",
+          "fields": [
+            {
+              "name": "RX0_CUST_PARITY_MODE",
+              "lsb": 0,
+              "width": 2,
+              "desc": "Custom Parity modu (0:Kapalı, 1:Odd, 2:Even)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ACT_GLITCH_FILTER_SIZE",
+          "offset": "0x000040A0",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Glitch Filter boyu (clk)",
+          "fields": [
+            {
+              "name": "RX0_ACT_GLITCH_FILTER_SIZE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Glitch Filter boyu (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ACT_MIN_PULSE",
+          "offset": "0x000040A4",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Min Pulse (clk)",
+          "fields": [
+            {
+              "name": "RX0_ACT_MIN_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Min Pulse (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ACT_MAX_PULSE",
+          "offset": "0x000040A8",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Pulse (clk)",
+          "fields": [
+            {
+              "name": "RX0_ACT_MAX_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Pulse (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ACT_MIN_BIT",
+          "offset": "0x000040AC",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Min Bit (clk)",
+          "fields": [
+            {
+              "name": "RX0_ACT_MIN_BIT",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Min Bit (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ACT_MAX_BIT",
+          "offset": "0x000040B0",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Bit (clk)",
+          "fields": [
+            {
+              "name": "RX0_ACT_MAX_BIT",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Bit (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ACT_MAX_PULSE_ERR",
+          "offset": "0x000040B4",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Pulse Glitch Error",
+          "fields": [
+            {
+              "name": "RX0_ACT_MAX_PULSE_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Pulse Glitch Error",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ACT_MAX_NULL_ERR",
+          "offset": "0x000040B8",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Null Glitch Error",
+          "fields": [
+            {
+              "name": "RX0_ACT_MAX_NULL_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Null Glitch Error",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ACT_MAX_GAP_ERR",
+          "offset": "0x000040BC",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Gap Glitch Error",
+          "fields": [
+            {
+              "name": "RX0_ACT_MAX_GAP_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Gap Glitch Error",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ACT_PARITY_MODE",
+          "offset": "0x000040C0",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Parity modu",
+          "fields": [
+            {
+              "name": "RX0_ACT_PARITY_MODE",
+              "lsb": 0,
+              "width": 2,
+              "desc": "Aktif Parity modu",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_WORD_CNT",
+          "offset": "0x000040E0",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Geçerli Word sayısı",
+          "fields": [
+            {
+              "name": "RX0_WORD_CNT",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Geçerli Word sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ERR_CNT",
+          "offset": "0x000040E4",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Hata kaydı sayısı",
+          "fields": [
+            {
+              "name": "RX0_ERR_CNT",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Hata kaydı sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_DROP_CNT",
+          "offset": "0x000040E8",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Freeze sırasında atılan kayıt sayısı",
+          "fields": [
+            {
+              "name": "RX0_DROP_CNT",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Freeze sırasında atılan kayıt sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_LAST_WORD",
+          "offset": "0x000040EC",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Alınan son geçerli Word",
+          "fields": [
+            {
+              "name": "RX0_LAST_WORD",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Alınan son geçerli Word",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_WORD_RADDR",
+          "offset": "0x00004100",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Word RAM okuma adresi",
+          "fields": [
+            {
+              "name": "RX0_WORD_RADDR",
+              "lsb": 0,
+              "width": 8,
+              "desc": "Word RAM okuma adresi",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX0_WORD_RD_TS_MSB",
+          "offset": "0x00004104",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı Timestamp MSB",
+          "fields": [
+            {
+              "name": "RX0_WORD_RD_TS_MSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Word kaydı Timestamp MSB",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_WORD_RD_TS_LSB",
+          "offset": "0x00004108",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı Timestamp LSB",
+          "fields": [
+            {
+              "name": "RX0_WORD_RD_TS_LSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Word kaydı Timestamp LSB",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_WORD_RD_DATA",
+          "offset": "0x0000410C",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı 32-bit veri",
+          "fields": [
+            {
+              "name": "RX0_WORD_RD_DATA",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Word kaydı 32-bit veri",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_WORD_RD_GAP",
+          "offset": "0x00004110",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı önceki Gap süresi (clk)",
+          "fields": [
+            {
+              "name": "RX0_WORD_RD_GAP",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Word kaydı önceki Gap süresi (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_WORD_RD_GAP_ERR",
+          "offset": "0x00004114",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı Gap gürültü sayısı",
+          "fields": [
+            {
+              "name": "RX0_WORD_RD_GAP_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Word kaydı Gap gürültü sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ERR_RADDR",
+          "offset": "0x00004120",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Error RAM okuma adresi",
+          "fields": [
+            {
+              "name": "RX0_ERR_RADDR",
+              "lsb": 0,
+              "width": 8,
+              "desc": "Error RAM okuma adresi",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ERR_RD_TS_MSB",
+          "offset": "0x00004124",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı Timestamp MSB",
+          "fields": [
+            {
+              "name": "RX0_ERR_RD_TS_MSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Error kaydı Timestamp MSB",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ERR_RD_TS_LSB",
+          "offset": "0x00004128",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı Timestamp LSB",
+          "fields": [
+            {
+              "name": "RX0_ERR_RD_TS_LSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Error kaydı Timestamp LSB",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ERR_RD_CODE",
+          "offset": "0x0000412C",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı hata kodu bitmask",
+          "fields": [
+            {
+              "name": "RX0_ERR_RD_CODE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Error kaydı hata kodu bitmask",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ERR_RD_ADDR",
+          "offset": "0x00004130",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı konum/bit/FIFO adresi",
+          "fields": [
+            {
+              "name": "RX0_ERR_RD_ADDR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Error kaydı konum/bit/FIFO adresi",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_ERR_RD_DATA",
+          "offset": "0x00004134",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı ölçüm/beklenen veri",
+          "fields": [
+            {
+              "name": "RX0_ERR_RD_DATA",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Error kaydı ölçüm/beklenen veri",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_BIT_RADDR",
+          "offset": "0x00004140",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Bit Diagnostic RAM okuma adresi",
+          "fields": [
+            {
+              "name": "BIT_IDX",
+              "lsb": 0,
+              "width": 5,
+              "desc": "Bit indeksi (0-31)",
+              "kind": "RW"
+            },
+            {
+              "name": "WORD_IDX",
+              "lsb": 8,
+              "width": 3,
+              "desc": "Bit Diagnostic Word indeksi",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX0_BIT_RD_PULSE",
+          "offset": "0x00004144",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Bit Pulse süresi (clk)",
+          "fields": [
+            {
+              "name": "RX0_BIT_RD_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Bit Pulse süresi (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_BIT_RD_PULSE_ERR",
+          "offset": "0x00004148",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Bit Pulse gürültü sayısı",
+          "fields": [
+            {
+              "name": "RX0_BIT_RD_PULSE_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Bit Pulse gürültü sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_BIT_RD_NULL",
+          "offset": "0x0000414C",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Bit Null süresi (clk)",
+          "fields": [
+            {
+              "name": "RX0_BIT_RD_NULL",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Bit Null süresi (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX0_BIT_RD_NULL_ERR",
+          "offset": "0x00004150",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Bit Null gürültü sayısı",
+          "fields": [
+            {
+              "name": "RX0_BIT_RD_NULL_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Bit Null gürültü sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_CTRL",
+          "offset": "0x00004400",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "RX1_ kanal kontrolü",
+          "fields": [
+            {
+              "name": "ENABLE",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Logger kayıt etkin",
+              "kind": "RW"
+            },
+            {
+              "name": "FREEZE",
+              "lsb": 1,
+              "width": 1,
+              "desc": "RAM okuma için dondur",
+              "kind": "RW"
+            },
+            {
+              "name": "CLEAR",
+              "lsb": 2,
+              "width": 1,
+              "desc": "Sayaç ve RAM pointer'larını temizle",
+              "kind": "PULSE"
+            }
+          ]
+        },
+        {
+          "name": "RX1_STATUS",
+          "offset": "0x00004404",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "RX1_ kanal durumu",
+          "fields": [
+            {
+              "name": "FROZEN",
+              "lsb": 4,
+              "width": 1,
+              "desc": "Logger donduruldu",
+              "kind": "RO"
+            },
+            {
+              "name": "WORD_WRAP",
+              "lsb": 5,
+              "width": 1,
+              "desc": "Word RAM taştı/döndü",
+              "kind": "RO"
+            },
+            {
+              "name": "ERR_WRAP",
+              "lsb": 6,
+              "width": 1,
+              "desc": "Error RAM taştı/döndü",
+              "kind": "RO"
+            },
+            {
+              "name": "ACT_CFG",
+              "lsb": 8,
+              "width": 2,
+              "desc": "Aktif RX config modu (0:HS, 1:LS, 2:Custom)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_CFG_SEL",
+          "offset": "0x00004408",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Config seçimi (0: HS, 1: LS, 2: Custom)",
+          "fields": [
+            {
+              "name": "RX1_CFG_SEL",
+              "lsb": 0,
+              "width": 2,
+              "desc": "Config seçimi (0: HS, 1: LS, 2: Custom)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX1_CFG_APPLY",
+          "offset": "0x0000440C",
+          "access": "WO",
+          "reset": "0x00000000",
+          "desc": "RX Config uygula",
+          "fields": [
+            {
+              "name": "APPLY",
+              "lsb": 0,
+              "width": 1,
+              "desc": "Seçili RX config'i uygula",
+              "kind": "PULSE"
+            }
+          ]
+        },
+        {
+          "name": "RX1_CUST_GLITCH_FILTER_SIZE",
+          "offset": "0x00004440",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Glitch Filter boyu (clk)",
+          "fields": [
+            {
+              "name": "RX1_CUST_GLITCH_FILTER_SIZE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Glitch Filter boyu (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX1_CUST_MIN_PULSE",
+          "offset": "0x00004444",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Min Pulse (clk)",
+          "fields": [
+            {
+              "name": "RX1_CUST_MIN_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Min Pulse (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX1_CUST_MAX_PULSE",
+          "offset": "0x00004448",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Pulse (clk)",
+          "fields": [
+            {
+              "name": "RX1_CUST_MAX_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Pulse (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX1_CUST_MIN_BIT",
+          "offset": "0x0000444C",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Min Bit (clk)",
+          "fields": [
+            {
+              "name": "RX1_CUST_MIN_BIT",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Min Bit (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX1_CUST_MAX_BIT",
+          "offset": "0x00004450",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Bit (clk)",
+          "fields": [
+            {
+              "name": "RX1_CUST_MAX_BIT",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Bit (clk)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX1_CUST_MAX_PULSE_ERR",
+          "offset": "0x00004454",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Pulse Glitch Error",
+          "fields": [
+            {
+              "name": "RX1_CUST_MAX_PULSE_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Pulse Glitch Error",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX1_CUST_MAX_NULL_ERR",
+          "offset": "0x00004458",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Null Glitch Error",
+          "fields": [
+            {
+              "name": "RX1_CUST_MAX_NULL_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Null Glitch Error",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX1_CUST_MAX_GAP_ERR",
+          "offset": "0x0000445C",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Custom Max Gap Glitch Error",
+          "fields": [
+            {
+              "name": "RX1_CUST_MAX_GAP_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Custom Max Gap Glitch Error",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX1_CUST_PARITY_MODE",
+          "offset": "0x00004460",
+          "access": "RW",
+          "reset": "0x00000001",
+          "desc": "Custom Parity modu (0:Kapalı, 1:Odd, 2:Even)",
+          "fields": [
+            {
+              "name": "RX1_CUST_PARITY_MODE",
+              "lsb": 0,
+              "width": 2,
+              "desc": "Custom Parity modu (0:Kapalı, 1:Odd, 2:Even)",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ACT_GLITCH_FILTER_SIZE",
+          "offset": "0x000044A0",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Glitch Filter boyu (clk)",
+          "fields": [
+            {
+              "name": "RX1_ACT_GLITCH_FILTER_SIZE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Glitch Filter boyu (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ACT_MIN_PULSE",
+          "offset": "0x000044A4",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Min Pulse (clk)",
+          "fields": [
+            {
+              "name": "RX1_ACT_MIN_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Min Pulse (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ACT_MAX_PULSE",
+          "offset": "0x000044A8",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Pulse (clk)",
+          "fields": [
+            {
+              "name": "RX1_ACT_MAX_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Pulse (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ACT_MIN_BIT",
+          "offset": "0x000044AC",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Min Bit (clk)",
+          "fields": [
+            {
+              "name": "RX1_ACT_MIN_BIT",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Min Bit (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ACT_MAX_BIT",
+          "offset": "0x000044B0",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Bit (clk)",
+          "fields": [
+            {
+              "name": "RX1_ACT_MAX_BIT",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Bit (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ACT_MAX_PULSE_ERR",
+          "offset": "0x000044B4",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Pulse Glitch Error",
+          "fields": [
+            {
+              "name": "RX1_ACT_MAX_PULSE_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Pulse Glitch Error",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ACT_MAX_NULL_ERR",
+          "offset": "0x000044B8",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Null Glitch Error",
+          "fields": [
+            {
+              "name": "RX1_ACT_MAX_NULL_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Null Glitch Error",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ACT_MAX_GAP_ERR",
+          "offset": "0x000044BC",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Max Gap Glitch Error",
+          "fields": [
+            {
+              "name": "RX1_ACT_MAX_GAP_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Aktif Max Gap Glitch Error",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ACT_PARITY_MODE",
+          "offset": "0x000044C0",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Aktif Parity modu",
+          "fields": [
+            {
+              "name": "RX1_ACT_PARITY_MODE",
+              "lsb": 0,
+              "width": 2,
+              "desc": "Aktif Parity modu",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_WORD_CNT",
+          "offset": "0x000044E0",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Geçerli Word sayısı",
+          "fields": [
+            {
+              "name": "RX1_WORD_CNT",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Geçerli Word sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ERR_CNT",
+          "offset": "0x000044E4",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Hata kaydı sayısı",
+          "fields": [
+            {
+              "name": "RX1_ERR_CNT",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Hata kaydı sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_DROP_CNT",
+          "offset": "0x000044E8",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Freeze sırasında atılan kayıt sayısı",
+          "fields": [
+            {
+              "name": "RX1_DROP_CNT",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Freeze sırasında atılan kayıt sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_LAST_WORD",
+          "offset": "0x000044EC",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Alınan son geçerli Word",
+          "fields": [
+            {
+              "name": "RX1_LAST_WORD",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Alınan son geçerli Word",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_WORD_RADDR",
+          "offset": "0x00004500",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Word RAM okuma adresi",
+          "fields": [
+            {
+              "name": "RX1_WORD_RADDR",
+              "lsb": 0,
+              "width": 8,
+              "desc": "Word RAM okuma adresi",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX1_WORD_RD_TS_MSB",
+          "offset": "0x00004504",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı Timestamp MSB",
+          "fields": [
+            {
+              "name": "RX1_WORD_RD_TS_MSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Word kaydı Timestamp MSB",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_WORD_RD_TS_LSB",
+          "offset": "0x00004508",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı Timestamp LSB",
+          "fields": [
+            {
+              "name": "RX1_WORD_RD_TS_LSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Word kaydı Timestamp LSB",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_WORD_RD_DATA",
+          "offset": "0x0000450C",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı 32-bit veri",
+          "fields": [
+            {
+              "name": "RX1_WORD_RD_DATA",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Word kaydı 32-bit veri",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_WORD_RD_GAP",
+          "offset": "0x00004510",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı önceki Gap süresi (clk)",
+          "fields": [
+            {
+              "name": "RX1_WORD_RD_GAP",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Word kaydı önceki Gap süresi (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_WORD_RD_GAP_ERR",
+          "offset": "0x00004514",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Word kaydı Gap gürültü sayısı",
+          "fields": [
+            {
+              "name": "RX1_WORD_RD_GAP_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Word kaydı Gap gürültü sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ERR_RADDR",
+          "offset": "0x00004520",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Error RAM okuma adresi",
+          "fields": [
+            {
+              "name": "RX1_ERR_RADDR",
+              "lsb": 0,
+              "width": 8,
+              "desc": "Error RAM okuma adresi",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ERR_RD_TS_MSB",
+          "offset": "0x00004524",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı Timestamp MSB",
+          "fields": [
+            {
+              "name": "RX1_ERR_RD_TS_MSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Error kaydı Timestamp MSB",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ERR_RD_TS_LSB",
+          "offset": "0x00004528",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı Timestamp LSB",
+          "fields": [
+            {
+              "name": "RX1_ERR_RD_TS_LSB",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Error kaydı Timestamp LSB",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ERR_RD_CODE",
+          "offset": "0x0000452C",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı hata kodu bitmask",
+          "fields": [
+            {
+              "name": "RX1_ERR_RD_CODE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Error kaydı hata kodu bitmask",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ERR_RD_ADDR",
+          "offset": "0x00004530",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı konum/bit/FIFO adresi",
+          "fields": [
+            {
+              "name": "RX1_ERR_RD_ADDR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Error kaydı konum/bit/FIFO adresi",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_ERR_RD_DATA",
+          "offset": "0x00004534",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Error kaydı ölçüm/beklenen veri",
+          "fields": [
+            {
+              "name": "RX1_ERR_RD_DATA",
+              "lsb": 0,
+              "width": 32,
+              "desc": "Error kaydı ölçüm/beklenen veri",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_BIT_RADDR",
+          "offset": "0x00004540",
+          "access": "RW",
+          "reset": "0x00000000",
+          "desc": "Bit Diagnostic RAM okuma adresi",
+          "fields": [
+            {
+              "name": "BIT_IDX",
+              "lsb": 0,
+              "width": 5,
+              "desc": "Bit indeksi (0-31)",
+              "kind": "RW"
+            },
+            {
+              "name": "WORD_IDX",
+              "lsb": 8,
+              "width": 3,
+              "desc": "Bit Diagnostic Word indeksi",
+              "kind": "RW"
+            }
+          ]
+        },
+        {
+          "name": "RX1_BIT_RD_PULSE",
+          "offset": "0x00004544",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Bit Pulse süresi (clk)",
+          "fields": [
+            {
+              "name": "RX1_BIT_RD_PULSE",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Bit Pulse süresi (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_BIT_RD_PULSE_ERR",
+          "offset": "0x00004548",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Bit Pulse gürültü sayısı",
+          "fields": [
+            {
+              "name": "RX1_BIT_RD_PULSE_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Bit Pulse gürültü sayısı",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_BIT_RD_NULL",
+          "offset": "0x0000454C",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Bit Null süresi (clk)",
+          "fields": [
+            {
+              "name": "RX1_BIT_RD_NULL",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Bit Null süresi (clk)",
+              "kind": "RO"
+            }
+          ]
+        },
+        {
+          "name": "RX1_BIT_RD_NULL_ERR",
+          "offset": "0x00004550",
+          "access": "RO",
+          "reset": "0x00000000",
+          "desc": "Bit Null gürültü sayısı",
+          "fields": [
+            {
+              "name": "RX1_BIT_RD_NULL_ERR",
+              "lsb": 0,
+              "width": 16,
+              "desc": "Bit Null gürültü sayısı",
+              "kind": "RO"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "instances": [
+    {
+      "name": "ARINC429_0",
+      "ip": "ARINC429",
+      "base": "0x40000000",
+      "window": "0x10000",
+      "fixed": true
+    }
+  ]
+}
