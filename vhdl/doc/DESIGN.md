@@ -100,10 +100,20 @@ Tam bit-bazlı tablo: [`vhdl/axil/arinc429_axil_regs.md`](../axil/arinc429_axil_
 
 ---
 
-## 4. Simülasyon Doğrulaması
+## 4. Simülasyon ve Formal Doğrulama
 
 Tüm 19 VHDL birim/entegrasyon testbench'i (hem **VHDL-93** hem **VHDL-2008**) ve AXIL Studio **Icarus Verilog** testbench'i tek komutla çalıştırılır:
 
 ```bash
 bash vhdl/scripts/run_tests.sh
 ```
+
+**Formal Doğrulama (GHDL `synth` + Yosys SAT — 13 blok):**
+
+```bash
+bash vhdl/scripts/run_formal.sh
+```
+
+- **Kombinasyonel tam ispat (tüm $2^{32}$ giriş):** `a429_tx_word_builder` (alan yerleşimi + Odd/Even parity).
+- **k-İndüksiyon (sonsuz zaman ispatı):** `a429_tx_word_evt`, `a429_tx_scheduler`, `a429_timestamp` (32-bit taşma sınırında atomik MSB latch dahil), `a429_rx_cfg_sel`, `a429_tx_cfg_sel` (Word ortasında config değişmeme garantisi), `a429_rx_logger` (FREEZE sırasında RAM yazmama ve sıfır hata kaybı garantisi).
+- **Bounded Model Checking (BMC):** `a429_glitch_filter`, `a429_tx_transmitter` (Bus Fault `"11"` üretmeme garantisi), `a429_tx_core` (3-MUX izolasyon), `a429_rx_decoder` (clk başı en fazla 1 hata bayrağı, hatalı Word yayınlamama), `a429_word_checker` (FIFO sınır ve dışlama), `arinc429_axil` (AXI4-Lite protokol kararlılığı ve PULSE/CONST garantileri).
