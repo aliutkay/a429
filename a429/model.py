@@ -5,7 +5,7 @@ import copy
 import math
 from dataclasses import dataclass, field, asdict
 
-from .regmap import RegisterMap
+from .regs import RX_CONFIG_SPECS, RegMap, channel_prefix
 from .txlive import default_tx_live
 
 HB_ARINC = "ARINC (Rise → Fall başlangıcı)"
@@ -91,7 +91,6 @@ class ConfigInputs:
     null_glitch_pct: float = 0.10
     gap_glitch_pct: float = 0.10
     glitch_base: str = "MIN"            # MIN | NOM | MAX
-    regmap: RegisterMap = field(default_factory=RegisterMap)
     tx_live: dict = field(default_factory=default_tx_live)
     profiles: list = field(default_factory=lambda: copy.deepcopy(DEFAULT_PROFILES))
     ic_profiles: list = field(default_factory=lambda: [ICParams()])
@@ -99,14 +98,12 @@ class ConfigInputs:
 
     # ---- (de)serialisation
     def to_dict(self):
-        d = asdict(self)
-        return d
+        return asdict(self)
 
     @staticmethod
     def from_dict(d, link=None):
         d = dict(d)
-        regmap = RegisterMap.from_dict(d["regmap"]) if d.get("regmap") else RegisterMap.from_legacy(d, link)
-        d.pop("regmap", None)
+        d.pop("regmap", None)           # eski dosyalardaki komut/register şablonu artık kullanılmıyor
         if d.get("half_ref") == LEGACY_HB_ARINC:
             d["half_ref"] = HB_ARINC
         prof = [SpecProfile(**p) for p in d.pop("profiles", [])] or copy.deepcopy(DEFAULT_PROFILES)
@@ -115,7 +112,7 @@ class ConfigInputs:
         old_ic = d.pop("ic", {})                # eski dosyalar: tek entegre
         ics = [make_ic(x) for x in d.pop("ic_profiles", [])] or [make_ic(old_ic)]
         ci = ConfigInputs(**{k: v for k, v in d.items() if k in ConfigInputs.__dataclass_fields__})
-        ci.profiles, ci.ic_profiles, ci.regmap = prof, ics, regmap
+        ci.profiles, ci.ic_profiles = prof, ics
         ci.tx_live = {**default_tx_live(), **ci.tx_live}
         if "tx_profile" not in d:               # eski dosyalar: TX, RX ile aynı başlar
             ci.tx_profile = ci.profile
@@ -150,14 +147,15 @@ def _ceil(x):    # Excel ROUNDUP(x,0)
 class Result:
     rows: dict              # ara hesaplar: ad -> (min, nom, max)
     dur: dict               # test toleransı eklenmiş süreler: ad -> (µs, clk)
-    regs: list              # etkin yazma Register'ları: [(ad, adres, değer, değer_hex, komut_hex)]
+    regs: list              # [(görünen ad, Studio register adı, offset, değer, değer_hex, hata)]
     checks: list            # [(ad, ok)]
     single: dict            # tek bit analizi: "MIN"/"NOM"/"MAX" -> dict
-    vars: dict = field(default_factory=dict)   # hesaplanan değişkenler (formüller ve çözümleme limitleri)
+    vars: dict = field(default_factory=dict)   # hesaplanan değişkenler (çözümleme limitleri)
     nom_clk: tuple = (0, 0, 0)   # nominal (pulse, bit, null) clk – örnek grafik / word dalga formu
+    rx_values: dict = field(default_factory=dict)  # {CUST_* soneki: int}
 
 
-def compute(ci: ConfigInputs) -> Result:
+def compute(ci: ConfigInputs, rm: RegMap | None = None, channel: str = "RX0") -> Result:
     p, ic, mhz = ci.get_profile(), ci.ic, ci.clk_mhz
     for value, name in ((mhz, "System Clock"), (p.rate_min, "Bit Rate MIN"), (p.rate_nom, "Bit Rate NOM"), (p.rate_max, "Bit Rate MAX"),
                         (p.k, "k"), (p.amp_min, "Receiver genliği MIN"), (p.amp_max, "Receiver genliği MAX"),
@@ -243,13 +241,29 @@ def compute(ci: ConfigInputs) -> Result:
     nom_clk = (nom[0], nom[1], nom[1] - nom[0])
     cvars.update(nom_pulse=nom_clk[0], nom_bit=nom_clk[1], nom_null=nom_clk[2])
     regs = []
-    for r in ci.regmap.write_regs:
-        if r.enabled:
-            v, value_hex, cmd, err = ci.regmap.resolve(r, cvars)
-            regs.append((r.name, r.addr, v, value_hex, cmd))
-            if err:
-                checks.append((f"{r.name}: {err}", False))
-    return Result(rows, dur, regs, checks, single, cvars, nom_clk)
+    rx_values = {}
+    prefix = channel_prefix(channel)
+    loaded = rm is not None and rm.is_loaded()
+    for disp_name, suffix, var_key, bits in RX_CONFIG_SPECS:
+        full_name = prefix + suffix
+        v = int(cvars[var_key])
+        err = None
+        if v < 0:
+            err = f"Negatif değer: {v}"
+            val, val_hex = None, "HATA"
+        elif v >= (1 << bits):
+            err = f"{v} değeri {bits} bit alana sığmıyor (en fazla {(1 << bits) - 1})."
+            val, val_hex = None, "HATA"
+        else:
+            val, val_hex = v, f"0x{v:08X}"
+            rx_values[suffix] = v
+        off_str = rm.offset_hex(full_name) if loaded else "—"
+        if loaded and not rm.has(full_name) and err is None:
+            err = "IP haritasında yok"
+        regs.append((disp_name, full_name, off_str, val, val_hex, err))
+        if err and err != "IP haritasında yok":
+            checks.append((f"{disp_name}: {err}", False))
+    return Result(rows, dur, regs, checks, single, cvars, nom_clk, rx_values)
 
 
 def _edge(tp, t, v, rising):

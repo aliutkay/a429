@@ -3,14 +3,14 @@ from __future__ import annotations
 
 # Hat override: None = Word Transmitter etkin; aksi halde (ext_high, ext_low)
 OVERRIDE_LINES = {"Kapalı": None, "HIGH": (1, 0), "NULL": (0, 0), "LOW": (0, 1), "HIGH-Z": (1, 1)}
-TRIGGER = [("tx_ext_valid", 1), ("tx_ext_valid", 0)]     # ext_data_valid kenarla tetikler: 1 sonra 0
+TRIGGER = [("TX_SEND_CMD", 1)]     # SEND_CMD PULSE: 1 yazılınca tek darbe
 
 
 def override_writes(name):
     lines = OVERRIDE_LINES[name]
     if lines is None:
-        return [("tx_ext_high", 0), ("tx_ext_low", 0), ("tx_transmitter_en", 1)]
-    return [("tx_ext_high", lines[0]), ("tx_ext_low", lines[1]), ("tx_transmitter_en", 0)]
+        return [("TX_EXT_HIGH", 0), ("TX_EXT_LOW", 0), ("TX_TRANSMITTER_EN", 1)]
+    return [("TX_EXT_HIGH", lines[0]), ("TX_EXT_LOW", lines[1]), ("TX_TRANSMITTER_EN", 0)]
 
 
 def default_tx_live():

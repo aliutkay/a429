@@ -5,15 +5,18 @@ import math
 from dataclasses import dataclass, asdict
 
 UNITS = ["clk", "ns", "µs", "ms", "s"]
-ERR_NAMES = ["Bus Fault", "Noise Violation", "Gap Violation", "Bit Early",
-             "Pulse Glitch", "Pulse Stuck", "Bit Timeout", "Parity Error"]
+ERR_NAMES = [
+    "Bus Fault", "Noise Violation", "Gap Violation", "Bit Early",
+    "Pulse Glitch", "Pulse Stuck", "Bit Timeout", "Parity Error",
+    "Word Mismatch", "No Echo", "Unexpected Word", "Label Filtered",
+]
 
 
 @dataclass
 class DecodeSettings:
     parity_odd: bool = True
     ts_tol: float = 0.01                 # timestamp tutarlılık toleransı (oran)
-    ts_at_word_end: bool = True          # timestamp word bitince mi alınıyor
+    ts_at_word_end: bool = False         # DESIGN.md: timestamp word başında (word_start) alınır
     label_fmt: str = "oct"               # dalga formu alan formatları
     sdi_fmt: str = "dec"
     data_fmt: str = "hex"
@@ -178,12 +181,12 @@ def decode_errors(session):
     for i, e in enumerate(errs):
         ts, code, addr, data = ts_of(e["w"]), e["w"][2], e["w"][3], e["w"][4]
         prev = errs[i + 1] if i + 1 < len(errs) else None
-        flags = [((code or 0) >> k) & 1 for k in range(8)]
+        flags = [((code or 0) >> k) & 1 for k in range(len(ERR_NAMES))]
         rows.append(dict(ts=ts, code=code, addr=addr, data=data, flags=flags,
                          active="(okunamadı)" if code is None else (", ".join(n for n, f in zip(ERR_NAMES, flags) if f) or "(yok)"),
                          code_ok=code is not None,
                          dt=ts - ts_of(prev["w"]) if prev and ts is not None and ts_of(prev["w"]) is not None else None,
-                         pad_ok=code is not None and code < 256 and addr is not None and addr < 65536, raw=e["w"]))
+                         pad_ok=code is not None and code < 65536 and addr is not None and addr < 65536, raw=e["w"]))
     return rows
 
 
@@ -215,6 +218,8 @@ def stats(session, lim: Limits, wdepth=256, edepth=256, bit_words=8):
         ("Bit Diagnostic verisi okunan Word'ler", f"{max(bit_nos)} … {min(bit_nos)}" if bit_nos else "-",
          "En eski kaydın üzerine yazılmış olabileceği için son (BRAM derinliği − 1) Word okunur."),
     ]
+    if "drop_cnt" in s and s["drop_cnt"] is not None:
+        res.append(("Freeze sırasında atılan kayıt (DROP_CNT)", f"{s['drop_cnt']:,}", "Logger donduruluyken kaçırılan kayıtlar."))
     for x in s.get("extra", []):
         val = "okunamadı" if x["value"] is None else (f"0x{x['value']:08X}" if x["fmt"] == "hex" else f"{x['value']:,}")
         res.append((x["name"], val, f"Ek okuma Register'ı, adres {x['addr']}."))

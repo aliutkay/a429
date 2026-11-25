@@ -1,6 +1,6 @@
 """Dosya formatları.
 
-.a429cfg   – config + bağlantı + çözümleme ayarları (JSON)
+.a429cfg   – config + okuma + çözümleme ayarları (JSON)
 .a429read  – tek bir okuma oturumu (JSON: özet, word, error, bit diag + o anki config)
 .a429proj  – proje paketi (ZIP): project.json (ayarlar) + sessions/*.a429read (tüm okumalar)
 """
@@ -12,24 +12,28 @@ import os
 import zipfile
 
 from .model import ConfigInputs
-from .protocol import LinkSettings
+from .ip import ReadSettings
 from .decode import DecodeSettings
 
-VERSION = 1
+VERSION = 2
 
 
-def settings_dict(ci: ConfigInputs, ls: LinkSettings, ds: DecodeSettings) -> dict:
-    return {"version": VERSION, "config": ci.to_dict(), "link": ls.to_dict(), "decode": ds.to_dict()}
+def settings_dict(ci: ConfigInputs, rs: ReadSettings, ds: DecodeSettings) -> dict:
+    return {"version": VERSION, "config": ci.to_dict(), "read": rs.to_dict(), "decode": ds.to_dict()}
 
 
 def settings_from(d: dict):
-    return (ConfigInputs.from_dict(d.get("config", {}), d.get("link", {})), LinkSettings.from_dict(d.get("link", {})),
-            DecodeSettings.from_dict(d.get("decode", {})))
+    read_raw = d.get("read") if "read" in d else d.get("link", {})
+    return (
+        ConfigInputs.from_dict(d.get("config", {}), d.get("link")),
+        ReadSettings.from_dict(read_raw),
+        DecodeSettings.from_dict(d.get("decode", {})),
+    )
 
 
-def save_config(path, ci, ls, ds):
+def save_config(path, ci, rs, ds):
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(settings_dict(ci, ls, ds), f, ensure_ascii=False, indent=1)
+        json.dump(settings_dict(ci, rs, ds), f, ensure_ascii=False, indent=1)
 
 
 def load_config(path):
@@ -37,13 +41,15 @@ def load_config(path):
         return settings_from(json.load(f))
 
 
-def new_session(data: dict, ci, ls, ds, name=None) -> dict:
+def new_session(data: dict, ci, rs, ds, name=None) -> dict:
     now = _dt.datetime.now()
     s = dict(data)
-    s["name"] = name or now.strftime("okuma_%Y%m%d_%H%M%S")
+    ch = s.get("channel")
+    default_name = now.strftime(f"okuma_{ch}_%Y%m%d_%H%M%S" if ch else "okuma_%Y%m%d_%H%M%S")
+    s["name"] = name or default_name
     s["created"] = now.isoformat(timespec="seconds")
     s["clk_mhz"] = ci.clk_mhz
-    s["settings"] = settings_dict(ci, ls, ds)
+    s["settings"] = settings_dict(ci, rs, ds)
     return s
 
 
@@ -59,7 +65,7 @@ def load_session(path):
     return s
 
 
-def save_project(path, ci, ls, ds, sessions):
+def save_project(path, ci, rs, ds, sessions):
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
         idx = []
         for i, s in enumerate(sessions):
@@ -67,7 +73,7 @@ def save_project(path, ci, ls, ds, sessions):
             fn = f"sessions/{i:04d}_{safe}.a429read"
             z.writestr(fn, json.dumps(s, ensure_ascii=False, indent=1))
             idx.append(fn)
-        proj = settings_dict(ci, ls, ds)
+        proj = settings_dict(ci, rs, ds)
         proj["sessions"] = idx
         z.writestr("project.json", json.dumps(proj, ensure_ascii=False, indent=1))
 
@@ -76,5 +82,5 @@ def load_project(path):
     with zipfile.ZipFile(path) as z:
         proj = json.loads(z.read("project.json").decode("utf-8"))
         sessions = [json.loads(z.read(fn).decode("utf-8")) for fn in proj.get("sessions", [])]
-    ci, ls, ds = settings_from(proj)
-    return ci, ls, ds, sessions
+    ci, rs, ds = settings_from(proj)
+    return ci, rs, ds, sessions

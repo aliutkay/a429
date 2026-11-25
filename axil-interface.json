@@ -1,0 +1,15 @@
+{
+  "format": "axil-interface",
+  "protocol": 1,
+  "id": "arinc429",
+  "version": "0.1.0",
+  "title": {
+    "en": "ARINC 429 interface",
+    "tr": "ARINC 429 arayüzü"
+  },
+  "desc": {
+    "en": "ARINC 429 IP: Config calculation, RX capture & waveform decode, TX live control",
+    "tr": "ARINC 429 IP: Config hesabı, RX okuma ve çözümleme, dalga formu grafikleri, TX canlı kontrol"
+  },
+  "command": ["{python}", "a429_ui.py"]
+}
