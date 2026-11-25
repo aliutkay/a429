@@ -64,9 +64,15 @@ package a429_pkg is
         cfg_apply        : std_logic;
         cust             : t_rx_cfg;
         word_raddr       : std_logic_vector(15 downto 0);
+        word_raddr_wr    : std_logic;
+        word_rd_last     : std_logic;
         err_raddr        : std_logic_vector(15 downto 0);
+        err_raddr_wr     : std_logic;
+        err_rd_last      : std_logic;
         bit_raddr_bit    : std_logic_vector(4 downto 0);
         bit_raddr_word   : std_logic_vector(7 downto 0);
+        bit_raddr_wr     : std_logic;
+        bit_rd_last      : std_logic;
         chk_enable       : std_logic;
         chk_clear        : std_logic;
         chk_timeout      : std_logic_vector(31 downto 0);
@@ -164,9 +170,15 @@ package a429_pkg is
         cfg_apply      => '0',
         cust           => C_RX_CFG_ZERO,
         word_raddr     => (others => '0'),
+        word_raddr_wr  => '0',
+        word_rd_last   => '0',
         err_raddr      => (others => '0'),
+        err_raddr_wr   => '0',
+        err_rd_last    => '0',
         bit_raddr_bit  => (others => '0'),
         bit_raddr_word => (others => '0'),
+        bit_raddr_wr   => '0',
+        bit_rd_last    => '0',
         chk_enable     => '0',
         chk_clear      => '0',
         chk_timeout    => (others => '0')

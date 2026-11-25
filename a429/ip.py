@@ -530,49 +530,46 @@ def read_channel(
         done = 0
         words, errors, bits = [], [], []
 
-        # --- Word RAM
+        # --- Word RAM (1 kez başlangıç WORD_RADDR yazılır, WORD_RD_GAP_ERR rd_strobe ile +1 ilerler)
         w_raddr = rm.offset(p + "WORD_RADDR")
         w_rds = [rm.offset(p + s) for s in ("WORD_RD_TS_MSB", "WORD_RD_TS_LSB", "WORD_RD_DATA", "WORD_RD_GAP", "WORD_RD_GAP_ERR")]
-        for base_i in range(0, wn, BATCH_RECORDS):
-            check_stop()
-            chunk = list(range(base_i, min(wn, base_i + BATCH_RECORDS)))
-            ops = []
-            meta = []
-            for i in chunk:
-                addr = (wstart + wfull - 1 - i) % wdepth
-                ops.append(("write", w_raddr, addr))
-                for r in w_rds:
-                    ops.append(("read", r))
-                meta.append((wtot - 1 - i, addr))
-            res = bus.batch(ops, quiet=quiet)
-            for idx, (wno, addr) in enumerate(meta):
-                sl = res[idx * 6 + 1 : idx * 6 + 6]
-                words.append({"no": wno, "addr": addr, "w": list(sl)})
-            done += len(chunk)
-            prog(done, total, f"{ch} Word {done}/{wn}")
+        if wn > 0:
+            first_waddr = (wstart + wfull - wn) % wdepth
+            bus.write(w_raddr, first_waddr, quiet=quiet)
+            for base_j in range(0, wn, BATCH_RECORDS):
+                check_stop()
+                chunk = list(range(base_j, min(wn, base_j + BATCH_RECORDS)))
+                ops = [("read", r) for _ in chunk for r in w_rds]
+                res = bus.batch(ops, quiet=quiet)
+                for idx, j in enumerate(chunk):
+                    wno = wtot - wn + j
+                    addr = (first_waddr + j) % wdepth
+                    sl = res[idx * 5 : idx * 5 + 5]
+                    words.append({"no": wno, "addr": addr, "w": list(sl)})
+                done += len(chunk)
+                prog(done, total, f"{ch} Word {done}/{wn}")
+            words.reverse()
 
-        # --- Error RAM
+        # --- Error RAM (1 kez başlangıç ERR_RADDR yazılır, ERR_RD_DATA rd_strobe ile +1 ilerler)
         e_raddr = rm.offset(p + "ERR_RADDR")
         e_rds = [rm.offset(p + s) for s in ("ERR_RD_TS_MSB", "ERR_RD_TS_LSB", "ERR_RD_CODE", "ERR_RD_ADDR", "ERR_RD_DATA")]
-        for base_i in range(0, en, BATCH_RECORDS):
-            check_stop()
-            chunk = list(range(base_i, min(en, base_i + BATCH_RECORDS)))
-            ops = []
-            addrs = []
-            for i in chunk:
-                addr = (estart + efull - 1 - i) % edepth
-                ops.append(("write", e_raddr, addr))
-                for r in e_rds:
-                    ops.append(("read", r))
-                addrs.append(addr)
-            res = bus.batch(ops, quiet=quiet)
-            for idx, addr in enumerate(addrs):
-                sl = res[idx * 6 + 1 : idx * 6 + 6]
-                errors.append({"addr": addr, "w": list(sl)})
-            done += len(chunk)
-            prog(done, total, f"{ch} Error {len(errors)}/{en}")
+        if en > 0:
+            first_eaddr = (estart + efull - en) % edepth
+            bus.write(e_raddr, first_eaddr, quiet=quiet)
+            for base_j in range(0, en, BATCH_RECORDS):
+                check_stop()
+                chunk = list(range(base_j, min(en, base_j + BATCH_RECORDS)))
+                ops = [("read", r) for _ in chunk for r in e_rds]
+                res = bus.batch(ops, quiet=quiet)
+                for idx, j in enumerate(chunk):
+                    addr = (first_eaddr + j) % edepth
+                    sl = res[idx * 5 : idx * 5 + 5]
+                    errors.append({"addr": addr, "w": list(sl)})
+                done += len(chunk)
+                prog(done, total, f"{ch} Error {len(errors)}/{en}")
+            errors.reverse()
 
-        # --- Bit Diagnostic RAM
+        # --- Bit Diagnostic RAM (1 kez başlangıç BIT_RADDR yazılır, BIT_RD_NULL_ERR rd_strobe ile +1 ilerler)
         b_raddr = rm.offset(p + "BIT_RADDR")
         b_rds = [rm.offset(p + s) for s in ("BIT_RD_PULSE", "BIT_RD_PULSE_ERR", "BIT_RD_NULL", "BIT_RD_NULL_ERR")]
         bit_fe = rm.field(p + "BIT_RADDR", "BIT")
@@ -581,26 +578,26 @@ def read_channel(
         word_lsb = word_fe.lsb if word_fe else 8
 
         total_bits = bn * 32
-        for base_kb in range(0, total_bits, BATCH_RECORDS * 2):
-            check_stop()
-            chunk = list(range(base_kb, min(total_bits, base_kb + BATCH_RECORDS * 2)))
-            ops = []
-            meta = []
-            for kb in chunk:
-                wno, bno = wtot - 1 - kb // 32, kb % 32
-                widx = wno % bit_words
-                addr_val = (widx << word_lsb) | (bno << bit_lsb)
-                ops.append(("write", b_raddr, addr_val))
-                for r in b_rds:
-                    ops.append(("read", r))
-                meta.append((wno, bno))
-            res = bus.batch(ops, quiet=quiet)
-            for idx, (wno, bno) in enumerate(meta):
-                sl = res[idx * 5 + 1 : idx * 5 + 5]
-                bits.append({"word": wno, "bit": bno, "w": list(sl)})
-            done += len(chunk)
-            last_w, last_b = meta[-1]
-            prog(done, total, f"{ch} Bit Diagnostic: Word {last_w}, Bit {last_b + 1}")
+        if total_bits > 0:
+            first_wno = wtot - bn
+            first_widx = first_wno % bit_words
+            bus.write(b_raddr, (first_widx << word_lsb) | (0 << bit_lsb), quiet=quiet)
+            raw_bits = []
+            for base_kb in range(0, total_bits, BATCH_RECORDS * 2):
+                check_stop()
+                chunk = list(range(base_kb, min(total_bits, base_kb + BATCH_RECORDS * 2)))
+                ops = [("read", r) for _ in chunk for r in b_rds]
+                res = bus.batch(ops, quiet=quiet)
+                for idx, kb in enumerate(chunk):
+                    wno, bno = first_wno + kb // 32, kb % 32
+                    sl = res[idx * 4 : idx * 4 + 4]
+                    raw_bits.append({"word": wno, "bit": bno, "w": list(sl)})
+                done += len(chunk)
+                last_b = raw_bits[-1]
+                prog(done, total, f"{ch} Bit Diagnostic: Word {last_b['word']}, Bit {last_b['bit'] + 1}")
+            # En yeni Word önce, her Word içinde bit 0..31 sırasıyla
+            for wi in range(bn - 1, -1, -1):
+                bits.extend(raw_bits[wi * 32 : (wi + 1) * 32])
 
         wend, eend = bus.batch([("read", rm.offset(p + "WORD_CNT")), ("read", rm.offset(p + "ERR_CNT"))], quiet=quiet)
         if wend != wtot or eend != etot:

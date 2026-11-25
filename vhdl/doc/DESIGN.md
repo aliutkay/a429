@@ -53,7 +53,7 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
 | `vhdl/rtl/a429_rx_cfg_sel.vhd` | RX Preset (HS/LS) / Custom seçici (`CFG_APPLY` → 1 clk aktifleşme, `ACT_CFG`) |
 | `vhdl/rtl/a429_rx_logger.vhd` | Dairesel RAM yazıcı, `FREEZE`/`DROP_CNT`, `WORD_WRAP`/`ERR_WRAP`, 12-bit hata birleştirici |
 | `vhdl/rtl/a429_word_checker.vhd` | TX BIT beklenen Word FIFO (`WORD_MISMATCH`, `NO_ECHO`, `UNEXPECTED_WORD`) |
-| `vhdl/rtl/a429_rx_channel.vhd` | Tek alıcı kanalı (`cfg_sel` + `rx_core` + `rx_logger` + 3× `sdp_ram` + ops. `word_checker`) |
+| `vhdl/rtl/a429_rx_channel.vhd` | Tek alıcı kanalı (`cfg_sel` + `rx_core` + `rx_logger` + 3× `sdp_ram` + `wr/rd_strobe` otomatik artan RADDR pointer + ops. `word_checker`) |
 | `vhdl/rtl/a429_tx_cfg_sel.vhd` | TX Preset (HS/LS) / Custom seçici (`tx_busy = 0`'da anında, meşgulken Word sınırında uygular) |
 | `vhdl/rtl/a429_tx_core.vhd` | MUX1 (Word Builder / `EXT_DATA`), MUX2 (Message Scheduler / `SEND_CMD`), MUX3 (Transmitter / Override) |
 | `vhdl/rtl/a429_tx_word_evt.vhd` | `tx_busy` kenarından `word_start` / `word_done` darbesi |
@@ -73,6 +73,12 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
 | RX *n* (`RX{n}_`) | `0x4000 + n×0x400` | `CTRL`, `STATUS [FROZEN, WORD_WRAP, ERR_WRAP, ACT_CFG]`, `CFG_SEL/APPLY`, `CUST_*`, `ACT_*`, sayaçlar, Word/Error/Bit RAM portları |
 
 Tam bit-bazlı tablo: [`vhdl/axil/arinc429_axil_regs.md`](../axil/arinc429_axil_regs.md).
+
+### RAM Okuma Mekanizması (`wr_strobe` + `rd_strobe` Auto-Increment)
+
+- **Rastgele erişim:** `WORD_RADDR` / `ERR_RADDR` / `BIT_RADDR` yazıldığında (`wr_strobe`) kanal içi okuma pointer'ı doğrudan istenen adrese yüklenir ve BRAM çıkışı 1 clk içinde hazırlanır.
+- **Blok okuma (otomatik artış):** Kaydın son register'ı (`WORD_RD_GAP_ERR`, `ERR_RD_DATA`, `BIT_RD_NULL_ERR`) okunduğunda (`rd_strobe`) dahili pointer dairesel olarak `+1` ilerler (`BIT` pointer'ında `{word_idx, bit_idx}` birlikte arttığından 31. bitten sonraki Word'ün 0. bitine otomatik geçilir).
+- Böylece 1 kez başlangıç adresi yazıp tüm blok veya "Son N kayıt" hiç ek `RADDR` yazmadan okunur; kanal başı adres alanı **1 KB** kalır.
 
 ---
 

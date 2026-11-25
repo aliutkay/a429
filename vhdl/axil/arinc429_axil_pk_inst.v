@@ -74,23 +74,29 @@ arinc429_axil_pk u_arinc429_axil_pk (
     .i_tb_drop_cnt       (),  // input [31:0]
     .i_tb_last_word      (),  // input [31:0]
     .o_tb_word_raddr     (),  // output [7:0]
+    .o_tb_word_raddr_wr  (),  // output
     .i_tb_word_rd_ts_msb (),  // input [31:0]
     .i_tb_word_rd_ts_lsb (),  // input [31:0]
     .i_tb_word_rd_data   (),  // input [31:0]
     .i_tb_word_rd_gap    (),  // input [31:0]
     .i_tb_word_rd_gap_err(),  // input [15:0]
+    .o_tb_word_rd_gap_err_rd(),  // output
     .o_tb_err_raddr      (),  // output [7:0]
+    .o_tb_err_raddr_wr   (),  // output
     .i_tb_err_rd_ts_msb  (),  // input [31:0]
     .i_tb_err_rd_ts_lsb  (),  // input [31:0]
     .i_tb_err_rd_code    (),  // input [15:0]
     .i_tb_err_rd_addr    (),  // input [15:0]
     .i_tb_err_rd_data    (),  // input [31:0]
+    .o_tb_err_rd_data_rd (),  // output
     .o_tb_bit_raddr_bit_idx(),  // output [4:0]
     .o_tb_bit_raddr_word_idx(),  // output [2:0]
+    .o_tb_bit_raddr_wr   (),  // output
     .i_tb_bit_rd_pulse   (),  // input [15:0]
     .i_tb_bit_rd_pulse_err(),  // input [15:0]
     .i_tb_bit_rd_null    (),  // input [15:0]
     .i_tb_bit_rd_null_err(),  // input [15:0]
+    .o_tb_bit_rd_null_err_rd(),  // output
     .o_tb_chk_ctrl_enable(),  // output
     .o_tb_chk_ctrl_clear (),  // output
     .o_tb_chk_timeout    (),  // output [31:0]
@@ -130,23 +136,29 @@ arinc429_axil_pk u_arinc429_axil_pk (
     .i_rx0_drop_cnt      (),  // input [31:0]
     .i_rx0_last_word     (),  // input [31:0]
     .o_rx0_word_raddr    (),  // output [7:0]
+    .o_rx0_word_raddr_wr (),  // output
     .i_rx0_word_rd_ts_msb(),  // input [31:0]
     .i_rx0_word_rd_ts_lsb(),  // input [31:0]
     .i_rx0_word_rd_data  (),  // input [31:0]
     .i_rx0_word_rd_gap   (),  // input [31:0]
     .i_rx0_word_rd_gap_err(),  // input [15:0]
+    .o_rx0_word_rd_gap_err_rd(),  // output
     .o_rx0_err_raddr     (),  // output [7:0]
+    .o_rx0_err_raddr_wr  (),  // output
     .i_rx0_err_rd_ts_msb (),  // input [31:0]
     .i_rx0_err_rd_ts_lsb (),  // input [31:0]
     .i_rx0_err_rd_code   (),  // input [15:0]
     .i_rx0_err_rd_addr   (),  // input [15:0]
     .i_rx0_err_rd_data   (),  // input [31:0]
+    .o_rx0_err_rd_data_rd(),  // output
     .o_rx0_bit_raddr_bit_idx(),  // output [4:0]
     .o_rx0_bit_raddr_word_idx(),  // output [2:0]
+    .o_rx0_bit_raddr_wr  (),  // output
     .i_rx0_bit_rd_pulse  (),  // input [15:0]
     .i_rx0_bit_rd_pulse_err(),  // input [15:0]
     .i_rx0_bit_rd_null   (),  // input [15:0]
     .i_rx0_bit_rd_null_err(),  // input [15:0]
+    .o_rx0_bit_rd_null_err_rd(),  // output
     .o_rx1_ctrl_enable   (),  // output
     .o_rx1_ctrl_freeze   (),  // output
     .o_rx1_ctrl_clear    (),  // output
@@ -179,23 +191,29 @@ arinc429_axil_pk u_arinc429_axil_pk (
     .i_rx1_drop_cnt      (),  // input [31:0]
     .i_rx1_last_word     (),  // input [31:0]
     .o_rx1_word_raddr    (),  // output [7:0]
+    .o_rx1_word_raddr_wr (),  // output
     .i_rx1_word_rd_ts_msb(),  // input [31:0]
     .i_rx1_word_rd_ts_lsb(),  // input [31:0]
     .i_rx1_word_rd_data  (),  // input [31:0]
     .i_rx1_word_rd_gap   (),  // input [31:0]
     .i_rx1_word_rd_gap_err(),  // input [15:0]
+    .o_rx1_word_rd_gap_err_rd(),  // output
     .o_rx1_err_raddr     (),  // output [7:0]
+    .o_rx1_err_raddr_wr  (),  // output
     .i_rx1_err_rd_ts_msb (),  // input [31:0]
     .i_rx1_err_rd_ts_lsb (),  // input [31:0]
     .i_rx1_err_rd_code   (),  // input [15:0]
     .i_rx1_err_rd_addr   (),  // input [15:0]
     .i_rx1_err_rd_data   (),  // input [31:0]
+    .o_rx1_err_rd_data_rd(),  // output
     .o_rx1_bit_raddr_bit_idx(),  // output [4:0]
     .o_rx1_bit_raddr_word_idx(),  // output [2:0]
+    .o_rx1_bit_raddr_wr  (),  // output
     .i_rx1_bit_rd_pulse  (),  // input [15:0]
     .i_rx1_bit_rd_pulse_err(),  // input [15:0]
     .i_rx1_bit_rd_null   (),  // input [15:0]
     .i_rx1_bit_rd_null_err(),  // input [15:0]
+    .o_rx1_bit_rd_null_err_rd(),  // output
     .SLAVE_AXI_REQ       (),  // input [110:0]
     .SLAVE_AXI_RSP       ()   // output [40:0]
 );

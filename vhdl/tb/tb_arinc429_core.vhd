@@ -209,16 +209,29 @@ begin
         chk(rx_reg_out(0).last_word(30 downto 0) = ("11" & "001" & x"2345" & "01" & x"C8"),
             "RX0 LAST_WORD alanlari (Label/SDI/Data/SSM) birebir dogru");
 
-        -- Word RAM & Bit Diagnostic RAM okuma testi (FREEZE=1 ile)
+        -- Word RAM & Bit Diagnostic RAM okuma testi (FREEZE=1 + wr_strobe / rd_strobe auto-inc)
         rx_reg_in(0).ctrl_freeze    <= '1';
         rx_reg_in(0).word_raddr     <= u16(0);
+        rx_reg_in(0).word_raddr_wr  <= '1';
         rx_reg_in(0).bit_raddr_word <= x"00";
         rx_reg_in(0).bit_raddr_bit  <= "00000";
-        tick(3);
+        rx_reg_in(0).bit_raddr_wr   <= '1';
+        tick(1);
+        rx_reg_in(0).word_raddr_wr  <= '0';
+        rx_reg_in(0).bit_raddr_wr   <= '0';
+        tick(2);
         chk(rx_reg_out(0).status_frozen = '1', "RX0 STATUS.FROZEN = 1");
         chk(rx_reg_out(0).word_rd_data = rx_reg_out(0).last_word, "RX0 Word RAM[0] verisi dogru");
         chk(unsigned(rx_reg_out(0).bit_rd_pulse) = 20 and unsigned(rx_reg_out(0).bit_rd_null) = 20,
             "RX0 Bit Diag RAM[0, bit0] pulse=20, null=20");
+
+        -- rd_strobe ile bit 1'e otomatik ilerleme testi (BIT_RADDR yazmadan)
+        rx_reg_in(0).bit_rd_last <= '1';
+        tick(1);
+        rx_reg_in(0).bit_rd_last <= '0';
+        tick(1);
+        chk(unsigned(rx_reg_out(0).bit_rd_pulse) = 20 and unsigned(rx_reg_out(0).bit_rd_null) = 20,
+            "RX0 Bit Diag rd_strobe ile bit1'e otomatik ilerledi");
 
         -- 4) Freeze aktifken bir Word daha gönder -> RX0 DROP_CNT=1, TB normal almalı
         tx_reg_in.builder_en <= '0';
@@ -232,6 +245,22 @@ begin
         chk(unsigned(rx_reg_out(0).drop_cnt) = 1 and unsigned(rx_reg_out(0).word_cnt) = 1,
             "RX0 FREEZE sirasinda gelen Word DROP_CNT'ye sayildi");
         chk(unsigned(tb_reg_out.chk_ok_cnt) = 2, "TB ikinci Word'u eslestirdi (OK=2)");
+
+        -- TB Word RAM'den tek WORD_RADDR=0 yazmasi + rd_strobe ile Word[0] ve Word[1] ardisik okuma
+        tb_reg_in.word_raddr    <= u16(0);
+        tb_reg_in.word_raddr_wr <= '1';
+        tick(1);
+        tb_reg_in.word_raddr_wr <= '0';
+        tick(1);
+        chk(tb_reg_out.word_rd_data = rx_reg_out(0).last_word,
+            "TB Word RAM[0] tek RADDR yazmasiyla okundu");
+        tb_reg_in.word_rd_last <= '1';
+        tick(1);
+        tb_reg_in.word_rd_last <= '0';
+        tick(1);
+        chk(tb_reg_out.word_rd_data = x"A0000181",
+            "TB Word RAM[1] rd_strobe auto-increment ile RADDR yazmadan okundu");
+
         rx_reg_in(0).ctrl_freeze <= '0';
         tick(2);
 
@@ -259,8 +288,11 @@ begin
         tb_cut_line <= '0';
         chk(unsigned(tb_reg_out.chk_err_cnt) = 1 and unsigned(tb_reg_out.err_cnt) = 1,
             "Hat kesikken TX BIT NO_ECHO hatasi uretildi");
-        tb_reg_in.err_raddr <= u16(0);
-        tick(2);
+        tb_reg_in.err_raddr    <= u16(0);
+        tb_reg_in.err_raddr_wr <= '1';
+        tick(1);
+        tb_reg_in.err_raddr_wr <= '0';
+        tick(1);
         chk(tb_reg_out.err_rd_code(C_ERR_NO_ECHO) = '1' and tb_reg_out.err_rd_data = x"A0000181",
             "TB Error RAM[0] NO_ECHO kodu ve beklenen Word dogru");
 

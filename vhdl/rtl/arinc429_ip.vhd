@@ -150,23 +150,29 @@ architecture rtl of arinc429_ip is
             i_tb_drop_cnt                  : in  std_logic_vector(31 downto 0);
             i_tb_last_word                 : in  std_logic_vector(31 downto 0);
             o_tb_word_raddr                : out std_logic_vector(7 downto 0);
+            o_tb_word_raddr_wr             : out std_logic;
             i_tb_word_rd_ts_msb            : in  std_logic_vector(31 downto 0);
             i_tb_word_rd_ts_lsb            : in  std_logic_vector(31 downto 0);
             i_tb_word_rd_data              : in  std_logic_vector(31 downto 0);
             i_tb_word_rd_gap               : in  std_logic_vector(31 downto 0);
             i_tb_word_rd_gap_err           : in  std_logic_vector(15 downto 0);
+            o_tb_word_rd_gap_err_rd        : out std_logic;
             o_tb_err_raddr                 : out std_logic_vector(7 downto 0);
+            o_tb_err_raddr_wr              : out std_logic;
             i_tb_err_rd_ts_msb             : in  std_logic_vector(31 downto 0);
             i_tb_err_rd_ts_lsb             : in  std_logic_vector(31 downto 0);
             i_tb_err_rd_code               : in  std_logic_vector(15 downto 0);
             i_tb_err_rd_addr               : in  std_logic_vector(15 downto 0);
             i_tb_err_rd_data               : in  std_logic_vector(31 downto 0);
+            o_tb_err_rd_data_rd            : out std_logic;
             o_tb_bit_raddr_bit_idx         : out std_logic_vector(4 downto 0);
             o_tb_bit_raddr_word_idx        : out std_logic_vector(2 downto 0);
+            o_tb_bit_raddr_wr              : out std_logic;
             i_tb_bit_rd_pulse              : in  std_logic_vector(15 downto 0);
             i_tb_bit_rd_pulse_err          : in  std_logic_vector(15 downto 0);
             i_tb_bit_rd_null               : in  std_logic_vector(15 downto 0);
             i_tb_bit_rd_null_err           : in  std_logic_vector(15 downto 0);
+            o_tb_bit_rd_null_err_rd        : out std_logic;
             o_tb_chk_ctrl_enable           : out std_logic;
             o_tb_chk_ctrl_clear            : out std_logic;
             o_tb_chk_timeout               : out std_logic_vector(31 downto 0);
@@ -206,23 +212,29 @@ architecture rtl of arinc429_ip is
             i_rx0_drop_cnt                 : in  std_logic_vector(31 downto 0);
             i_rx0_last_word                : in  std_logic_vector(31 downto 0);
             o_rx0_word_raddr               : out std_logic_vector(7 downto 0);
+            o_rx0_word_raddr_wr            : out std_logic;
             i_rx0_word_rd_ts_msb           : in  std_logic_vector(31 downto 0);
             i_rx0_word_rd_ts_lsb           : in  std_logic_vector(31 downto 0);
             i_rx0_word_rd_data             : in  std_logic_vector(31 downto 0);
             i_rx0_word_rd_gap              : in  std_logic_vector(31 downto 0);
             i_rx0_word_rd_gap_err          : in  std_logic_vector(15 downto 0);
+            o_rx0_word_rd_gap_err_rd       : out std_logic;
             o_rx0_err_raddr                : out std_logic_vector(7 downto 0);
+            o_rx0_err_raddr_wr             : out std_logic;
             i_rx0_err_rd_ts_msb            : in  std_logic_vector(31 downto 0);
             i_rx0_err_rd_ts_lsb            : in  std_logic_vector(31 downto 0);
             i_rx0_err_rd_code              : in  std_logic_vector(15 downto 0);
             i_rx0_err_rd_addr              : in  std_logic_vector(15 downto 0);
             i_rx0_err_rd_data              : in  std_logic_vector(31 downto 0);
+            o_rx0_err_rd_data_rd           : out std_logic;
             o_rx0_bit_raddr_bit_idx        : out std_logic_vector(4 downto 0);
             o_rx0_bit_raddr_word_idx       : out std_logic_vector(2 downto 0);
+            o_rx0_bit_raddr_wr             : out std_logic;
             i_rx0_bit_rd_pulse             : in  std_logic_vector(15 downto 0);
             i_rx0_bit_rd_pulse_err         : in  std_logic_vector(15 downto 0);
             i_rx0_bit_rd_null              : in  std_logic_vector(15 downto 0);
             i_rx0_bit_rd_null_err          : in  std_logic_vector(15 downto 0);
+            o_rx0_bit_rd_null_err_rd       : out std_logic;
             o_rx1_ctrl_enable              : out std_logic;
             o_rx1_ctrl_freeze              : out std_logic;
             o_rx1_ctrl_clear               : out std_logic;
@@ -255,23 +267,29 @@ architecture rtl of arinc429_ip is
             i_rx1_drop_cnt                 : in  std_logic_vector(31 downto 0);
             i_rx1_last_word                : in  std_logic_vector(31 downto 0);
             o_rx1_word_raddr               : out std_logic_vector(7 downto 0);
+            o_rx1_word_raddr_wr            : out std_logic;
             i_rx1_word_rd_ts_msb           : in  std_logic_vector(31 downto 0);
             i_rx1_word_rd_ts_lsb           : in  std_logic_vector(31 downto 0);
             i_rx1_word_rd_data             : in  std_logic_vector(31 downto 0);
             i_rx1_word_rd_gap              : in  std_logic_vector(31 downto 0);
             i_rx1_word_rd_gap_err          : in  std_logic_vector(15 downto 0);
+            o_rx1_word_rd_gap_err_rd       : out std_logic;
             o_rx1_err_raddr                : out std_logic_vector(7 downto 0);
+            o_rx1_err_raddr_wr             : out std_logic;
             i_rx1_err_rd_ts_msb            : in  std_logic_vector(31 downto 0);
             i_rx1_err_rd_ts_lsb            : in  std_logic_vector(31 downto 0);
             i_rx1_err_rd_code              : in  std_logic_vector(15 downto 0);
             i_rx1_err_rd_addr              : in  std_logic_vector(15 downto 0);
             i_rx1_err_rd_data              : in  std_logic_vector(31 downto 0);
+            o_rx1_err_rd_data_rd           : out std_logic;
             o_rx1_bit_raddr_bit_idx        : out std_logic_vector(4 downto 0);
             o_rx1_bit_raddr_word_idx       : out std_logic_vector(2 downto 0);
+            o_rx1_bit_raddr_wr             : out std_logic;
             i_rx1_bit_rd_pulse             : in  std_logic_vector(15 downto 0);
             i_rx1_bit_rd_pulse_err         : in  std_logic_vector(15 downto 0);
             i_rx1_bit_rd_null              : in  std_logic_vector(15 downto 0);
-            i_rx1_bit_rd_null_err          : in  std_logic_vector(15 downto 0)
+            i_rx1_bit_rd_null_err          : in  std_logic_vector(15 downto 0);
+            o_rx1_bit_rd_null_err_rd       : out std_logic
         );
     end component;
 
@@ -410,23 +428,29 @@ begin
             i_tb_drop_cnt                  => tb_reg_out.drop_cnt,
             i_tb_last_word                 => tb_reg_out.last_word,
             o_tb_word_raddr                => s_tb_word_raddr,
+            o_tb_word_raddr_wr             => tb_reg_in.word_raddr_wr,
             i_tb_word_rd_ts_msb            => tb_reg_out.word_rd_ts_msb,
             i_tb_word_rd_ts_lsb            => tb_reg_out.word_rd_ts_lsb,
             i_tb_word_rd_data              => tb_reg_out.word_rd_data,
             i_tb_word_rd_gap               => tb_reg_out.word_rd_gap,
             i_tb_word_rd_gap_err           => tb_reg_out.word_rd_gap_err,
+            o_tb_word_rd_gap_err_rd        => tb_reg_in.word_rd_last,
             o_tb_err_raddr                 => s_tb_err_raddr,
+            o_tb_err_raddr_wr              => tb_reg_in.err_raddr_wr,
             i_tb_err_rd_ts_msb             => tb_reg_out.err_rd_ts_msb,
             i_tb_err_rd_ts_lsb             => tb_reg_out.err_rd_ts_lsb,
             i_tb_err_rd_code               => tb_reg_out.err_rd_code,
             i_tb_err_rd_addr               => tb_reg_out.err_rd_addr,
             i_tb_err_rd_data               => tb_reg_out.err_rd_data,
+            o_tb_err_rd_data_rd            => tb_reg_in.err_rd_last,
             o_tb_bit_raddr_bit_idx         => tb_reg_in.bit_raddr_bit,
             o_tb_bit_raddr_word_idx        => s_tb_bit_widx,
+            o_tb_bit_raddr_wr              => tb_reg_in.bit_raddr_wr,
             i_tb_bit_rd_pulse              => tb_reg_out.bit_rd_pulse,
             i_tb_bit_rd_pulse_err          => tb_reg_out.bit_rd_pulse_err,
             i_tb_bit_rd_null               => tb_reg_out.bit_rd_null,
             i_tb_bit_rd_null_err           => tb_reg_out.bit_rd_null_err,
+            o_tb_bit_rd_null_err_rd        => tb_reg_in.bit_rd_last,
             o_tb_chk_ctrl_enable           => tb_reg_in.chk_enable,
             o_tb_chk_ctrl_clear            => tb_reg_in.chk_clear,
             o_tb_chk_timeout               => tb_reg_in.chk_timeout,
@@ -466,23 +490,29 @@ begin
             i_rx0_drop_cnt                 => rx_reg_out(0).drop_cnt,
             i_rx0_last_word                => rx_reg_out(0).last_word,
             o_rx0_word_raddr               => s_rx0_word_raddr,
+            o_rx0_word_raddr_wr            => rx_reg_in(0).word_raddr_wr,
             i_rx0_word_rd_ts_msb           => rx_reg_out(0).word_rd_ts_msb,
             i_rx0_word_rd_ts_lsb           => rx_reg_out(0).word_rd_ts_lsb,
             i_rx0_word_rd_data             => rx_reg_out(0).word_rd_data,
             i_rx0_word_rd_gap              => rx_reg_out(0).word_rd_gap,
             i_rx0_word_rd_gap_err          => rx_reg_out(0).word_rd_gap_err,
+            o_rx0_word_rd_gap_err_rd       => rx_reg_in(0).word_rd_last,
             o_rx0_err_raddr                => s_rx0_err_raddr,
+            o_rx0_err_raddr_wr             => rx_reg_in(0).err_raddr_wr,
             i_rx0_err_rd_ts_msb            => rx_reg_out(0).err_rd_ts_msb,
             i_rx0_err_rd_ts_lsb            => rx_reg_out(0).err_rd_ts_lsb,
             i_rx0_err_rd_code              => rx_reg_out(0).err_rd_code,
             i_rx0_err_rd_addr              => rx_reg_out(0).err_rd_addr,
             i_rx0_err_rd_data              => rx_reg_out(0).err_rd_data,
+            o_rx0_err_rd_data_rd           => rx_reg_in(0).err_rd_last,
             o_rx0_bit_raddr_bit_idx        => rx_reg_in(0).bit_raddr_bit,
             o_rx0_bit_raddr_word_idx       => s_rx0_bit_widx,
+            o_rx0_bit_raddr_wr             => rx_reg_in(0).bit_raddr_wr,
             i_rx0_bit_rd_pulse             => rx_reg_out(0).bit_rd_pulse,
             i_rx0_bit_rd_pulse_err         => rx_reg_out(0).bit_rd_pulse_err,
             i_rx0_bit_rd_null              => rx_reg_out(0).bit_rd_null,
             i_rx0_bit_rd_null_err          => rx_reg_out(0).bit_rd_null_err,
+            o_rx0_bit_rd_null_err_rd       => rx_reg_in(0).bit_rd_last,
             o_rx1_ctrl_enable              => rx_reg_in(1).ctrl_enable,
             o_rx1_ctrl_freeze              => rx_reg_in(1).ctrl_freeze,
             o_rx1_ctrl_clear               => rx_reg_in(1).ctrl_clear,
@@ -515,23 +545,29 @@ begin
             i_rx1_drop_cnt                 => rx_reg_out(1).drop_cnt,
             i_rx1_last_word                => rx_reg_out(1).last_word,
             o_rx1_word_raddr               => s_rx1_word_raddr,
+            o_rx1_word_raddr_wr            => rx_reg_in(1).word_raddr_wr,
             i_rx1_word_rd_ts_msb           => rx_reg_out(1).word_rd_ts_msb,
             i_rx1_word_rd_ts_lsb           => rx_reg_out(1).word_rd_ts_lsb,
             i_rx1_word_rd_data             => rx_reg_out(1).word_rd_data,
             i_rx1_word_rd_gap              => rx_reg_out(1).word_rd_gap,
             i_rx1_word_rd_gap_err          => rx_reg_out(1).word_rd_gap_err,
+            o_rx1_word_rd_gap_err_rd       => rx_reg_in(1).word_rd_last,
             o_rx1_err_raddr                => s_rx1_err_raddr,
+            o_rx1_err_raddr_wr             => rx_reg_in(1).err_raddr_wr,
             i_rx1_err_rd_ts_msb            => rx_reg_out(1).err_rd_ts_msb,
             i_rx1_err_rd_ts_lsb            => rx_reg_out(1).err_rd_ts_lsb,
             i_rx1_err_rd_code              => rx_reg_out(1).err_rd_code,
             i_rx1_err_rd_addr              => rx_reg_out(1).err_rd_addr,
             i_rx1_err_rd_data              => rx_reg_out(1).err_rd_data,
+            o_rx1_err_rd_data_rd           => rx_reg_in(1).err_rd_last,
             o_rx1_bit_raddr_bit_idx        => rx_reg_in(1).bit_raddr_bit,
             o_rx1_bit_raddr_word_idx       => s_rx1_bit_widx,
+            o_rx1_bit_raddr_wr             => rx_reg_in(1).bit_raddr_wr,
             i_rx1_bit_rd_pulse             => rx_reg_out(1).bit_rd_pulse,
             i_rx1_bit_rd_pulse_err         => rx_reg_out(1).bit_rd_pulse_err,
             i_rx1_bit_rd_null              => rx_reg_out(1).bit_rd_null,
-            i_rx1_bit_rd_null_err          => rx_reg_out(1).bit_rd_null_err
+            i_rx1_bit_rd_null_err          => rx_reg_out(1).bit_rd_null_err,
+            o_rx1_bit_rd_null_err_rd       => rx_reg_in(1).bit_rd_last
         );
 
     u_core : entity work.arinc429_core

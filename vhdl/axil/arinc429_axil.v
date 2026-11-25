@@ -161,7 +161,7 @@
 //          [31:0]   TB_DROP_CNT      RO
 //   0x8EC  TB_LAST_WORD     RO
 //          [31:0]   TB_LAST_WORD     RO
-//   0x900  TB_WORD_RADDR    RW
+//   0x900  TB_WORD_RADDR    RW wr_strobe
 //          [7:0]    TB_WORD_RADDR    RW
 //   0x904  TB_WORD_RD_TS_MSB RO
 //          [31:0]   TB_WORD_RD_TS_MSB RO
@@ -171,9 +171,9 @@
 //          [31:0]   TB_WORD_RD_DATA  RO
 //   0x910  TB_WORD_RD_GAP   RO
 //          [31:0]   TB_WORD_RD_GAP   RO
-//   0x914  TB_WORD_RD_GAP_ERR RO
+//   0x914  TB_WORD_RD_GAP_ERR RO rd_strobe
 //          [15:0]   TB_WORD_RD_GAP_ERR RO
-//   0x920  TB_ERR_RADDR     RW
+//   0x920  TB_ERR_RADDR     RW wr_strobe
 //          [7:0]    TB_ERR_RADDR     RW
 //   0x924  TB_ERR_RD_TS_MSB RO
 //          [31:0]   TB_ERR_RD_TS_MSB RO
@@ -183,9 +183,9 @@
 //          [15:0]   TB_ERR_RD_CODE   RO
 //   0x930  TB_ERR_RD_ADDR   RO
 //          [15:0]   TB_ERR_RD_ADDR   RO
-//   0x934  TB_ERR_RD_DATA   RO
+//   0x934  TB_ERR_RD_DATA   RO rd_strobe
 //          [31:0]   TB_ERR_RD_DATA   RO
-//   0x940  TB_BIT_RADDR     RW
+//   0x940  TB_BIT_RADDR     RW wr_strobe
 //          [10:8]   WORD_IDX         RW
 //          [4:0]    BIT_IDX          RW
 //   0x944  TB_BIT_RD_PULSE  RO
@@ -194,7 +194,7 @@
 //          [15:0]   TB_BIT_RD_PULSE_ERR RO
 //   0x94C  TB_BIT_RD_NULL   RO
 //          [15:0]   TB_BIT_RD_NULL   RO
-//   0x950  TB_BIT_RD_NULL_ERR RO
+//   0x950  TB_BIT_RD_NULL_ERR RO rd_strobe
 //          [15:0]   TB_BIT_RD_NULL_ERR RO
 //   0x9C0  TB_CHK_CTRL      RW
 //          [1]      CLEAR            PULSE
@@ -265,7 +265,7 @@
 //          [31:0]   RX0_DROP_CNT     RO
 //   0x40EC  RX0_LAST_WORD    RO
 //          [31:0]   RX0_LAST_WORD    RO
-//   0x4100  RX0_WORD_RADDR   RW
+//   0x4100  RX0_WORD_RADDR   RW wr_strobe
 //          [7:0]    RX0_WORD_RADDR   RW
 //   0x4104  RX0_WORD_RD_TS_MSB RO
 //          [31:0]   RX0_WORD_RD_TS_MSB RO
@@ -275,9 +275,9 @@
 //          [31:0]   RX0_WORD_RD_DATA RO
 //   0x4110  RX0_WORD_RD_GAP  RO
 //          [31:0]   RX0_WORD_RD_GAP  RO
-//   0x4114  RX0_WORD_RD_GAP_ERR RO
+//   0x4114  RX0_WORD_RD_GAP_ERR RO rd_strobe
 //          [15:0]   RX0_WORD_RD_GAP_ERR RO
-//   0x4120  RX0_ERR_RADDR    RW
+//   0x4120  RX0_ERR_RADDR    RW wr_strobe
 //          [7:0]    RX0_ERR_RADDR    RW
 //   0x4124  RX0_ERR_RD_TS_MSB RO
 //          [31:0]   RX0_ERR_RD_TS_MSB RO
@@ -287,9 +287,9 @@
 //          [15:0]   RX0_ERR_RD_CODE  RO
 //   0x4130  RX0_ERR_RD_ADDR  RO
 //          [15:0]   RX0_ERR_RD_ADDR  RO
-//   0x4134  RX0_ERR_RD_DATA  RO
+//   0x4134  RX0_ERR_RD_DATA  RO rd_strobe
 //          [31:0]   RX0_ERR_RD_DATA  RO
-//   0x4140  RX0_BIT_RADDR    RW
+//   0x4140  RX0_BIT_RADDR    RW wr_strobe
 //          [10:8]   WORD_IDX         RW
 //          [4:0]    BIT_IDX          RW
 //   0x4144  RX0_BIT_RD_PULSE RO
@@ -298,7 +298,7 @@
 //          [15:0]   RX0_BIT_RD_PULSE_ERR RO
 //   0x414C  RX0_BIT_RD_NULL  RO
 //          [15:0]   RX0_BIT_RD_NULL  RO
-//   0x4150  RX0_BIT_RD_NULL_ERR RO
+//   0x4150  RX0_BIT_RD_NULL_ERR RO rd_strobe
 //          [15:0]   RX0_BIT_RD_NULL_ERR RO
 //   0x4400  RX1_CTRL         RW
 //          [2]      CLEAR            PULSE
@@ -357,7 +357,7 @@
 //          [31:0]   RX1_DROP_CNT     RO
 //   0x44EC  RX1_LAST_WORD    RO
 //          [31:0]   RX1_LAST_WORD    RO
-//   0x4500  RX1_WORD_RADDR   RW
+//   0x4500  RX1_WORD_RADDR   RW wr_strobe
 //          [7:0]    RX1_WORD_RADDR   RW
 //   0x4504  RX1_WORD_RD_TS_MSB RO
 //          [31:0]   RX1_WORD_RD_TS_MSB RO
@@ -367,9 +367,9 @@
 //          [31:0]   RX1_WORD_RD_DATA RO
 //   0x4510  RX1_WORD_RD_GAP  RO
 //          [31:0]   RX1_WORD_RD_GAP  RO
-//   0x4514  RX1_WORD_RD_GAP_ERR RO
+//   0x4514  RX1_WORD_RD_GAP_ERR RO rd_strobe
 //          [15:0]   RX1_WORD_RD_GAP_ERR RO
-//   0x4520  RX1_ERR_RADDR    RW
+//   0x4520  RX1_ERR_RADDR    RW wr_strobe
 //          [7:0]    RX1_ERR_RADDR    RW
 //   0x4524  RX1_ERR_RD_TS_MSB RO
 //          [31:0]   RX1_ERR_RD_TS_MSB RO
@@ -379,9 +379,9 @@
 //          [15:0]   RX1_ERR_RD_CODE  RO
 //   0x4530  RX1_ERR_RD_ADDR  RO
 //          [15:0]   RX1_ERR_RD_ADDR  RO
-//   0x4534  RX1_ERR_RD_DATA  RO
+//   0x4534  RX1_ERR_RD_DATA  RO rd_strobe
 //          [31:0]   RX1_ERR_RD_DATA  RO
-//   0x4540  RX1_BIT_RADDR    RW
+//   0x4540  RX1_BIT_RADDR    RW wr_strobe
 //          [10:8]   WORD_IDX         RW
 //          [4:0]    BIT_IDX          RW
 //   0x4544  RX1_BIT_RD_PULSE RO
@@ -390,7 +390,7 @@
 //          [15:0]   RX1_BIT_RD_PULSE_ERR RO
 //   0x454C  RX1_BIT_RD_NULL  RO
 //          [15:0]   RX1_BIT_RD_NULL  RO
-//   0x4550  RX1_BIT_RD_NULL_ERR RO
+//   0x4550  RX1_BIT_RD_NULL_ERR RO rd_strobe
 //          [15:0]   RX1_BIT_RD_NULL_ERR RO
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
@@ -550,23 +550,29 @@ module	arinc429_axil #(
 		input	wire	[31:0]      	i_tb_drop_cnt,	// TB_DROP_CNT.TB_DROP_CNT RO
 		input	wire	[31:0]      	i_tb_last_word,	// TB_LAST_WORD.TB_LAST_WORD RO
 		output	wire	[7:0]       	o_tb_word_raddr,	// TB_WORD_RADDR.TB_WORD_RADDR RW
+		output	wire	            	o_tb_word_raddr_wr,	// TB_WORD_RADDR write strobe
 		input	wire	[31:0]      	i_tb_word_rd_ts_msb,	// TB_WORD_RD_TS_MSB.TB_WORD_RD_TS_MSB RO
 		input	wire	[31:0]      	i_tb_word_rd_ts_lsb,	// TB_WORD_RD_TS_LSB.TB_WORD_RD_TS_LSB RO
 		input	wire	[31:0]      	i_tb_word_rd_data,	// TB_WORD_RD_DATA.TB_WORD_RD_DATA RO
 		input	wire	[31:0]      	i_tb_word_rd_gap,	// TB_WORD_RD_GAP.TB_WORD_RD_GAP RO
 		input	wire	[15:0]      	i_tb_word_rd_gap_err,	// TB_WORD_RD_GAP_ERR.TB_WORD_RD_GAP_ERR RO
+		output	wire	            	o_tb_word_rd_gap_err_rd,	// TB_WORD_RD_GAP_ERR read strobe
 		output	wire	[7:0]       	o_tb_err_raddr,	// TB_ERR_RADDR.TB_ERR_RADDR RW
+		output	wire	            	o_tb_err_raddr_wr,	// TB_ERR_RADDR write strobe
 		input	wire	[31:0]      	i_tb_err_rd_ts_msb,	// TB_ERR_RD_TS_MSB.TB_ERR_RD_TS_MSB RO
 		input	wire	[31:0]      	i_tb_err_rd_ts_lsb,	// TB_ERR_RD_TS_LSB.TB_ERR_RD_TS_LSB RO
 		input	wire	[15:0]      	i_tb_err_rd_code,	// TB_ERR_RD_CODE.TB_ERR_RD_CODE RO
 		input	wire	[15:0]      	i_tb_err_rd_addr,	// TB_ERR_RD_ADDR.TB_ERR_RD_ADDR RO
 		input	wire	[31:0]      	i_tb_err_rd_data,	// TB_ERR_RD_DATA.TB_ERR_RD_DATA RO
+		output	wire	            	o_tb_err_rd_data_rd,	// TB_ERR_RD_DATA read strobe
 		output	wire	[4:0]       	o_tb_bit_raddr_bit_idx,	// TB_BIT_RADDR.BIT_IDX RW
 		output	wire	[2:0]       	o_tb_bit_raddr_word_idx,	// TB_BIT_RADDR.WORD_IDX RW
+		output	wire	            	o_tb_bit_raddr_wr,	// TB_BIT_RADDR write strobe
 		input	wire	[15:0]      	i_tb_bit_rd_pulse,	// TB_BIT_RD_PULSE.TB_BIT_RD_PULSE RO
 		input	wire	[15:0]      	i_tb_bit_rd_pulse_err,	// TB_BIT_RD_PULSE_ERR.TB_BIT_RD_PULSE_ERR RO
 		input	wire	[15:0]      	i_tb_bit_rd_null,	// TB_BIT_RD_NULL.TB_BIT_RD_NULL RO
 		input	wire	[15:0]      	i_tb_bit_rd_null_err,	// TB_BIT_RD_NULL_ERR.TB_BIT_RD_NULL_ERR RO
+		output	wire	            	o_tb_bit_rd_null_err_rd,	// TB_BIT_RD_NULL_ERR read strobe
 		output	wire	            	o_tb_chk_ctrl_enable,	// TB_CHK_CTRL.ENABLE RW
 		output	wire	            	o_tb_chk_ctrl_clear,	// TB_CHK_CTRL.CLEAR PULSE
 		output	wire	[31:0]      	o_tb_chk_timeout,	// TB_CHK_TIMEOUT.TB_CHK_TIMEOUT RW
@@ -606,23 +612,29 @@ module	arinc429_axil #(
 		input	wire	[31:0]      	i_rx0_drop_cnt,	// RX0_DROP_CNT.RX0_DROP_CNT RO
 		input	wire	[31:0]      	i_rx0_last_word,	// RX0_LAST_WORD.RX0_LAST_WORD RO
 		output	wire	[7:0]       	o_rx0_word_raddr,	// RX0_WORD_RADDR.RX0_WORD_RADDR RW
+		output	wire	            	o_rx0_word_raddr_wr,	// RX0_WORD_RADDR write strobe
 		input	wire	[31:0]      	i_rx0_word_rd_ts_msb,	// RX0_WORD_RD_TS_MSB.RX0_WORD_RD_TS_MSB RO
 		input	wire	[31:0]      	i_rx0_word_rd_ts_lsb,	// RX0_WORD_RD_TS_LSB.RX0_WORD_RD_TS_LSB RO
 		input	wire	[31:0]      	i_rx0_word_rd_data,	// RX0_WORD_RD_DATA.RX0_WORD_RD_DATA RO
 		input	wire	[31:0]      	i_rx0_word_rd_gap,	// RX0_WORD_RD_GAP.RX0_WORD_RD_GAP RO
 		input	wire	[15:0]      	i_rx0_word_rd_gap_err,	// RX0_WORD_RD_GAP_ERR.RX0_WORD_RD_GAP_ERR RO
+		output	wire	            	o_rx0_word_rd_gap_err_rd,	// RX0_WORD_RD_GAP_ERR read strobe
 		output	wire	[7:0]       	o_rx0_err_raddr,	// RX0_ERR_RADDR.RX0_ERR_RADDR RW
+		output	wire	            	o_rx0_err_raddr_wr,	// RX0_ERR_RADDR write strobe
 		input	wire	[31:0]      	i_rx0_err_rd_ts_msb,	// RX0_ERR_RD_TS_MSB.RX0_ERR_RD_TS_MSB RO
 		input	wire	[31:0]      	i_rx0_err_rd_ts_lsb,	// RX0_ERR_RD_TS_LSB.RX0_ERR_RD_TS_LSB RO
 		input	wire	[15:0]      	i_rx0_err_rd_code,	// RX0_ERR_RD_CODE.RX0_ERR_RD_CODE RO
 		input	wire	[15:0]      	i_rx0_err_rd_addr,	// RX0_ERR_RD_ADDR.RX0_ERR_RD_ADDR RO
 		input	wire	[31:0]      	i_rx0_err_rd_data,	// RX0_ERR_RD_DATA.RX0_ERR_RD_DATA RO
+		output	wire	            	o_rx0_err_rd_data_rd,	// RX0_ERR_RD_DATA read strobe
 		output	wire	[4:0]       	o_rx0_bit_raddr_bit_idx,	// RX0_BIT_RADDR.BIT_IDX RW
 		output	wire	[2:0]       	o_rx0_bit_raddr_word_idx,	// RX0_BIT_RADDR.WORD_IDX RW
+		output	wire	            	o_rx0_bit_raddr_wr,	// RX0_BIT_RADDR write strobe
 		input	wire	[15:0]      	i_rx0_bit_rd_pulse,	// RX0_BIT_RD_PULSE.RX0_BIT_RD_PULSE RO
 		input	wire	[15:0]      	i_rx0_bit_rd_pulse_err,	// RX0_BIT_RD_PULSE_ERR.RX0_BIT_RD_PULSE_ERR RO
 		input	wire	[15:0]      	i_rx0_bit_rd_null,	// RX0_BIT_RD_NULL.RX0_BIT_RD_NULL RO
 		input	wire	[15:0]      	i_rx0_bit_rd_null_err,	// RX0_BIT_RD_NULL_ERR.RX0_BIT_RD_NULL_ERR RO
+		output	wire	            	o_rx0_bit_rd_null_err_rd,	// RX0_BIT_RD_NULL_ERR read strobe
 		output	wire	            	o_rx1_ctrl_enable,	// RX1_CTRL.ENABLE RW
 		output	wire	            	o_rx1_ctrl_freeze,	// RX1_CTRL.FREEZE RW
 		output	wire	            	o_rx1_ctrl_clear,	// RX1_CTRL.CLEAR PULSE
@@ -655,23 +667,29 @@ module	arinc429_axil #(
 		input	wire	[31:0]      	i_rx1_drop_cnt,	// RX1_DROP_CNT.RX1_DROP_CNT RO
 		input	wire	[31:0]      	i_rx1_last_word,	// RX1_LAST_WORD.RX1_LAST_WORD RO
 		output	wire	[7:0]       	o_rx1_word_raddr,	// RX1_WORD_RADDR.RX1_WORD_RADDR RW
+		output	wire	            	o_rx1_word_raddr_wr,	// RX1_WORD_RADDR write strobe
 		input	wire	[31:0]      	i_rx1_word_rd_ts_msb,	// RX1_WORD_RD_TS_MSB.RX1_WORD_RD_TS_MSB RO
 		input	wire	[31:0]      	i_rx1_word_rd_ts_lsb,	// RX1_WORD_RD_TS_LSB.RX1_WORD_RD_TS_LSB RO
 		input	wire	[31:0]      	i_rx1_word_rd_data,	// RX1_WORD_RD_DATA.RX1_WORD_RD_DATA RO
 		input	wire	[31:0]      	i_rx1_word_rd_gap,	// RX1_WORD_RD_GAP.RX1_WORD_RD_GAP RO
 		input	wire	[15:0]      	i_rx1_word_rd_gap_err,	// RX1_WORD_RD_GAP_ERR.RX1_WORD_RD_GAP_ERR RO
+		output	wire	            	o_rx1_word_rd_gap_err_rd,	// RX1_WORD_RD_GAP_ERR read strobe
 		output	wire	[7:0]       	o_rx1_err_raddr,	// RX1_ERR_RADDR.RX1_ERR_RADDR RW
+		output	wire	            	o_rx1_err_raddr_wr,	// RX1_ERR_RADDR write strobe
 		input	wire	[31:0]      	i_rx1_err_rd_ts_msb,	// RX1_ERR_RD_TS_MSB.RX1_ERR_RD_TS_MSB RO
 		input	wire	[31:0]      	i_rx1_err_rd_ts_lsb,	// RX1_ERR_RD_TS_LSB.RX1_ERR_RD_TS_LSB RO
 		input	wire	[15:0]      	i_rx1_err_rd_code,	// RX1_ERR_RD_CODE.RX1_ERR_RD_CODE RO
 		input	wire	[15:0]      	i_rx1_err_rd_addr,	// RX1_ERR_RD_ADDR.RX1_ERR_RD_ADDR RO
 		input	wire	[31:0]      	i_rx1_err_rd_data,	// RX1_ERR_RD_DATA.RX1_ERR_RD_DATA RO
+		output	wire	            	o_rx1_err_rd_data_rd,	// RX1_ERR_RD_DATA read strobe
 		output	wire	[4:0]       	o_rx1_bit_raddr_bit_idx,	// RX1_BIT_RADDR.BIT_IDX RW
 		output	wire	[2:0]       	o_rx1_bit_raddr_word_idx,	// RX1_BIT_RADDR.WORD_IDX RW
+		output	wire	            	o_rx1_bit_raddr_wr,	// RX1_BIT_RADDR write strobe
 		input	wire	[15:0]      	i_rx1_bit_rd_pulse,	// RX1_BIT_RD_PULSE.RX1_BIT_RD_PULSE RO
 		input	wire	[15:0]      	i_rx1_bit_rd_pulse_err,	// RX1_BIT_RD_PULSE_ERR.RX1_BIT_RD_PULSE_ERR RO
 		input	wire	[15:0]      	i_rx1_bit_rd_null,	// RX1_BIT_RD_NULL.RX1_BIT_RD_NULL RO
-		input	wire	[15:0]      	i_rx1_bit_rd_null_err	// RX1_BIT_RD_NULL_ERR.RX1_BIT_RD_NULL_ERR RO
+		input	wire	[15:0]      	i_rx1_bit_rd_null_err,	// RX1_BIT_RD_NULL_ERR.RX1_BIT_RD_NULL_ERR RO
+		output	wire	            	o_rx1_bit_rd_null_err_rd	// RX1_BIT_RD_NULL_ERR read strobe
 		// }}}
 	);
 
@@ -1175,6 +1193,150 @@ module	arinc429_axil #(
 	else
 		stb_ts_lsb_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd11);
 	assign	o_ts_lsb_rd = stb_ts_lsb_rd;
+	reg	stb_tb_word_raddr_wr;
+	initial	stb_tb_word_raddr_wr = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_tb_word_raddr_wr <= 0;
+	else
+		stb_tb_word_raddr_wr <= axil_write_ready && (awskd_addr[REG_AW-1:0] == 13'd576);
+	assign	o_tb_word_raddr_wr = stb_tb_word_raddr_wr;
+	reg	stb_tb_word_rd_gap_err_rd;
+	initial	stb_tb_word_rd_gap_err_rd = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_tb_word_rd_gap_err_rd <= 0;
+	else
+		stb_tb_word_rd_gap_err_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd581);
+	assign	o_tb_word_rd_gap_err_rd = stb_tb_word_rd_gap_err_rd;
+	reg	stb_tb_err_raddr_wr;
+	initial	stb_tb_err_raddr_wr = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_tb_err_raddr_wr <= 0;
+	else
+		stb_tb_err_raddr_wr <= axil_write_ready && (awskd_addr[REG_AW-1:0] == 13'd584);
+	assign	o_tb_err_raddr_wr = stb_tb_err_raddr_wr;
+	reg	stb_tb_err_rd_data_rd;
+	initial	stb_tb_err_rd_data_rd = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_tb_err_rd_data_rd <= 0;
+	else
+		stb_tb_err_rd_data_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd589);
+	assign	o_tb_err_rd_data_rd = stb_tb_err_rd_data_rd;
+	reg	stb_tb_bit_raddr_wr;
+	initial	stb_tb_bit_raddr_wr = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_tb_bit_raddr_wr <= 0;
+	else
+		stb_tb_bit_raddr_wr <= axil_write_ready && (awskd_addr[REG_AW-1:0] == 13'd592);
+	assign	o_tb_bit_raddr_wr = stb_tb_bit_raddr_wr;
+	reg	stb_tb_bit_rd_null_err_rd;
+	initial	stb_tb_bit_rd_null_err_rd = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_tb_bit_rd_null_err_rd <= 0;
+	else
+		stb_tb_bit_rd_null_err_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd596);
+	assign	o_tb_bit_rd_null_err_rd = stb_tb_bit_rd_null_err_rd;
+	reg	stb_rx0_word_raddr_wr;
+	initial	stb_rx0_word_raddr_wr = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_rx0_word_raddr_wr <= 0;
+	else
+		stb_rx0_word_raddr_wr <= axil_write_ready && (awskd_addr[REG_AW-1:0] == 13'd4160);
+	assign	o_rx0_word_raddr_wr = stb_rx0_word_raddr_wr;
+	reg	stb_rx0_word_rd_gap_err_rd;
+	initial	stb_rx0_word_rd_gap_err_rd = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_rx0_word_rd_gap_err_rd <= 0;
+	else
+		stb_rx0_word_rd_gap_err_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd4165);
+	assign	o_rx0_word_rd_gap_err_rd = stb_rx0_word_rd_gap_err_rd;
+	reg	stb_rx0_err_raddr_wr;
+	initial	stb_rx0_err_raddr_wr = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_rx0_err_raddr_wr <= 0;
+	else
+		stb_rx0_err_raddr_wr <= axil_write_ready && (awskd_addr[REG_AW-1:0] == 13'd4168);
+	assign	o_rx0_err_raddr_wr = stb_rx0_err_raddr_wr;
+	reg	stb_rx0_err_rd_data_rd;
+	initial	stb_rx0_err_rd_data_rd = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_rx0_err_rd_data_rd <= 0;
+	else
+		stb_rx0_err_rd_data_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd4173);
+	assign	o_rx0_err_rd_data_rd = stb_rx0_err_rd_data_rd;
+	reg	stb_rx0_bit_raddr_wr;
+	initial	stb_rx0_bit_raddr_wr = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_rx0_bit_raddr_wr <= 0;
+	else
+		stb_rx0_bit_raddr_wr <= axil_write_ready && (awskd_addr[REG_AW-1:0] == 13'd4176);
+	assign	o_rx0_bit_raddr_wr = stb_rx0_bit_raddr_wr;
+	reg	stb_rx0_bit_rd_null_err_rd;
+	initial	stb_rx0_bit_rd_null_err_rd = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_rx0_bit_rd_null_err_rd <= 0;
+	else
+		stb_rx0_bit_rd_null_err_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd4180);
+	assign	o_rx0_bit_rd_null_err_rd = stb_rx0_bit_rd_null_err_rd;
+	reg	stb_rx1_word_raddr_wr;
+	initial	stb_rx1_word_raddr_wr = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_rx1_word_raddr_wr <= 0;
+	else
+		stb_rx1_word_raddr_wr <= axil_write_ready && (awskd_addr[REG_AW-1:0] == 13'd4416);
+	assign	o_rx1_word_raddr_wr = stb_rx1_word_raddr_wr;
+	reg	stb_rx1_word_rd_gap_err_rd;
+	initial	stb_rx1_word_rd_gap_err_rd = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_rx1_word_rd_gap_err_rd <= 0;
+	else
+		stb_rx1_word_rd_gap_err_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd4421);
+	assign	o_rx1_word_rd_gap_err_rd = stb_rx1_word_rd_gap_err_rd;
+	reg	stb_rx1_err_raddr_wr;
+	initial	stb_rx1_err_raddr_wr = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_rx1_err_raddr_wr <= 0;
+	else
+		stb_rx1_err_raddr_wr <= axil_write_ready && (awskd_addr[REG_AW-1:0] == 13'd4424);
+	assign	o_rx1_err_raddr_wr = stb_rx1_err_raddr_wr;
+	reg	stb_rx1_err_rd_data_rd;
+	initial	stb_rx1_err_rd_data_rd = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_rx1_err_rd_data_rd <= 0;
+	else
+		stb_rx1_err_rd_data_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd4429);
+	assign	o_rx1_err_rd_data_rd = stb_rx1_err_rd_data_rd;
+	reg	stb_rx1_bit_raddr_wr;
+	initial	stb_rx1_bit_raddr_wr = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_rx1_bit_raddr_wr <= 0;
+	else
+		stb_rx1_bit_raddr_wr <= axil_write_ready && (awskd_addr[REG_AW-1:0] == 13'd4432);
+	assign	o_rx1_bit_raddr_wr = stb_rx1_bit_raddr_wr;
+	reg	stb_rx1_bit_rd_null_err_rd;
+	initial	stb_rx1_bit_rd_null_err_rd = 0;
+	always @(posedge S_AXI_ACLK)
+	if (i_reset)
+		stb_rx1_bit_rd_null_err_rd <= 0;
+	else
+		stb_rx1_bit_rd_null_err_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd4436);
+	assign	o_rx1_bit_rd_null_err_rd = stb_rx1_bit_rd_null_err_rd;
 
 	// IP-side outputs
 	assign	o_soft_reset_rst_all = p_soft_reset[0];

@@ -74,23 +74,23 @@ Decoded address bits: `[14:2]` (block repeats every 0x8000 bytes)
 | 0x8E4 | TB_ERR_CNT | RO | 0x00000000 | Hata kaydı sayısı |
 | 0x8E8 | TB_DROP_CNT | RO | 0x00000000 | Freeze sırasında atılan kayıt sayısı |
 | 0x8EC | TB_LAST_WORD | RO | 0x00000000 | Alınan son geçerli Word |
-| 0x900 | TB_WORD_RADDR | RW | 0x00000000 | Word RAM okuma adresi |
+| 0x900 | TB_WORD_RADDR | RW | 0x00000000 | Word RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
 | 0x904 | TB_WORD_RD_TS_MSB | RO | 0x00000000 | Word kaydı Timestamp MSB |
 | 0x908 | TB_WORD_RD_TS_LSB | RO | 0x00000000 | Word kaydı Timestamp LSB |
 | 0x90C | TB_WORD_RD_DATA | RO | 0x00000000 | Word kaydı 32-bit veri |
 | 0x910 | TB_WORD_RD_GAP | RO | 0x00000000 | Word kaydı önceki Gap süresi (clk) |
-| 0x914 | TB_WORD_RD_GAP_ERR | RO | 0x00000000 | Word kaydı Gap gürültü sayısı |
-| 0x920 | TB_ERR_RADDR | RW | 0x00000000 | Error RAM okuma adresi |
+| 0x914 | TB_WORD_RD_GAP_ERR | RO | 0x00000000 | Word kaydı Gap gürültü sayısı (okununca pointer +1) |
+| 0x920 | TB_ERR_RADDR | RW | 0x00000000 | Error RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
 | 0x924 | TB_ERR_RD_TS_MSB | RO | 0x00000000 | Error kaydı Timestamp MSB |
 | 0x928 | TB_ERR_RD_TS_LSB | RO | 0x00000000 | Error kaydı Timestamp LSB |
 | 0x92C | TB_ERR_RD_CODE | RO | 0x00000000 | Error kaydı hata kodu bitmask |
 | 0x930 | TB_ERR_RD_ADDR | RO | 0x00000000 | Error kaydı konum/bit/FIFO adresi |
-| 0x934 | TB_ERR_RD_DATA | RO | 0x00000000 | Error kaydı ölçüm/beklenen veri |
-| 0x940 | TB_BIT_RADDR | RW | 0x00000000 | Bit Diagnostic RAM okuma adresi |
+| 0x934 | TB_ERR_RD_DATA | RO | 0x00000000 | Error kaydı ölçüm/beklenen veri (okununca pointer +1) |
+| 0x940 | TB_BIT_RADDR | RW | 0x00000000 | Bit Diagnostic RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
 | 0x944 | TB_BIT_RD_PULSE | RO | 0x00000000 | Bit Pulse süresi (clk) |
 | 0x948 | TB_BIT_RD_PULSE_ERR | RO | 0x00000000 | Bit Pulse gürültü sayısı |
 | 0x94C | TB_BIT_RD_NULL | RO | 0x00000000 | Bit Null süresi (clk) |
-| 0x950 | TB_BIT_RD_NULL_ERR | RO | 0x00000000 | Bit Null gürültü sayısı |
+| 0x950 | TB_BIT_RD_NULL_ERR | RO | 0x00000000 | Bit Null gürültü sayısı (okununca pointer +1) |
 | 0x9C0 | TB_CHK_CTRL | RW | 0x00000000 | TX BIT Word Checker kontrol |
 | 0x9C4 | TB_CHK_TIMEOUT | RW | 0x00000000 | Echo zaman aşımı (clk, 0=kapalı) |
 | 0x9C8 | TB_CHK_OK_CNT | RO | 0x00000000 | Eşleşen Word sayısı |
@@ -122,23 +122,23 @@ Decoded address bits: `[14:2]` (block repeats every 0x8000 bytes)
 | 0x40E4 | RX0_ERR_CNT | RO | 0x00000000 | Hata kaydı sayısı |
 | 0x40E8 | RX0_DROP_CNT | RO | 0x00000000 | Freeze sırasında atılan kayıt sayısı |
 | 0x40EC | RX0_LAST_WORD | RO | 0x00000000 | Alınan son geçerli Word |
-| 0x4100 | RX0_WORD_RADDR | RW | 0x00000000 | Word RAM okuma adresi |
+| 0x4100 | RX0_WORD_RADDR | RW | 0x00000000 | Word RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
 | 0x4104 | RX0_WORD_RD_TS_MSB | RO | 0x00000000 | Word kaydı Timestamp MSB |
 | 0x4108 | RX0_WORD_RD_TS_LSB | RO | 0x00000000 | Word kaydı Timestamp LSB |
 | 0x410C | RX0_WORD_RD_DATA | RO | 0x00000000 | Word kaydı 32-bit veri |
 | 0x4110 | RX0_WORD_RD_GAP | RO | 0x00000000 | Word kaydı önceki Gap süresi (clk) |
-| 0x4114 | RX0_WORD_RD_GAP_ERR | RO | 0x00000000 | Word kaydı Gap gürültü sayısı |
-| 0x4120 | RX0_ERR_RADDR | RW | 0x00000000 | Error RAM okuma adresi |
+| 0x4114 | RX0_WORD_RD_GAP_ERR | RO | 0x00000000 | Word kaydı Gap gürültü sayısı (okununca pointer +1) |
+| 0x4120 | RX0_ERR_RADDR | RW | 0x00000000 | Error RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
 | 0x4124 | RX0_ERR_RD_TS_MSB | RO | 0x00000000 | Error kaydı Timestamp MSB |
 | 0x4128 | RX0_ERR_RD_TS_LSB | RO | 0x00000000 | Error kaydı Timestamp LSB |
 | 0x412C | RX0_ERR_RD_CODE | RO | 0x00000000 | Error kaydı hata kodu bitmask |
 | 0x4130 | RX0_ERR_RD_ADDR | RO | 0x00000000 | Error kaydı konum/bit/FIFO adresi |
-| 0x4134 | RX0_ERR_RD_DATA | RO | 0x00000000 | Error kaydı ölçüm/beklenen veri |
-| 0x4140 | RX0_BIT_RADDR | RW | 0x00000000 | Bit Diagnostic RAM okuma adresi |
+| 0x4134 | RX0_ERR_RD_DATA | RO | 0x00000000 | Error kaydı ölçüm/beklenen veri (okununca pointer +1) |
+| 0x4140 | RX0_BIT_RADDR | RW | 0x00000000 | Bit Diagnostic RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
 | 0x4144 | RX0_BIT_RD_PULSE | RO | 0x00000000 | Bit Pulse süresi (clk) |
 | 0x4148 | RX0_BIT_RD_PULSE_ERR | RO | 0x00000000 | Bit Pulse gürültü sayısı |
 | 0x414C | RX0_BIT_RD_NULL | RO | 0x00000000 | Bit Null süresi (clk) |
-| 0x4150 | RX0_BIT_RD_NULL_ERR | RO | 0x00000000 | Bit Null gürültü sayısı |
+| 0x4150 | RX0_BIT_RD_NULL_ERR | RO | 0x00000000 | Bit Null gürültü sayısı (okununca pointer +1) |
 | 0x4400 | RX1_CTRL | RW | 0x00000000 | RX1_ kanal kontrolü |
 | 0x4404 | RX1_STATUS | RO | 0x00000000 | RX1_ kanal durumu |
 | 0x4408 | RX1_CFG_SEL | RW | 0x00000000 | Config seçimi (0: HS, 1: LS, 2: Custom) |
@@ -165,23 +165,23 @@ Decoded address bits: `[14:2]` (block repeats every 0x8000 bytes)
 | 0x44E4 | RX1_ERR_CNT | RO | 0x00000000 | Hata kaydı sayısı |
 | 0x44E8 | RX1_DROP_CNT | RO | 0x00000000 | Freeze sırasında atılan kayıt sayısı |
 | 0x44EC | RX1_LAST_WORD | RO | 0x00000000 | Alınan son geçerli Word |
-| 0x4500 | RX1_WORD_RADDR | RW | 0x00000000 | Word RAM okuma adresi |
+| 0x4500 | RX1_WORD_RADDR | RW | 0x00000000 | Word RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
 | 0x4504 | RX1_WORD_RD_TS_MSB | RO | 0x00000000 | Word kaydı Timestamp MSB |
 | 0x4508 | RX1_WORD_RD_TS_LSB | RO | 0x00000000 | Word kaydı Timestamp LSB |
 | 0x450C | RX1_WORD_RD_DATA | RO | 0x00000000 | Word kaydı 32-bit veri |
 | 0x4510 | RX1_WORD_RD_GAP | RO | 0x00000000 | Word kaydı önceki Gap süresi (clk) |
-| 0x4514 | RX1_WORD_RD_GAP_ERR | RO | 0x00000000 | Word kaydı Gap gürültü sayısı |
-| 0x4520 | RX1_ERR_RADDR | RW | 0x00000000 | Error RAM okuma adresi |
+| 0x4514 | RX1_WORD_RD_GAP_ERR | RO | 0x00000000 | Word kaydı Gap gürültü sayısı (okununca pointer +1) |
+| 0x4520 | RX1_ERR_RADDR | RW | 0x00000000 | Error RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
 | 0x4524 | RX1_ERR_RD_TS_MSB | RO | 0x00000000 | Error kaydı Timestamp MSB |
 | 0x4528 | RX1_ERR_RD_TS_LSB | RO | 0x00000000 | Error kaydı Timestamp LSB |
 | 0x452C | RX1_ERR_RD_CODE | RO | 0x00000000 | Error kaydı hata kodu bitmask |
 | 0x4530 | RX1_ERR_RD_ADDR | RO | 0x00000000 | Error kaydı konum/bit/FIFO adresi |
-| 0x4534 | RX1_ERR_RD_DATA | RO | 0x00000000 | Error kaydı ölçüm/beklenen veri |
-| 0x4540 | RX1_BIT_RADDR | RW | 0x00000000 | Bit Diagnostic RAM okuma adresi |
+| 0x4534 | RX1_ERR_RD_DATA | RO | 0x00000000 | Error kaydı ölçüm/beklenen veri (okununca pointer +1) |
+| 0x4540 | RX1_BIT_RADDR | RW | 0x00000000 | Bit Diagnostic RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
 | 0x4544 | RX1_BIT_RD_PULSE | RO | 0x00000000 | Bit Pulse süresi (clk) |
 | 0x4548 | RX1_BIT_RD_PULSE_ERR | RO | 0x00000000 | Bit Pulse gürültü sayısı |
 | 0x454C | RX1_BIT_RD_NULL | RO | 0x00000000 | Bit Null süresi (clk) |
-| 0x4550 | RX1_BIT_RD_NULL_ERR | RO | 0x00000000 | Bit Null gürültü sayısı |
+| 0x4550 | RX1_BIT_RD_NULL_ERR | RO | 0x00000000 | Bit Null gürültü sayısı (okununca pointer +1) |
 
 ### 0x00 IP_ID
 
@@ -709,11 +709,13 @@ Alınan son geçerli Word
 
 ### 0x900 TB_WORD_RADDR
 
-Word RAM okuma adresi
+Word RAM başlangıç okuma adresi (yazınca pointer yüklenir)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [7:0] | TB_WORD_RADDR | RW | 0x0 | `o_tb_word_raddr` | Word RAM okuma adresi |
+| [7:0] | TB_WORD_RADDR | RW | 0x0 | `o_tb_word_raddr` | Word RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
+
+Strobes: `o_tb_word_raddr_wr`
 
 ### 0x904 TB_WORD_RD_TS_MSB
 
@@ -749,19 +751,23 @@ Word kaydı önceki Gap süresi (clk)
 
 ### 0x914 TB_WORD_RD_GAP_ERR
 
-Word kaydı Gap gürültü sayısı
+Word kaydı Gap gürültü sayısı (okununca pointer +1)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [15:0] | TB_WORD_RD_GAP_ERR | RO | 0 | `i_tb_word_rd_gap_err` | Word kaydı Gap gürültü sayısı |
+| [15:0] | TB_WORD_RD_GAP_ERR | RO | 0 | `i_tb_word_rd_gap_err` | Word kaydı Gap gürültü sayısı (okununca pointer +1) |
+
+Strobes: `o_tb_word_rd_gap_err_rd`
 
 ### 0x920 TB_ERR_RADDR
 
-Error RAM okuma adresi
+Error RAM başlangıç okuma adresi (yazınca pointer yüklenir)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [7:0] | TB_ERR_RADDR | RW | 0x0 | `o_tb_err_raddr` | Error RAM okuma adresi |
+| [7:0] | TB_ERR_RADDR | RW | 0x0 | `o_tb_err_raddr` | Error RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
+
+Strobes: `o_tb_err_raddr_wr`
 
 ### 0x924 TB_ERR_RD_TS_MSB
 
@@ -797,20 +803,24 @@ Error kaydı konum/bit/FIFO adresi
 
 ### 0x934 TB_ERR_RD_DATA
 
-Error kaydı ölçüm/beklenen veri
+Error kaydı ölçüm/beklenen veri (okununca pointer +1)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:0] | TB_ERR_RD_DATA | RO | 0 | `i_tb_err_rd_data` | Error kaydı ölçüm/beklenen veri |
+| [31:0] | TB_ERR_RD_DATA | RO | 0 | `i_tb_err_rd_data` | Error kaydı ölçüm/beklenen veri (okununca pointer +1) |
+
+Strobes: `o_tb_err_rd_data_rd`
 
 ### 0x940 TB_BIT_RADDR
 
-Bit Diagnostic RAM okuma adresi
+Bit Diagnostic RAM başlangıç okuma adresi (yazınca pointer yüklenir)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
 | [10:8] | WORD_IDX | RW | 0x0 | `o_tb_bit_raddr_word_idx` | Bit Diagnostic Word indeksi |
 | [4:0] | BIT_IDX | RW | 0x0 | `o_tb_bit_raddr_bit_idx` | Bit indeksi (0-31) |
+
+Strobes: `o_tb_bit_raddr_wr`
 
 ### 0x944 TB_BIT_RD_PULSE
 
@@ -838,11 +848,13 @@ Bit Null süresi (clk)
 
 ### 0x950 TB_BIT_RD_NULL_ERR
 
-Bit Null gürültü sayısı
+Bit Null gürültü sayısı (okununca pointer +1)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [15:0] | TB_BIT_RD_NULL_ERR | RO | 0 | `i_tb_bit_rd_null_err` | Bit Null gürültü sayısı |
+| [15:0] | TB_BIT_RD_NULL_ERR | RO | 0 | `i_tb_bit_rd_null_err` | Bit Null gürültü sayısı (okununca pointer +1) |
+
+Strobes: `o_tb_bit_rd_null_err_rd`
 
 ### 0x9C0 TB_CHK_CTRL
 
@@ -1101,11 +1113,13 @@ Alınan son geçerli Word
 
 ### 0x4100 RX0_WORD_RADDR
 
-Word RAM okuma adresi
+Word RAM başlangıç okuma adresi (yazınca pointer yüklenir)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [7:0] | RX0_WORD_RADDR | RW | 0x0 | `o_rx0_word_raddr` | Word RAM okuma adresi |
+| [7:0] | RX0_WORD_RADDR | RW | 0x0 | `o_rx0_word_raddr` | Word RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
+
+Strobes: `o_rx0_word_raddr_wr`
 
 ### 0x4104 RX0_WORD_RD_TS_MSB
 
@@ -1141,19 +1155,23 @@ Word kaydı önceki Gap süresi (clk)
 
 ### 0x4114 RX0_WORD_RD_GAP_ERR
 
-Word kaydı Gap gürültü sayısı
+Word kaydı Gap gürültü sayısı (okununca pointer +1)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [15:0] | RX0_WORD_RD_GAP_ERR | RO | 0 | `i_rx0_word_rd_gap_err` | Word kaydı Gap gürültü sayısı |
+| [15:0] | RX0_WORD_RD_GAP_ERR | RO | 0 | `i_rx0_word_rd_gap_err` | Word kaydı Gap gürültü sayısı (okununca pointer +1) |
+
+Strobes: `o_rx0_word_rd_gap_err_rd`
 
 ### 0x4120 RX0_ERR_RADDR
 
-Error RAM okuma adresi
+Error RAM başlangıç okuma adresi (yazınca pointer yüklenir)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [7:0] | RX0_ERR_RADDR | RW | 0x0 | `o_rx0_err_raddr` | Error RAM okuma adresi |
+| [7:0] | RX0_ERR_RADDR | RW | 0x0 | `o_rx0_err_raddr` | Error RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
+
+Strobes: `o_rx0_err_raddr_wr`
 
 ### 0x4124 RX0_ERR_RD_TS_MSB
 
@@ -1189,20 +1207,24 @@ Error kaydı konum/bit/FIFO adresi
 
 ### 0x4134 RX0_ERR_RD_DATA
 
-Error kaydı ölçüm/beklenen veri
+Error kaydı ölçüm/beklenen veri (okununca pointer +1)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:0] | RX0_ERR_RD_DATA | RO | 0 | `i_rx0_err_rd_data` | Error kaydı ölçüm/beklenen veri |
+| [31:0] | RX0_ERR_RD_DATA | RO | 0 | `i_rx0_err_rd_data` | Error kaydı ölçüm/beklenen veri (okununca pointer +1) |
+
+Strobes: `o_rx0_err_rd_data_rd`
 
 ### 0x4140 RX0_BIT_RADDR
 
-Bit Diagnostic RAM okuma adresi
+Bit Diagnostic RAM başlangıç okuma adresi (yazınca pointer yüklenir)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
 | [10:8] | WORD_IDX | RW | 0x0 | `o_rx0_bit_raddr_word_idx` | Bit Diagnostic Word indeksi |
 | [4:0] | BIT_IDX | RW | 0x0 | `o_rx0_bit_raddr_bit_idx` | Bit indeksi (0-31) |
+
+Strobes: `o_rx0_bit_raddr_wr`
 
 ### 0x4144 RX0_BIT_RD_PULSE
 
@@ -1230,11 +1252,13 @@ Bit Null süresi (clk)
 
 ### 0x4150 RX0_BIT_RD_NULL_ERR
 
-Bit Null gürültü sayısı
+Bit Null gürültü sayısı (okununca pointer +1)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [15:0] | RX0_BIT_RD_NULL_ERR | RO | 0 | `i_rx0_bit_rd_null_err` | Bit Null gürültü sayısı |
+| [15:0] | RX0_BIT_RD_NULL_ERR | RO | 0 | `i_rx0_bit_rd_null_err` | Bit Null gürültü sayısı (okununca pointer +1) |
+
+Strobes: `o_rx0_bit_rd_null_err_rd`
 
 ### 0x4400 RX1_CTRL
 
@@ -1451,11 +1475,13 @@ Alınan son geçerli Word
 
 ### 0x4500 RX1_WORD_RADDR
 
-Word RAM okuma adresi
+Word RAM başlangıç okuma adresi (yazınca pointer yüklenir)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [7:0] | RX1_WORD_RADDR | RW | 0x0 | `o_rx1_word_raddr` | Word RAM okuma adresi |
+| [7:0] | RX1_WORD_RADDR | RW | 0x0 | `o_rx1_word_raddr` | Word RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
+
+Strobes: `o_rx1_word_raddr_wr`
 
 ### 0x4504 RX1_WORD_RD_TS_MSB
 
@@ -1491,19 +1517,23 @@ Word kaydı önceki Gap süresi (clk)
 
 ### 0x4514 RX1_WORD_RD_GAP_ERR
 
-Word kaydı Gap gürültü sayısı
+Word kaydı Gap gürültü sayısı (okununca pointer +1)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [15:0] | RX1_WORD_RD_GAP_ERR | RO | 0 | `i_rx1_word_rd_gap_err` | Word kaydı Gap gürültü sayısı |
+| [15:0] | RX1_WORD_RD_GAP_ERR | RO | 0 | `i_rx1_word_rd_gap_err` | Word kaydı Gap gürültü sayısı (okununca pointer +1) |
+
+Strobes: `o_rx1_word_rd_gap_err_rd`
 
 ### 0x4520 RX1_ERR_RADDR
 
-Error RAM okuma adresi
+Error RAM başlangıç okuma adresi (yazınca pointer yüklenir)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [7:0] | RX1_ERR_RADDR | RW | 0x0 | `o_rx1_err_raddr` | Error RAM okuma adresi |
+| [7:0] | RX1_ERR_RADDR | RW | 0x0 | `o_rx1_err_raddr` | Error RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
+
+Strobes: `o_rx1_err_raddr_wr`
 
 ### 0x4524 RX1_ERR_RD_TS_MSB
 
@@ -1539,20 +1569,24 @@ Error kaydı konum/bit/FIFO adresi
 
 ### 0x4534 RX1_ERR_RD_DATA
 
-Error kaydı ölçüm/beklenen veri
+Error kaydı ölçüm/beklenen veri (okununca pointer +1)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:0] | RX1_ERR_RD_DATA | RO | 0 | `i_rx1_err_rd_data` | Error kaydı ölçüm/beklenen veri |
+| [31:0] | RX1_ERR_RD_DATA | RO | 0 | `i_rx1_err_rd_data` | Error kaydı ölçüm/beklenen veri (okununca pointer +1) |
+
+Strobes: `o_rx1_err_rd_data_rd`
 
 ### 0x4540 RX1_BIT_RADDR
 
-Bit Diagnostic RAM okuma adresi
+Bit Diagnostic RAM başlangıç okuma adresi (yazınca pointer yüklenir)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
 | [10:8] | WORD_IDX | RW | 0x0 | `o_rx1_bit_raddr_word_idx` | Bit Diagnostic Word indeksi |
 | [4:0] | BIT_IDX | RW | 0x0 | `o_rx1_bit_raddr_bit_idx` | Bit indeksi (0-31) |
+
+Strobes: `o_rx1_bit_raddr_wr`
 
 ### 0x4544 RX1_BIT_RD_PULSE
 
@@ -1580,11 +1614,13 @@ Bit Null süresi (clk)
 
 ### 0x4550 RX1_BIT_RD_NULL_ERR
 
-Bit Null gürültü sayısı
+Bit Null gürültü sayısı (okununca pointer +1)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [15:0] | RX1_BIT_RD_NULL_ERR | RO | 0 | `i_rx1_bit_rd_null_err` | Bit Null gürültü sayısı |
+| [15:0] | RX1_BIT_RD_NULL_ERR | RO | 0 | `i_rx1_bit_rd_null_err` | Bit Null gürültü sayısı (okununca pointer +1) |
+
+Strobes: `o_rx1_bit_rd_null_err_rd`
 
 ## Field kinds
 

@@ -53,8 +53,22 @@ def test_rx_config_and_read_channel():
     assert (sim.read(rm.offset("RX0_CTRL")) & 2) == 0
     assert data["channel"] == "RX0"
     assert len(data["words"]) == 23
+    assert data["words"][0]["no"] == 22 and data["words"][-1]["no"] == 0
     assert len(data["errors"]) == 3
     assert len(data["bits"]) == 7 * 32
+    assert data["bits"][0]["word"] == 22 and data["bits"][0]["bit"] == 0
+    assert data["bits"][31]["word"] == 22 and data["bits"][31]["bit"] == 31
+    assert data["bits"][32]["word"] == 21 and data["bits"][32]["bit"] == 0
+
+    # "Son N kayıt" kısmi okuma da tek RADDR yazması + auto-increment ile doğru kayıtları getirmeli
+    rs_last = ReadSettings(read_word="last", read_word_n=5, read_error="last", read_error_n=2, read_bit="last", read_bit_n=2)
+    data_last = read_channel(sim, rm, "RX0", rs_last)
+    assert [w["no"] for w in data_last["words"]] == [22, 21, 20, 19, 18]
+    assert data_last["words"][0]["w"] == data["words"][0]["w"]
+    assert data_last["words"][4]["w"] == data["words"][4]["w"]
+    assert len(data_last["errors"]) == 2
+    assert len(data_last["bits"]) == 2 * 32
+    assert data_last["bits"][0]["w"] == data["bits"][0]["w"]
 
     ds = DecodeSettings()
     lim = Limits.from_result(res, ci.clk_mhz)

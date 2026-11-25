@@ -1240,7 +1240,7 @@
     {
       "name": "TB_WORD_RADDR",
       "offset": "0x900",
-      "wr_strobe": false,
+      "wr_strobe": true,
       "rd_strobe": false,
       "fields": [
         {
@@ -1326,7 +1326,7 @@
       "name": "TB_WORD_RD_GAP_ERR",
       "offset": "0x914",
       "wr_strobe": false,
-      "rd_strobe": false,
+      "rd_strobe": true,
       "fields": [
         {
           "name": "TB_WORD_RD_GAP_ERR",
@@ -1342,7 +1342,7 @@
     {
       "name": "TB_ERR_RADDR",
       "offset": "0x920",
-      "wr_strobe": false,
+      "wr_strobe": true,
       "rd_strobe": false,
       "fields": [
         {
@@ -1428,7 +1428,7 @@
       "name": "TB_ERR_RD_DATA",
       "offset": "0x934",
       "wr_strobe": false,
-      "rd_strobe": false,
+      "rd_strobe": true,
       "fields": [
         {
           "name": "TB_ERR_RD_DATA",
@@ -1444,7 +1444,7 @@
     {
       "name": "TB_BIT_RADDR",
       "offset": "0x940",
-      "wr_strobe": false,
+      "wr_strobe": true,
       "rd_strobe": false,
       "fields": [
         {
@@ -1522,7 +1522,7 @@
       "name": "TB_BIT_RD_NULL_ERR",
       "offset": "0x950",
       "wr_strobe": false,
-      "rd_strobe": false,
+      "rd_strobe": true,
       "fields": [
         {
           "name": "TB_BIT_RD_NULL_ERR",
@@ -2128,7 +2128,7 @@
     {
       "name": "RX0_WORD_RADDR",
       "offset": "0x4100",
-      "wr_strobe": false,
+      "wr_strobe": true,
       "rd_strobe": false,
       "fields": [
         {
@@ -2214,7 +2214,7 @@
       "name": "RX0_WORD_RD_GAP_ERR",
       "offset": "0x4114",
       "wr_strobe": false,
-      "rd_strobe": false,
+      "rd_strobe": true,
       "fields": [
         {
           "name": "RX0_WORD_RD_GAP_ERR",
@@ -2230,7 +2230,7 @@
     {
       "name": "RX0_ERR_RADDR",
       "offset": "0x4120",
-      "wr_strobe": false,
+      "wr_strobe": true,
       "rd_strobe": false,
       "fields": [
         {
@@ -2316,7 +2316,7 @@
       "name": "RX0_ERR_RD_DATA",
       "offset": "0x4134",
       "wr_strobe": false,
-      "rd_strobe": false,
+      "rd_strobe": true,
       "fields": [
         {
           "name": "RX0_ERR_RD_DATA",
@@ -2332,7 +2332,7 @@
     {
       "name": "RX0_BIT_RADDR",
       "offset": "0x4140",
-      "wr_strobe": false,
+      "wr_strobe": true,
       "rd_strobe": false,
       "fields": [
         {
@@ -2410,7 +2410,7 @@
       "name": "RX0_BIT_RD_NULL_ERR",
       "offset": "0x4150",
       "wr_strobe": false,
-      "rd_strobe": false,
+      "rd_strobe": true,
       "fields": [
         {
           "name": "RX0_BIT_RD_NULL_ERR",
@@ -2913,7 +2913,7 @@
     {
       "name": "RX1_WORD_RADDR",
       "offset": "0x4500",
-      "wr_strobe": false,
+      "wr_strobe": true,
       "rd_strobe": false,
       "fields": [
         {
@@ -2999,7 +2999,7 @@
       "name": "RX1_WORD_RD_GAP_ERR",
       "offset": "0x4514",
       "wr_strobe": false,
-      "rd_strobe": false,
+      "rd_strobe": true,
       "fields": [
         {
           "name": "RX1_WORD_RD_GAP_ERR",
@@ -3015,7 +3015,7 @@
     {
       "name": "RX1_ERR_RADDR",
       "offset": "0x4520",
-      "wr_strobe": false,
+      "wr_strobe": true,
       "rd_strobe": false,
       "fields": [
         {
@@ -3101,7 +3101,7 @@
       "name": "RX1_ERR_RD_DATA",
       "offset": "0x4534",
       "wr_strobe": false,
-      "rd_strobe": false,
+      "rd_strobe": true,
       "fields": [
         {
           "name": "RX1_ERR_RD_DATA",
@@ -3117,7 +3117,7 @@
     {
       "name": "RX1_BIT_RADDR",
       "offset": "0x4540",
-      "wr_strobe": false,
+      "wr_strobe": true,
       "rd_strobe": false,
       "fields": [
         {
@@ -3195,7 +3195,7 @@
       "name": "RX1_BIT_RD_NULL_ERR",
       "offset": "0x4550",
       "wr_strobe": false,
-      "rd_strobe": false,
+      "rd_strobe": true,
       "fields": [
         {
           "name": "RX1_BIT_RD_NULL_ERR",

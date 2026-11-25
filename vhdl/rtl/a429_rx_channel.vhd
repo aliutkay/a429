@@ -86,17 +86,22 @@ architecture rtl of a429_rx_channel is
     signal word_waddr          : std_logic_vector(G_WORD_DEPTH_LOG2 - 1 downto 0);
     signal word_wdata          : std_logic_vector(143 downto 0);
     signal word_rdata          : std_logic_vector(143 downto 0);
+    signal r_word_ptr          : unsigned(G_WORD_DEPTH_LOG2 - 1 downto 0);
+    signal next_word_ptr       : unsigned(G_WORD_DEPTH_LOG2 - 1 downto 0);
 
     signal err_we              : std_logic;
     signal err_waddr           : std_logic_vector(G_ERR_DEPTH_LOG2 - 1 downto 0);
     signal err_wdata           : std_logic_vector(127 downto 0);
     signal err_rdata           : std_logic_vector(127 downto 0);
+    signal r_err_ptr           : unsigned(G_ERR_DEPTH_LOG2 - 1 downto 0);
+    signal next_err_ptr        : unsigned(G_ERR_DEPTH_LOG2 - 1 downto 0);
 
     signal bit_we              : std_logic;
     signal bit_waddr           : std_logic_vector(G_BITDIAG_WORDS_LOG2 + 4 downto 0);
     signal bit_wdata           : std_logic_vector(63 downto 0);
     signal bit_rdata           : std_logic_vector(63 downto 0) := (others => '0');
-    signal bit_raddr_cat       : std_logic_vector(G_BITDIAG_WORDS_LOG2 + 4 downto 0);
+    signal r_bit_ptr           : unsigned(G_BITDIAG_WORDS_LOG2 + 4 downto 0);
+    signal next_bit_ptr        : unsigned(G_BITDIAG_WORDS_LOG2 + 4 downto 0);
 begin
 
     u_cfg : entity work.a429_rx_cfg_sel
@@ -250,6 +255,40 @@ begin
             rx_err_any          => rx_err_any
         );
 
+    -- Otomatik artan okuma pointer'ları (RADDR yazımında yüklenir, son RD register okumasında +1 sarar)
+    -- next_* kombinasyonel olarak BRAM raddr'a verilerek 1 clk gecikme gizlenir
+    next_word_ptr <= unsigned(reg_in.word_raddr(G_WORD_DEPTH_LOG2 - 1 downto 0)) when reg_in.word_raddr_wr = '1' else
+                     r_word_ptr + 1                                               when reg_in.word_rd_last = '1' else
+                     r_word_ptr;
+
+    next_err_ptr  <= unsigned(reg_in.err_raddr(G_ERR_DEPTH_LOG2 - 1 downto 0))   when reg_in.err_raddr_wr = '1' else
+                     r_err_ptr + 1                                                when reg_in.err_rd_last = '1' else
+                     r_err_ptr;
+
+    next_bit_ptr  <= unsigned(reg_in.bit_raddr_word(G_BITDIAG_WORDS_LOG2 - 1 downto 0) & reg_in.bit_raddr_bit)
+                                                                                  when reg_in.bit_raddr_wr = '1' else
+                     r_bit_ptr + 1                                                when reg_in.bit_rd_last = '1' else
+                     r_bit_ptr;
+
+    process (clk, rst_n)
+    begin
+        if rst_n = '0' then
+            r_word_ptr <= (others => '0');
+            r_err_ptr  <= (others => '0');
+            r_bit_ptr  <= (others => '0');
+        elsif rising_edge(clk) then
+            if soft_rst = '1' or reg_in.ctrl_clear = '1' then
+                r_word_ptr <= (others => '0');
+                r_err_ptr  <= (others => '0');
+                r_bit_ptr  <= (others => '0');
+            else
+                r_word_ptr <= next_word_ptr;
+                r_err_ptr  <= next_err_ptr;
+                r_bit_ptr  <= next_bit_ptr;
+            end if;
+        end if;
+    end process;
+
     u_word_ram : entity work.a429_sdp_ram
         generic map (G_ADDR_W => G_WORD_DEPTH_LOG2, G_DATA_W => 144)
         port map (
@@ -257,7 +296,7 @@ begin
             we    => word_we,
             waddr => word_waddr,
             wdata => word_wdata,
-            raddr => reg_in.word_raddr(G_WORD_DEPTH_LOG2 - 1 downto 0),
+            raddr => std_logic_vector(next_word_ptr),
             rdata => word_rdata
         );
 
@@ -268,11 +307,9 @@ begin
             we    => err_we,
             waddr => err_waddr,
             wdata => err_wdata,
-            raddr => reg_in.err_raddr(G_ERR_DEPTH_LOG2 - 1 downto 0),
+            raddr => std_logic_vector(next_err_ptr),
             rdata => err_rdata
         );
-
-    bit_raddr_cat <= reg_in.bit_raddr_word(G_BITDIAG_WORDS_LOG2 - 1 downto 0) & reg_in.bit_raddr_bit;
 
     gen_bit_ram : if G_BITDIAG_EN generate
         u_bit_ram : entity work.a429_sdp_ram
@@ -282,7 +319,7 @@ begin
                 we    => bit_we,
                 waddr => bit_waddr,
                 wdata => bit_wdata,
-                raddr => bit_raddr_cat,
+                raddr => std_logic_vector(next_bit_ptr),
                 rdata => bit_rdata
             );
     end generate;

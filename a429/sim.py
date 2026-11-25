@@ -158,6 +158,9 @@ class _SimChannel:
         self.wtot = n_words
         self.etot = n_err
         self.drop = 0
+        self.w_ptr = 0
+        self.e_ptr = 0
+        self.b_ptr = 0
         self.wmem: dict[int, list[int]] = {}
         self.emem: dict[int, list[int]] = {}
         self.bmem: dict[tuple[int, int], list[int]] = {}
@@ -317,17 +320,23 @@ class SimClient:
                 return sim.wmem.get((sim.wtot - 1) % 256, [0, 0, 0, 0, 0])[2] if sim.wtot else 0
             if suf in ("WORD_RD_TS_MSB", "WORD_RD_TS_LSB", "WORD_RD_DATA", "WORD_RD_GAP", "WORD_RD_GAP_ERR"):
                 idx = ("WORD_RD_TS_MSB", "WORD_RD_TS_LSB", "WORD_RD_DATA", "WORD_RD_GAP", "WORD_RD_GAP_ERR").index(suf)
-                sel = self._regs.get(self._off_by_name[p + "WORD_RADDR"], 0)
-                return sim.wmem.get(sel, [0] * 5)[idx]
+                val = sim.wmem.get(sim.w_ptr, [0] * 5)[idx]
+                if suf == "WORD_RD_GAP_ERR":
+                    sim.w_ptr = (sim.w_ptr + 1) & 0xFF
+                return val
             if suf in ("ERR_RD_TS_MSB", "ERR_RD_TS_LSB", "ERR_RD_CODE", "ERR_RD_ADDR", "ERR_RD_DATA"):
                 idx = ("ERR_RD_TS_MSB", "ERR_RD_TS_LSB", "ERR_RD_CODE", "ERR_RD_ADDR", "ERR_RD_DATA").index(suf)
-                sel = self._regs.get(self._off_by_name[p + "ERR_RADDR"], 0)
-                return sim.emem.get(sel, [0] * 5)[idx]
+                val = sim.emem.get(sim.e_ptr, [0] * 5)[idx]
+                if suf == "ERR_RD_DATA":
+                    sim.e_ptr = (sim.e_ptr + 1) & 0xFF
+                return val
             if suf in ("BIT_RD_PULSE", "BIT_RD_PULSE_ERR", "BIT_RD_NULL", "BIT_RD_NULL_ERR"):
                 idx = ("BIT_RD_PULSE", "BIT_RD_PULSE_ERR", "BIT_RD_NULL", "BIT_RD_NULL_ERR").index(suf)
-                raw = self._regs.get(self._off_by_name[p + "BIT_RADDR"], 0)
-                widx, bno = (raw >> 8) & 0x1F, raw & 0x1F
-                return sim.bmem.get((widx, bno), [0] * 4)[idx]
+                widx, bno = (sim.b_ptr >> 5) & 0x7, sim.b_ptr & 0x1F
+                val = sim.bmem.get((widx, bno), [0] * 4)[idx]
+                if suf == "BIT_RD_NULL_ERR":
+                    sim.b_ptr = (sim.b_ptr + 1) & 0xFF
+                return val
         return self._regs.get(off, 0) & 0xFFFFFFFF
 
     def write(self, offset=0, value=0, addr=None, quiet=False):
@@ -394,8 +403,21 @@ class SimClient:
                     sim.wtot = 0
                     sim.etot = 0
                     sim.drop = 0
+                    sim.w_ptr = 0; sim.e_ptr = 0; sim.b_ptr = 0
                     sim.wmem.clear(); sim.emem.clear(); sim.bmem.clear()
                 self._regs[off] = v & ~4
+                return
+            if name == p + "WORD_RADDR":
+                self._regs[off] = v & 0xFF
+                sim.w_ptr = v & 0xFF
+                return
+            if name == p + "ERR_RADDR":
+                self._regs[off] = v & 0xFF
+                sim.e_ptr = v & 0xFF
+                return
+            if name == p + "BIT_RADDR":
+                self._regs[off] = v
+                sim.b_ptr = (((v >> 8) & 0x7) << 5) | (v & 0x1F)
                 return
             if name == p + "CFG_APPLY" and (v & 1):
                 sel = self._regs.get(self._off_by_name.get(p + "CFG_SEL", -1), 0) & 3

@@ -1100,7 +1100,7 @@
     {
       "name": "TB_WORD_RADDR",
       "offset": "0x0900",
-      "desc": "Word RAM okuma adresi",
+      "desc": "Word RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)",
       "fields": [
         {
           "name": "TB_WORD_RADDR",
@@ -1108,9 +1108,10 @@
           "width": 8,
           "kind": "RW",
           "reset": "0x0",
-          "desc": "Word RAM okuma adresi"
+          "desc": "Word RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)"
         }
-      ]
+      ],
+      "wr_strobe": true
     },
     {
       "name": "TB_WORD_RD_TS_MSB",
@@ -1175,7 +1176,7 @@
     {
       "name": "TB_WORD_RD_GAP_ERR",
       "offset": "0x0914",
-      "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131",
+      "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)",
       "fields": [
         {
           "name": "TB_WORD_RD_GAP_ERR",
@@ -1183,14 +1184,15 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131"
+          "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)"
         }
-      ]
+      ],
+      "rd_strobe": true
     },
     {
       "name": "TB_ERR_RADDR",
       "offset": "0x0920",
-      "desc": "Error RAM okuma adresi",
+      "desc": "Error RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)",
       "fields": [
         {
           "name": "TB_ERR_RADDR",
@@ -1198,9 +1200,10 @@
           "width": 8,
           "kind": "RW",
           "reset": "0x0",
-          "desc": "Error RAM okuma adresi"
+          "desc": "Error RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)"
         }
-      ]
+      ],
+      "wr_strobe": true
     },
     {
       "name": "TB_ERR_RD_TS_MSB",
@@ -1265,7 +1268,7 @@
     {
       "name": "TB_ERR_RD_DATA",
       "offset": "0x0934",
-      "desc": "Error kayd\u0131 \u00f6l\u00e7\u00fcm/beklenen veri",
+      "desc": "Error kayd\u0131 \u00f6l\u00e7\u00fcm/beklenen veri (okununca pointer +1)",
       "fields": [
         {
           "name": "TB_ERR_RD_DATA",
@@ -1273,14 +1276,15 @@
           "width": 32,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Error kayd\u0131 \u00f6l\u00e7\u00fcm/beklenen veri"
+          "desc": "Error kayd\u0131 \u00f6l\u00e7\u00fcm/beklenen veri (okununca pointer +1)"
         }
-      ]
+      ],
+      "rd_strobe": true
     },
     {
       "name": "TB_BIT_RADDR",
       "offset": "0x0940",
-      "desc": "Bit Diagnostic RAM okuma adresi",
+      "desc": "Bit Diagnostic RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)",
       "fields": [
         {
           "name": "BIT_IDX",
@@ -1298,7 +1302,8 @@
           "reset": "0x0",
           "desc": "Bit Diagnostic Word indeksi"
         }
-      ]
+      ],
+      "wr_strobe": true
     },
     {
       "name": "TB_BIT_RD_PULSE",
@@ -1348,7 +1353,7 @@
     {
       "name": "TB_BIT_RD_NULL_ERR",
       "offset": "0x0950",
-      "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131",
+      "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)",
       "fields": [
         {
           "name": "TB_BIT_RD_NULL_ERR",
@@ -1356,9 +1361,10 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131"
+          "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)"
         }
-      ]
+      ],
+      "rd_strobe": true
     },
     {
       "name": "TB_CHK_CTRL",
@@ -1884,7 +1890,7 @@
     {
       "name": "RX0_WORD_RADDR",
       "offset": "0x4100",
-      "desc": "Word RAM okuma adresi",
+      "desc": "Word RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)",
       "fields": [
         {
           "name": "RX0_WORD_RADDR",
@@ -1892,9 +1898,10 @@
           "width": 8,
           "kind": "RW",
           "reset": "0x0",
-          "desc": "Word RAM okuma adresi"
+          "desc": "Word RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)"
         }
-      ]
+      ],
+      "wr_strobe": true
     },
     {
       "name": "RX0_WORD_RD_TS_MSB",
@@ -1959,7 +1966,7 @@
     {
       "name": "RX0_WORD_RD_GAP_ERR",
       "offset": "0x4114",
-      "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131",
+      "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)",
       "fields": [
         {
           "name": "RX0_WORD_RD_GAP_ERR",
@@ -1967,14 +1974,15 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131"
+          "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)"
         }
-      ]
+      ],
+      "rd_strobe": true
     },
     {
       "name": "RX0_ERR_RADDR",
       "offset": "0x4120",
-      "desc": "Error RAM okuma adresi",
+      "desc": "Error RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)",
       "fields": [
         {
           "name": "RX0_ERR_RADDR",
@@ -1982,9 +1990,10 @@
           "width": 8,
           "kind": "RW",
           "reset": "0x0",
-          "desc": "Error RAM okuma adresi"
+          "desc": "Error RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)"
         }
-      ]
+      ],
+      "wr_strobe": true
     },
     {
       "name": "RX0_ERR_RD_TS_MSB",
@@ -2049,7 +2058,7 @@
     {
       "name": "RX0_ERR_RD_DATA",
       "offset": "0x4134",
-      "desc": "Error kayd\u0131 \u00f6l\u00e7\u00fcm/beklenen veri",
+      "desc": "Error kayd\u0131 \u00f6l\u00e7\u00fcm/beklenen veri (okununca pointer +1)",
       "fields": [
         {
           "name": "RX0_ERR_RD_DATA",
@@ -2057,14 +2066,15 @@
           "width": 32,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Error kayd\u0131 \u00f6l\u00e7\u00fcm/beklenen veri"
+          "desc": "Error kayd\u0131 \u00f6l\u00e7\u00fcm/beklenen veri (okununca pointer +1)"
         }
-      ]
+      ],
+      "rd_strobe": true
     },
     {
       "name": "RX0_BIT_RADDR",
       "offset": "0x4140",
-      "desc": "Bit Diagnostic RAM okuma adresi",
+      "desc": "Bit Diagnostic RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)",
       "fields": [
         {
           "name": "BIT_IDX",
@@ -2082,7 +2092,8 @@
           "reset": "0x0",
           "desc": "Bit Diagnostic Word indeksi"
         }
-      ]
+      ],
+      "wr_strobe": true
     },
     {
       "name": "RX0_BIT_RD_PULSE",
@@ -2132,7 +2143,7 @@
     {
       "name": "RX0_BIT_RD_NULL_ERR",
       "offset": "0x4150",
-      "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131",
+      "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)",
       "fields": [
         {
           "name": "RX0_BIT_RD_NULL_ERR",
@@ -2140,9 +2151,10 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131"
+          "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)"
         }
-      ]
+      ],
+      "rd_strobe": true
     },
     {
       "name": "RX1_CTRL",
@@ -2577,7 +2589,7 @@
     {
       "name": "RX1_WORD_RADDR",
       "offset": "0x4500",
-      "desc": "Word RAM okuma adresi",
+      "desc": "Word RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)",
       "fields": [
         {
           "name": "RX1_WORD_RADDR",
@@ -2585,9 +2597,10 @@
           "width": 8,
           "kind": "RW",
           "reset": "0x0",
-          "desc": "Word RAM okuma adresi"
+          "desc": "Word RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)"
         }
-      ]
+      ],
+      "wr_strobe": true
     },
     {
       "name": "RX1_WORD_RD_TS_MSB",
@@ -2652,7 +2665,7 @@
     {
       "name": "RX1_WORD_RD_GAP_ERR",
       "offset": "0x4514",
-      "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131",
+      "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)",
       "fields": [
         {
           "name": "RX1_WORD_RD_GAP_ERR",
@@ -2660,14 +2673,15 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131"
+          "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)"
         }
-      ]
+      ],
+      "rd_strobe": true
     },
     {
       "name": "RX1_ERR_RADDR",
       "offset": "0x4520",
-      "desc": "Error RAM okuma adresi",
+      "desc": "Error RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)",
       "fields": [
         {
           "name": "RX1_ERR_RADDR",
@@ -2675,9 +2689,10 @@
           "width": 8,
           "kind": "RW",
           "reset": "0x0",
-          "desc": "Error RAM okuma adresi"
+          "desc": "Error RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)"
         }
-      ]
+      ],
+      "wr_strobe": true
     },
     {
       "name": "RX1_ERR_RD_TS_MSB",
@@ -2742,7 +2757,7 @@
     {
       "name": "RX1_ERR_RD_DATA",
       "offset": "0x4534",
-      "desc": "Error kayd\u0131 \u00f6l\u00e7\u00fcm/beklenen veri",
+      "desc": "Error kayd\u0131 \u00f6l\u00e7\u00fcm/beklenen veri (okununca pointer +1)",
       "fields": [
         {
           "name": "RX1_ERR_RD_DATA",
@@ -2750,14 +2765,15 @@
           "width": 32,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Error kayd\u0131 \u00f6l\u00e7\u00fcm/beklenen veri"
+          "desc": "Error kayd\u0131 \u00f6l\u00e7\u00fcm/beklenen veri (okununca pointer +1)"
         }
-      ]
+      ],
+      "rd_strobe": true
     },
     {
       "name": "RX1_BIT_RADDR",
       "offset": "0x4540",
-      "desc": "Bit Diagnostic RAM okuma adresi",
+      "desc": "Bit Diagnostic RAM ba\u015flang\u0131\u00e7 okuma adresi (yaz\u0131nca pointer y\u00fcklenir)",
       "fields": [
         {
           "name": "BIT_IDX",
@@ -2775,7 +2791,8 @@
           "reset": "0x0",
           "desc": "Bit Diagnostic Word indeksi"
         }
-      ]
+      ],
+      "wr_strobe": true
     },
     {
       "name": "RX1_BIT_RD_PULSE",
@@ -2825,7 +2842,7 @@
     {
       "name": "RX1_BIT_RD_NULL_ERR",
       "offset": "0x4550",
-      "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131",
+      "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)",
       "fields": [
         {
           "name": "RX1_BIT_RD_NULL_ERR",
@@ -2833,9 +2850,10 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131"
+          "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)"
         }
-      ]
+      ],
+      "rd_strobe": true
     }
   ]
 }
