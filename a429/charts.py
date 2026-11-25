@@ -287,3 +287,97 @@ def draw_word(fig, wrow, bitmap, mhz, unit, ds, nominal=(250, 250)):
     ax.set_xlabel(f"Zaman ({unit}) – geçiş anları Word Timestamp'ine göre kesikli çizgilerin altında; Word Gap ölçeksiz",
                   color=FG, fontsize=8)
     fig.tight_layout(); finalize(fig)
+
+
+# ---------------------------------------------------------------- TX Config: örnek dalga formu ve tek bit analizi
+def draw_tx_examples(fig, tx_res, mhz, unit, pattern, only=None):
+    """TX Line Driver çıkışındaki ARINC 429 örnek dalga formu (trapezoid eğimli)."""
+    fig.clear(); fig.set_facecolor(BG)
+    cases = [c for c in ("MIN", "NOM", "MAX") if not only or c == only]
+    axs = fig.subplots(len(cases), 1, squeeze=False).ravel()
+    T = lambda us: conv(us * mhz, unit, mhz)
+    for ax, nm in zip(axs, cases):
+        d = tx_res["single"][nm]
+        col = CASE_COL[nm]
+        P, Bt = T(d["line_p"]), T(d["line_b"])
+        Tr, Tf, A = T(d["Tr"]), T(d["Tf"]), d["vdiff"]
+        xs, ys = [], []
+        for k, b in enumerate(pattern):
+            t0 = k * Bt
+            lv = A if b else -A
+            r0 = max(t0, t0 - Tr / 2.0) if k > 0 else t0
+            r1 = min(t0 + P, t0 + Tr / 2.0)
+            f0 = max(r1, t0 + P - Tf / 2.0)
+            f1 = min((k + 1) * Bt, t0 + P + Tf / 2.0)
+            if k == 0:
+                xs.append(t0); ys.append(0.0)
+            xs += [r0, r1, f0, f1, (k + 1) * Bt]
+            ys += [0.0, lv, lv, 0.0, 0.0]
+        ax.plot(xs, ys, color=col, lw=1.8)
+        for k in range(len(pattern) + 1):
+            _vline(ax, k * Bt, -A - 3.5, A + 4.5, _fmt(k * Bt, unit))
+            if k < len(pattern):
+                _vline(ax, k * Bt + P, -A - 3.5, A + 4.5, _fmt(k * Bt + P, unit), "#3C3C3C", ":", "#707070")
+                _arrow(ax, k * Bt, k * Bt + P, -A - 1.8, _fmt(P, unit), col, fs=7)
+                _arrow(ax, k * Bt + P, (k + 1) * Bt, -A - 1.8, _fmt(Bt - P, unit), "#A0A0A0", fs=7)
+        ref_k = min(2, max(0, len(pattern) - 1))
+        _arrow(ax, ref_k * Bt, ref_k * Bt + P, A + 1.4, f"Pulse = {_fmt(P, unit)}", col, above=True, fs=8)
+        _arrow(ax, ref_k * Bt, (ref_k + 1) * Bt, A + 3.2, f"Bit = {_fmt(Bt, unit)}", col, above=True, fs=8)
+        comp = " · gecikme telafili" if d["comp"] else ""
+        _style(ax, f"TX örnek dalga formu – {nm} ({d['driver']}, ±{A:.1f} V{comp})", "Gerilim (V)")
+        ax.set_ylim(-A - 6.5, A + 5.5)
+        ax.set_xlim(-0.01 * len(pattern) * Bt, len(pattern) * Bt * 1.01)
+        ax.set_yticks([-A, 0, A])
+    axs[-1].set_xlabel(f"Zaman ({unit}) – geçiş anları kesikli çizgilerin altında", color=FG, fontsize=8)
+    fig.tight_layout(); finalize(fig)
+
+
+def draw_tx_single(fig, tx_res, mhz, unit, case):
+    """TX Tek Bit analizi: üstte FPGA dijital çıkışı, altta Line Driver ARINC 429 çıkışı."""
+    fig.clear(); fig.set_facecolor(BG)
+    d = tx_res["single"][case]
+    col = CASE_COL[case]
+    T = lambda us: conv(us * mhz, unit, mhz)
+    fp, fb = T(d["fpga_p"]), T(d["fpga_b"])
+    ton, toff = T(d["ton_50"]), T(d["toff_50"])
+    Tr, Tf, A = T(d["Tr"]), T(d["Tf"]), d["vdiff"]
+    lp = toff - ton
+    r0, r1 = max(0.0, ton - Tr / 2.0), ton + Tr / 2.0
+    f0, f1 = max(r1, toff - Tf / 2.0), toff + Tf / 2.0
+    tend = max(fb, f1 * 1.05)
+
+    bx, ax = fig.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [2, 3]})
+    # Üst: FPGA dijital çıkışı (tx_high / tx_low)
+    bx.plot([0, 0, fp, fp, tend], [0, 1, 1, 0, 0], color="#00B0F0", lw=1.8)
+    for x in (0, fp, fb):
+        _vline(bx, x, -0.9, 1.9, _fmt(x, unit))
+    _arrow(bx, 0, fp, -0.45, f"FPGA Pulse = {_fmt(fp, unit)}", "#00B0F0", fs=8)
+    _arrow(bx, fp, fb, -0.45, f"FPGA Null = {_fmt(fb - fp, unit)}", "#A0A0A0", fs=8)
+    _arrow(bx, 0, fb, 1.35, f"FPGA 1 Bit = {_fmt(fb, unit)}", "#FFFFFF", above=True, fs=8)
+    comp = " (gecikme telafili)" if d["comp"] else ""
+    _style(bx, f"TX {case} – FPGA çıkışı ({d['fpga']}, VCC = {d['vcc']:.2f} V){comp}", "Lojik")
+    bx.set_ylim(-1.8, 2.0); bx.set_yticks([0, 1])
+
+    # Alt: Line Driver ARINC 429 çıkışı
+    ax.plot([0, r0, r1, f0, f1, tend], [0, 0, A, A, 0, 0], color=col, lw=1.8)
+    ax.axhline(A / 2.0, color="#FFFF00", ls=":", lw=0.9)
+    ax.plot([ton, toff], [A / 2.0, A / 2.0], "o", color="#FFFF00", ms=5)
+    for x in (r0, r1, f0, f1):
+        _vline(ax, x, -2.0, A + 2.5, _fmt(x, unit))
+    _vline(ax, ton, -2.0, A + 2.5, None, "#FFFF00", ":", "#FFFF00")
+    _vline(ax, toff, -2.0, A + 2.5, None, "#FF9900", ":", "#FF9900")
+    _arrow(ax, 0, ton, A * 0.28, f"tPLH = {_fmt(ton, unit)}", "#FFFF00", above=True, fs=8)
+    _arrow(ax, fp, toff, A * 0.28, f"tPHL = {_fmt(toff - fp, unit)}", "#FF9900", above=True, fs=8)
+    _arrow(ax, ton, toff, A * 0.56, f"Hatta Pulse = {_fmt(lp, unit)}", "#FFFFFF", above=True, fs=9)
+    _arrow(ax, r0 + 0.1 * Tr, r0 + 0.9 * Tr, A + 1.2, f"tr = {_fmt(T(d['tr_10_90']), unit)}", "#C8C8C8", above=True, fs=8)
+    _arrow(ax, f0 + 0.1 * Tf, f0 + 0.9 * Tf, A + 1.2, f"tf = {_fmt(T(d['tf_10_90']), unit)}", "#C8C8C8", above=True, fs=8)
+    if f0 > r1:
+        _arrow(ax, r1, f0, -1.2, f"Flat-top = {_fmt(f0 - r1, unit)}", col, fs=8)
+    lp_min, lp_max = T(d["lim_p"][0]), T(d["lim_p"][1])
+    ok_p = d["lim_p"][0] - 1e-9 <= d["line_p"] <= d["lim_p"][1] + 1e-9
+    st = "ARINC limiti içinde" if ok_p else "ARINC LİMİTİ DIŞINDA!"
+    _style(ax, f"TX {case} – Line Driver çıkışı ({d['driver']}, Vdiff = {A:.1f} V) · ARINC ½ Bit: {_fmt(lp_min, unit)} … {_fmt(lp_max, unit)} ({st})", "Gerilim (V)")
+    ax.set_ylim(-4.5, A + 3.5)
+    ax.set_xlim(-0.02 * tend, tend * 1.02)
+    ax.set_xlabel(f"Zaman ({unit}) – geçiş anları kesikli çizgilerin altında", color=FG, fontsize=8)
+    fig.tight_layout(); finalize(fig)

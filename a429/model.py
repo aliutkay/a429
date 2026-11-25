@@ -16,6 +16,12 @@ ROW_PULSE = "FPGA'da görülen Pulse süresi (µs)"
 ROW_BIT = "Receiver çıkışı Bit Time (µs)"
 ROW_NULL = "Receiver çıkışı Null süresi (µs)"
 DEFAULT_FPGA = [("LVCMOS33", 0.8, 2.0), ("LVTTL", 0.8, 2.0), ("Custom", 0.8, 1.7)]
+# TX FPGA çıkış standartları: (ad, VOH_min V, VOL_max V, VCC V, tr ns, tf ns)
+DEFAULT_TX_FPGA = [
+    ("LVCMOS33", 2.4, 0.4, 3.3, 3.0, 3.0),
+    ("LVTTL", 2.4, 0.4, 3.3, 3.0, 3.0),
+    ("Custom", 2.4, 0.4, 3.3, 5.0, 5.0),
+]
 # Register formüllerinde kullanılabilen hesaplanan değişkenler (clock sayısı; clk_mhz hariç)
 VARIABLES = [
     ("glitch_filter_size", "Glitch Filter Size"),
@@ -74,6 +80,40 @@ class ICParams:
 
 
 @dataclass
+class TxDriverParams:
+    """ARINC 429 Line Driver entegre parametreleri: (min, nom, max)."""
+    name: str = "HI-8597"
+    vil_max: float = 0.99               # V (HI-8597: 0.3 * 3.3 V)
+    vih_min: float = 2.31               # V (HI-8597: 0.7 * 3.3 V)
+    tplh: tuple = (200.0, 500.0, 1000.0)   # ns
+    tphl: tuple = (200.0, 500.0, 1000.0)   # ns
+    skew_max: float = 150.0             # ns, |tPLH - tPHL| max (0 ise bağımsız min/max farkı kullanılır)
+    tr_hs: tuple = (1.0, 1.5, 2.0)      # µs, High Speed (%10→%90)
+    tf_hs: tuple = (1.0, 1.5, 2.0)      # µs
+    tr_ls: tuple = (5.0, 10.0, 15.0)    # µs, Low Speed (%10→%90)
+    tf_ls: tuple = (5.0, 10.0, 15.0)    # µs
+    vdiff: tuple = (9.0, 10.0, 11.0)    # V, diferansiyel çıkış genliği
+    has_slp: bool = True                # Dijital SLP pini (1: 1.5 µs, 0: 10 µs)
+    has_hiz: bool = True                # TX1IN=1, TX0IN=1 → HIGH-Z desteği
+
+
+DEFAULT_TX_DRIVERS = [
+    TxDriverParams("HI-8597", 0.99, 2.31, (200, 500, 1000), (200, 500, 1000), 150,
+                   (1.0, 1.5, 2.0), (1.0, 1.5, 2.0), (5.0, 10.0, 15.0), (5.0, 10.0, 15.0),
+                   (9.0, 10.0, 11.0), True, True),
+    TxDriverParams("HI-8585", 0.8, 2.0, (100, 500, 2000), (100, 500, 2000), 200,
+                   (1.0, 1.5, 2.0), (1.0, 1.5, 2.0), (5.0, 10.0, 15.0), (5.0, 10.0, 15.0),
+                   (9.0, 10.0, 11.0), True, False),
+    TxDriverParams("HI-8592", 0.8, 2.0, (50, 250, 500), (50, 250, 500), 150,
+                   (1.0, 1.5, 2.0), (1.0, 1.5, 2.0), (5.0, 10.0, 15.0), (5.0, 10.0, 15.0),
+                   (9.0, 10.0, 11.0), True, False),
+    TxDriverParams("HS-3182", 0.5, 2.0, (500, 1500, 3300), (500, 1500, 3300), 300,
+                   (1.0, 1.5, 2.0), (1.0, 1.5, 2.0), (3.0, 6.0, 9.0), (3.0, 6.0, 9.0),
+                   (9.0, 10.0, 11.0), False, False),
+]
+
+
+@dataclass
 class ConfigInputs:
     clk_mhz: float = 50.0
     ppm: float = 50.0                   # sistem clock toleransı (±ppm)
@@ -95,6 +135,12 @@ class ConfigInputs:
     profiles: list = field(default_factory=lambda: copy.deepcopy(DEFAULT_PROFILES))
     ic_profiles: list = field(default_factory=lambda: [ICParams()])
     ic_profile: str = "HI-8591"
+    tx_drivers: list = field(default_factory=lambda: copy.deepcopy(DEFAULT_TX_DRIVERS))
+    tx_driver: str = "HI-8597"
+    tx_fpga_std: str = "LVCMOS33"
+    tx_fpga_table: list = field(default_factory=lambda: [list(x) for x in DEFAULT_TX_FPGA])
+    tx_comp_delay: bool = False         # Line Driver tPHL-tPLH farkını TX_CUST_PULSE_DUR'da telafi et
+    tx_gap_margin: bool = False         # Word Gap'e +ppm güvenlik marjı ekle
 
     # ---- (de)serialisation
     def to_dict(self):
@@ -111,8 +157,11 @@ class ConfigInputs:
                                         if k in ICParams.__dataclass_fields__})
         old_ic = d.pop("ic", {})                # eski dosyalar: tek entegre
         ics = [make_ic(x) for x in d.pop("ic_profiles", [])] or [make_ic(old_ic)]
+        make_drv = lambda x: TxDriverParams(**{k: (tuple(v) if isinstance(v, (list, tuple)) else v) for k, v in x.items()
+                                               if k in TxDriverParams.__dataclass_fields__})
+        drvs = [make_drv(x) for x in d.pop("tx_drivers", [])] or copy.deepcopy(DEFAULT_TX_DRIVERS)
         ci = ConfigInputs(**{k: v for k, v in d.items() if k in ConfigInputs.__dataclass_fields__})
-        ci.profiles, ci.ic_profiles = prof, ics
+        ci.profiles, ci.ic_profiles, ci.tx_drivers = prof, ics, drvs
         ci.tx_live = {**default_tx_live(), **ci.tx_live}
         if "tx_profile" not in d:               # eski dosyalar: TX, RX ile aynı başlar
             ci.tx_profile = ci.profile
@@ -124,9 +173,20 @@ class ConfigInputs:
                 return float(vil), float(vih)
         return float(self.fpga_table[0][1]), float(self.fpga_table[0][2])
 
+    def get_tx_fpga(self):
+        """(voh_min, vol_max, vcc, tr_ns, tf_ns)"""
+        for r in self.tx_fpga_table:
+            if r[0] == self.tx_fpga_std:
+                return tuple(float(x) for x in r[1:6])
+        return tuple(float(x) for x in self.tx_fpga_table[0][1:6])
+
     @property
     def ic(self) -> ICParams:
         return next((x for x in self.ic_profiles if x.name == self.ic_profile), self.ic_profiles[0])
+
+    @property
+    def driver(self) -> TxDriverParams:
+        return next((x for x in self.tx_drivers if x.name == self.tx_driver), self.tx_drivers[0])
 
     def get_profile(self) -> SpecProfile:
         for p in self.profiles:

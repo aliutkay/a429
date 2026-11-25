@@ -4,9 +4,9 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QBrush
 from PySide6.QtWidgets import (
-    QAbstractItemView, QApplication, QComboBox, QGridLayout, QGroupBox, QHBoxLayout,
-    QHeaderView, QLabel, QLineEdit, QSplitter, QTableWidget, QTableWidgetItem, QTabWidget,
-    QVBoxLayout, QWidget,
+    QAbstractItemView, QApplication, QCheckBox, QComboBox, QFrame, QGridLayout, QGroupBox,
+    QHBoxLayout, QHeaderView, QLabel, QLineEdit, QScrollArea, QSplitter, QTableWidget,
+    QTableWidgetItem, QTabWidget, QVBoxLayout, QWidget,
 )
 
 from ..formulas import DERIVED_ROWS
@@ -63,106 +63,175 @@ class ConfigTab(QWidget):
         splitter = QSplitter(Qt.Orientation.Horizontal)
         root.addWidget(splitter, 1)
 
-        # ---- Sol panel
-        left = QWidget()
-        left.setMaximumWidth(420)
-        llay = QVBoxLayout(left)
-        llay.setContentsMargins(0, 0, 0, 0)
-        llay.setSpacing(8)
+        # ---- Sol panel (ferah, kaydırılabilir)
+        left_scroll = QScrollArea()
+        left_scroll.setWidgetResizable(True)
+        left_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        left_scroll.setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }")
+        left_scroll.setMinimumWidth(380)
+        left_scroll.setMaximumWidth(455)
 
-        # Genel
+        left = QWidget()
+        llay = QVBoxLayout(left)
+        llay.setContentsMargins(0, 0, 4, 0)
+        llay.setSpacing(10)
+        self._edit_btns = []
+
+        def pencil(slot, tip: str):
+            b = look.edit_button(slot, tip)
+            self._edit_btns.append(b)
+            return b
+
+        # Genel (kompakt tek satırda iki giriş)
         g_gen = QGroupBox("Genel")
         gl = QGridLayout(g_gen)
-        gl.addWidget(QLabel("System Clock (MHz)"), 0, 0)
+        gl.setHorizontalSpacing(10)
+        gl.setVerticalSpacing(4)
+        gl.addWidget(look.label("System Clock (MHz)", "muted"), 0, 0)
+        gl.addWidget(look.label("Tolerans (±ppm)", "muted"), 0, 1)
         self.ed_clk = QLineEdit()
-        self.ed_clk.setFixedWidth(90)
         self.ed_clk.textChanged.connect(self._on_input)
-        gl.addWidget(self.ed_clk, 0, 1)
-        gl.addWidget(QLabel("System Clock toleransı (±ppm)"), 1, 0)
         self.ed_ppm = QLineEdit()
-        self.ed_ppm.setFixedWidth(90)
         self.ed_ppm.textChanged.connect(self._on_input)
+        gl.addWidget(self.ed_clk, 1, 0)
         gl.addWidget(self.ed_ppm, 1, 1)
         llay.addWidget(g_gen)
 
         # RX Config
         g_rx = QGroupBox("RX Config")
         gl = QGridLayout(g_rx)
+        gl.setHorizontalSpacing(8)
+        gl.setVerticalSpacing(7)
+        gl.setColumnStretch(1, 1)
+
         gl.addWidget(QLabel("ARINC 429 profili"), 0, 0)
         self.cb_rx_prof = QComboBox()
         self.cb_rx_prof.currentTextChanged.connect(lambda t: self._on_profile("profile", t))
         gl.addWidget(self.cb_rx_prof, 0, 1)
-        gl.addWidget(look.button("Düzenle…", None, app.open_arinc_dialog), 0, 2)
+        gl.addWidget(pencil(app.open_arinc_dialog, "ARINC 429 profillerini düzenle"), 0, 2)
 
         gl.addWidget(QLabel("Receiver entegresi"), 1, 0)
         self.cb_ic = QComboBox()
         self.cb_ic.currentTextChanged.connect(lambda t: self._on_profile("ic_profile", t))
         gl.addWidget(self.cb_ic, 1, 1)
-        gl.addWidget(look.button("Düzenle…", None, app.open_ic_dialog), 1, 2)
+        gl.addWidget(pencil(app.open_ic_dialog, "Receiver entegresini düzenle"), 1, 2)
 
         gl.addWidget(QLabel("FPGA giriş standardı"), 2, 0)
         self.cb_fpga = QComboBox()
         self.cb_fpga.currentTextChanged.connect(self._on_fpga)
         gl.addWidget(self.cb_fpga, 2, 1)
-        gl.addWidget(look.button("Düzenle…", None, app.open_fpga_dialog), 2, 2)
+        gl.addWidget(pencil(app.open_fpga_dialog, "FPGA giriş standartlarını düzenle"), 2, 2)
 
-        gl.addWidget(QLabel("Glitch Filter ve limitler"), 3, 0)
-        self.lbl_glitch = look.label("", "muted", wrap=True)
-        gl.addWidget(self.lbl_glitch, 3, 1)
-        gl.addWidget(look.button("Düzenle…", None, app.open_glitch_dialog), 3, 2)
-
-        gl.addWidget(QLabel("Test toleransı (%)"), 4, 0)
+        gl.addWidget(QLabel("Test toleransı (%)"), 3, 0)
         self.ed_err = QLineEdit()
         self.ed_err.setFixedWidth(90)
         self.ed_err.textChanged.connect(self._on_input)
-        gl.addWidget(self.ed_err, 4, 1)
+        gl.addWidget(self.ed_err, 3, 1, Qt.AlignmentFlag.AlignLeft)
+
+        # Glitch Filter & Limitler: temiz tam genişlikte özet kartı + sağda kalem
+        gf_box = QFrame()
+        gf_box.setObjectName("SubPanel")
+        gfl = QVBoxLayout(gf_box)
+        gfl.setContentsMargins(10, 7, 8, 7)
+        gfl.setSpacing(3)
+        gf_top = QHBoxLayout()
+        gf_top.setSpacing(6)
+        gf_top.addWidget(look.label("Glitch Filter:", "muted"))
+        self.lbl_gf_val = look.label("", "cardTitle")
+        gf_top.addWidget(self.lbl_gf_val)
+        gf_top.addStretch(1)
+        gf_top.addWidget(pencil(app.open_glitch_dialog, "Glitch Filter ve limitleri düzenle"))
+        gfl.addLayout(gf_top)
+        self.lbl_gf_lim = look.label("", "muted")
+        gfl.addWidget(self.lbl_gf_lim)
+        gl.addWidget(gf_box, 4, 0, 1, 3)
 
         for r, (kind, txt) in enumerate((("example", "Örnek dalga formu"), ("single", "Tek Bit analizi")), 5):
             gl.addWidget(QLabel(txt), r, 0)
             row = QHBoxLayout()
-            row.setSpacing(4)
+            row.setSpacing(5)
             for case in ("MIN", "NOM", "MAX"):
-                row.addWidget(look.button(case, None, lambda _, k=kind, c=case: app.open_chart(k, c)))
-            row.addStretch(1)
+                row.addWidget(look.button(case, None, lambda _, k=kind, c=case: app.open_chart(k, c)), 1)
             gl.addLayout(row, r, 1, 1, 2)
         llay.addWidget(g_rx)
 
         # TX Config
         g_tx = QGroupBox("TX Config")
         gl = QGridLayout(g_tx)
+        gl.setHorizontalSpacing(8)
+        gl.setVerticalSpacing(7)
+        gl.setColumnStretch(1, 1)
+
         gl.addWidget(QLabel("ARINC 429 profili"), 0, 0)
         self.cb_tx_prof = QComboBox()
         self.cb_tx_prof.currentTextChanged.connect(lambda t: self._on_profile("tx_profile", t))
         gl.addWidget(self.cb_tx_prof, 0, 1)
-        gl.addWidget(look.button("Düzenle…", None, app.open_arinc_dialog), 0, 2)
+        gl.addWidget(pencil(app.open_arinc_dialog, "ARINC 429 profillerini düzenle"), 0, 2)
+
+        gl.addWidget(QLabel("Line Driver entegresi"), 1, 0)
+        self.cb_tx_drv = QComboBox()
+        self.cb_tx_drv.currentTextChanged.connect(lambda t: self._on_profile("tx_driver", t))
+        gl.addWidget(self.cb_tx_drv, 1, 1)
+        gl.addWidget(pencil(app.open_tx_driver_dialog, "Line Driver entegresini düzenle"), 1, 2)
+
+        gl.addWidget(QLabel("FPGA çıkış standardı"), 2, 0)
+        self.cb_tx_fpga = QComboBox()
+        self.cb_tx_fpga.currentTextChanged.connect(self._on_tx_fpga)
+        gl.addWidget(self.cb_tx_fpga, 2, 1)
+        gl.addWidget(pencil(app.open_tx_fpga_dialog, "FPGA çıkış standartlarını düzenle"), 2, 2)
+
+        self.chk_tx_comp = QCheckBox("Gecikme telafisi (tPHL − tPLH)")
+        self.chk_tx_comp.setToolTip("Line Driver nominal gecikme asimetrisini TX_CUST_PULSE_DUR / NULL_DUR'da telafi eder")
+        self.chk_tx_comp.toggled.connect(self._on_tx_opt)
+        gl.addWidget(self.chk_tx_comp, 3, 0, 1, 3)
+
+        self.chk_tx_gap = QCheckBox("Word Gap ±ppm güvenlik marjı")
+        self.chk_tx_gap.setToolTip("Clock hızlı sapmasında dahi Word Gap ≥ 4 Bit Time olsun diye yukarı yuvarlar")
+        self.chk_tx_gap.toggled.connect(self._on_tx_opt)
+        gl.addWidget(self.chk_tx_gap, 4, 0, 1, 3)
+
+        for r, (kind, txt) in enumerate((("tx_example", "Örnek dalga formu"), ("tx_single", "Tek Bit analizi")), 5):
+            gl.addWidget(QLabel(txt), r, 0)
+            row = QHBoxLayout()
+            row.setSpacing(5)
+            for case in ("MIN", "NOM", "MAX"):
+                row.addWidget(look.button(case, None, lambda _, k=kind, c=case: app.open_chart(k, c)), 1)
+            gl.addLayout(row, r, 1, 1, 2)
+
         llay.addWidget(g_tx)
         llay.addStretch(1)
 
-        splitter.addWidget(left)
+        left_scroll.setWidget(left)
+        splitter.addWidget(left_scroll)
 
         # ---- Sağ panel (RX / TX sekmeleri)
         self.side_tabs = QTabWidget()
         self.side_tabs.setDocumentMode(True)
-        splitter.addWidget(self.side_tabs)
+        splitter.addWidget(look.wrap_tabs(self.side_tabs, "SubCard"))
         splitter.setStretchFactor(0, 0)
         splitter.setStretchFactor(1, 1)
+        splitter.setSizes([415, 1015])
 
         # RX alt sekmesi
         rx_page = QWidget()
         rlay = QVBoxLayout(rx_page)
-        rlay.setContentsMargins(4, 4, 4, 4)
-        rlay.setSpacing(6)
+        rlay.setContentsMargins(8, 8, 8, 8)
+        rlay.setSpacing(8)
         self.lbl_rx_chk = look.label("", "cardTitle")
         rlay.addWidget(self.lbl_rx_chk)
 
         det = QTabWidget()
         det.setDocumentMode(True)
+        chk_w = QWidget()
+        chkl = QVBoxLayout(chk_w)
+        chkl.setContentsMargins(6, 6, 6, 6)
         self.tv_chk = _make_table(["Kontrol", "Sonuç"], [480, 90])
-        det.addTab(self.tv_chk, "Kontroller")
+        chkl.addWidget(self.tv_chk, 1)
+        det.addTab(chk_w, "Kontroller")
 
         dur_w = QWidget()
         dlay = QVBoxLayout(dur_w)
-        dlay.setContentsMargins(0, 4, 0, 0)
+        dlay.setContentsMargins(6, 6, 6, 6)
         self.tv_dur = _make_table(["Parametre", "µs", "clk"], [340, 100, 100])
         self.tv_dur.doubleClicked.connect(lambda idx: self._open_formula(self.tv_dur, idx.row(), ("µs", "clk")))
         dlay.addWidget(self.tv_dur, 1)
@@ -171,13 +240,13 @@ class ConfigTab(QWidget):
 
         mid_w = QWidget()
         mlay = QVBoxLayout(mid_w)
-        mlay.setContentsMargins(0, 4, 0, 0)
+        mlay.setContentsMargins(6, 6, 6, 6)
         mlay.addWidget(look.label("Fiziksel en kötü durum, test toleransı eklenmemiş. Formülü görmek için satıra çift tıklayın.", "muted"))
         self.tv_mid = _make_table(["Parametre", "MIN", "NOM", "MAX"], [420, 90, 90, 90])
         self.tv_mid.doubleClicked.connect(lambda idx: self._open_formula(self.tv_mid, idx.row(), ("MIN", "NOM", "MAX")))
         mlay.addWidget(self.tv_mid, 1)
         det.addTab(mid_w, "Ara hesaplar ve formüller")
-        rlay.addWidget(det, 1)
+        rlay.addWidget(look.wrap_tabs(det, "SubCard"), 1)
 
         g_rregs = QGroupBox("RX Config Register'ları")
         grl = QVBoxLayout(g_rregs)
@@ -198,18 +267,30 @@ class ConfigTab(QWidget):
         # TX alt sekmesi
         tx_page = QWidget()
         tlay = QVBoxLayout(tx_page)
-        tlay.setContentsMargins(4, 4, 4, 4)
-        tlay.setSpacing(6)
+        tlay.setContentsMargins(8, 8, 8, 8)
+        tlay.setSpacing(8)
         self.lbl_tx_chk = look.label("", "cardTitle")
         tlay.addWidget(self.lbl_tx_chk)
         self.lbl_tx_info = look.label("", "muted", wrap=True)
         tlay.addWidget(self.lbl_tx_info)
 
-        g_tchk = QGroupBox("TX Kontrolleri")
-        gtcl = QVBoxLayout(g_tchk)
+        tdet = QTabWidget()
+        tdet.setDocumentMode(True)
+        tchk_w = QWidget()
+        tchkl = QVBoxLayout(tchk_w)
+        tchkl.setContentsMargins(6, 6, 6, 6)
         self.tv_tx_chk = _make_table(["Kontrol", "Sonuç"], [480, 90])
-        gtcl.addWidget(self.tv_tx_chk, 1)
-        tlay.addWidget(g_tchk, 1)
+        tchkl.addWidget(self.tv_tx_chk, 1)
+        tdet.addTab(tchk_w, "Kontroller")
+
+        tmid_w = QWidget()
+        tmidl = QVBoxLayout(tmid_w)
+        tmidl.setContentsMargins(6, 6, 6, 6)
+        tmidl.addWidget(look.label("FPGA çıkışı → Line Driver → ARINC 429 hattı fiziksel zamanlama ve genlik analizi.", "muted"))
+        self.tv_tx_mid = _make_table(["Parametre", "MIN", "NOM", "MAX"], [420, 90, 90, 90])
+        tmidl.addWidget(self.tv_tx_mid, 1)
+        tdet.addTab(tmid_w, "Ara hesaplar")
+        tlay.addWidget(look.wrap_tabs(tdet, "SubCard"), 1)
 
         g_tregs = QGroupBox("TX Config Register'ları")
         gtrl = QVBoxLayout(g_tregs)
@@ -233,6 +314,8 @@ class ConfigTab(QWidget):
         self.ed_clk.setText(f"{ci.clk_mhz:g}")
         self.ed_ppm.setText(f"{ci.ppm:g}")
         self.ed_err.setText(f"{ci.err * 100:g}")
+        self.chk_tx_comp.setChecked(ci.tx_comp_delay)
+        self.chk_tx_gap.setChecked(ci.tx_gap_margin)
         self.refresh_combos()
         self._loading = False
 
@@ -244,6 +327,8 @@ class ConfigTab(QWidget):
             (self.cb_tx_prof, [p.name for p in ci.profiles], ci.tx_profile),
             (self.cb_ic, [p.name for p in ci.ic_profiles], ci.ic.name),
             (self.cb_fpga, [r[0] for r in ci.fpga_table], ci.fpga_std),
+            (self.cb_tx_drv, [d.name for d in ci.tx_drivers], ci.driver.name),
+            (self.cb_tx_fpga, [r[0] for r in ci.tx_fpga_table], ci.tx_fpga_std),
         ):
             cb.blockSignals(True)
             cb.clear()
@@ -270,6 +355,10 @@ class ConfigTab(QWidget):
         ci.err = num(self.ed_err, "Test toleransı") / 100.0
         if self.cb_fpga.currentText():
             ci.fpga_std = self.cb_fpga.currentText()
+        if self.cb_tx_fpga.currentText():
+            ci.tx_fpga_std = self.cb_tx_fpga.currentText()
+        ci.tx_comp_delay = self.chk_tx_comp.isChecked()
+        ci.tx_gap_margin = self.chk_tx_gap.isChecked()
 
     def _on_input(self):
         if not self._loading:
@@ -284,12 +373,30 @@ class ConfigTab(QWidget):
             self.app.ci.fpga_std = name
             self.app.schedule_recalc()
 
+    def _on_tx_fpga(self, name: str):
+        if not self._loading and name:
+            self.app.ci.tx_fpga_std = name
+            self.app.schedule_recalc()
+
+    def _on_tx_opt(self):
+        if not self._loading:
+            self.app.ci.tx_comp_delay = self.chk_tx_comp.isChecked()
+            self.app.ci.tx_gap_margin = self.chk_tx_gap.isChecked()
+            self.app.schedule_recalc()
+
+    def restyle_icons(self):
+        ic = look.pencil_icon()
+        for b in self._edit_btns:
+            b.setIcon(ic)
+
     def update_results(self, res, tx_res):
         ci = self.app.ci
         gf = f"%{ci.gf_ratio * 100:g} × {ci.gf_ref}" if ci.gf_mode == "ratio" else f"{ci.gf_clock} clock"
-        self.lbl_glitch.setText(
-            f"Filter: {gf} · Limit Pulse/Null/Gap "
-            f"%{ci.pulse_glitch_pct * 100:g}/{ci.null_glitch_pct * 100:g}/{ci.gap_glitch_pct * 100:g}"
+        self.lbl_gf_val.setText(gf)
+        self.lbl_gf_lim.setText(
+            f"MAX Glitch — Pulse: %{ci.pulse_glitch_pct * 100:g}  ·  "
+            f"Null: %{ci.null_glitch_pct * 100:g}  ·  "
+            f"Gap: %{ci.gap_glitch_pct * 100:g} ({ci.glitch_base})"
         )
 
         # RX tabloları
@@ -333,6 +440,8 @@ class ConfigTab(QWidget):
                 [[n, "OK" if ok else "UYARI"] for n, ok in tx_res["checks"]],
                 ["ok" if ok else "fail" for _, ok in tx_res["checks"]],
             )
+            fmt = lambda x: "" if x is None else f"{x:.3f}"
+            _fill_table(self.tv_tx_mid, [[k, fmt(a), fmt(b), fmt(c)] for k, (a, b, c) in tx_res.get("rows", {}).items()])
             bad = sum(1 for _, ok in tx_res["checks"] if not ok)
             self.lbl_tx_chk.setText(
                 f"UYARI: {bad} TX kontrolü sağlanmıyor."
@@ -344,6 +453,7 @@ class ConfigTab(QWidget):
         else:
             self.tv_tx_regs.setRowCount(0)
             self.tv_tx_chk.setRowCount(0)
+            self.tv_tx_mid.setRowCount(0)
             self.lbl_tx_chk.setText("TX Config hesaplanamadı.")
             self.lbl_tx_chk.setStyleSheet(f"color: {look.tokens()['danger']};")
             self.lbl_tx_info.setText("")

@@ -35,11 +35,10 @@ okumaları inceleme) çalışır.
 | Sekme | İçerik |
 |---|---|
 | **Config** | Sol panelde **Genel** (System Clock, ±ppm), **RX Config** (ARINC 429 profili, Receiver entegresi, FPGA giriş standardı, Glitch Filter ve limitler, test toleransı, örnek dalga formu / tek bit grafikleri) ve **TX Config** (ARINC 429 profili). Sağda **RX / TX** alt sekmeleri: kontroller, ara hesaplar (çift tık → formül), hesaplanan register değerleri, panoya kopyalama ve **Debug Bridge config listesine ekle**. |
+| **Kontrol** | Okunacak RX verileri (Word / Error / Bit Diagnostic: Tümü / Son N / Okunmasın), okuma ve yazma dosyası ayarları, IP/kanal harita durumu; sağda **RX İşlemleri** (**RX Config gönder**, **RX verilerini oku**, **Config + oku**), **TX İşlemleri** (**TX Config gönder**, **TX Canlı Kontrol…**), **IP Kontrol** (**IP reset**, **Durdur**), ilerleme çubuğu ve **İşlem Logu**. |
 | **RX Okunan Veriler** | Word Listesi, Word Dalga Formu, Bit Diagnostic, Error Listesi, İstatistik ve tutarlılık kontrolleri. PASS/FAIL hücre renklendirmesi (neden için üzerine gelin veya sağ tıklayın). Word satırına çift tık → dalga formu. |
-| **TX Gönderilen Veriler** | Yer tutucu (sonraki aşamada `TX_WORD_CNT` ve `TB_` kayıtları ile doldurulacak). |
+| **TX Gönderilen Veriler** | TX Canlı Kontrol gönderim geçmişi (filtreleme, CSV dışa aktarma, projeyle kayıt) ve **TX Built-In Test (TX BIT · Wraparound Checker)** canlı sayaçları (`TX_WORD_CNT`, `TB_WORD_CNT`, `CHK_OK_CNT`, `CHK_ERR_CNT`, FIFO), Checker kontrolü ve tek tıkla `TB_` okuması. |
 
-Alt işlem çubuğu tüm sekmelerde görünür: **RX Config gönder**, **RX verilerini oku**, **Config + oku**,
-**Okuma ayarları…**, **TX Config gönder**, **TX Canlı Kontrol…**, **IP reset**, **Durdur** ve katlanabilir **Log**.
 Üst başlık çubuğundan hedef kanal (`RX0`…`RXn`, `TX BIT`) seçilir.
 
 ## Register Adlandırma Sözleşmesi (`arinc429_ip`)

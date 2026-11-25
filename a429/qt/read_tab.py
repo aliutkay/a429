@@ -70,7 +70,7 @@ class ReadTab(QWidget):
         # Alt sekmeler
         self.sub = QTabWidget()
         self.sub.setDocumentMode(True)
-        lay.addWidget(self.sub, 1)
+        lay.addWidget(look.wrap_tabs(self.sub, "SubCard"), 1)
 
         def make_unit_bar(default: str):
             w = QWidget()
@@ -88,7 +88,7 @@ class ReadTab(QWidget):
         # 1. Word Listesi
         w_page = QWidget()
         wl = QVBoxLayout(w_page)
-        wl.setContentsMargins(0, 4, 0, 0)
+        wl.setContentsMargins(6, 6, 6, 6)
         ub, self.u_word = make_unit_bar("µs")
         wl.addWidget(ub)
         self.tv_word = CellTable(
@@ -113,7 +113,7 @@ class ReadTab(QWidget):
         # 2. Word Dalga Formu
         wv_page = QWidget()
         wvl = QVBoxLayout(wv_page)
-        wvl.setContentsMargins(0, 4, 0, 0)
+        wvl.setContentsMargins(6, 6, 6, 6)
         wbar = QHBoxLayout()
         wbar.addWidget(QLabel("Word No:"))
         self.cb_wword = QComboBox()
@@ -161,7 +161,7 @@ class ReadTab(QWidget):
         # 3. Bit Diagnostic
         b_page = QWidget()
         bl = QVBoxLayout(b_page)
-        bl.setContentsMargins(0, 4, 0, 0)
+        bl.setContentsMargins(6, 6, 6, 6)
         ub, self.u_bit = make_unit_bar("µs")
         bl.addWidget(ub)
         bl.addWidget(look.label("Yeşil: PASS, kırmızı: FAIL. Nedenini görmek için hücrenin üzerine gelin veya sağ tıklayın.", "muted"))
@@ -176,7 +176,7 @@ class ReadTab(QWidget):
         # 4. Error Listesi
         e_page = QWidget()
         el = QVBoxLayout(e_page)
-        el.setContentsMargins(0, 4, 0, 0)
+        el.setContentsMargins(6, 6, 6, 6)
         ub, self.u_err = make_unit_bar("ms")
         el.addWidget(ub)
         el.addWidget(look.label("Yeşil: PASS, kırmızı: FAIL. Nedenini görmek için hücrenin üzerine gelin veya sağ tıklayın.", "muted"))
@@ -191,7 +191,7 @@ class ReadTab(QWidget):
         # 5. İstatistik
         s_page = QWidget()
         sl = QVBoxLayout(s_page)
-        sl.setContentsMargins(0, 4, 0, 0)
+        sl.setContentsMargins(6, 6, 6, 6)
         sl.setSpacing(8)
         self.tv_st = _make_table(["Parametre", "Değer", "Açıklama"], [290, 160, 520])
         sl.addWidget(self.tv_st, 2)

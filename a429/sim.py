@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import random
+import time
 
 from .regs import channel_prefix
 
@@ -128,11 +129,11 @@ def build_sim_ip_dict(num_rx: int = 2, has_tx: bool = True, has_txbit: bool = Tr
         ]
         if has_checker:
             ch_defs += [
-                ("CHK_CTRL", 0x1C0, "RW", 0, None),
+                ("CHK_CTRL", 0x1C0, "RW", 0, [_fld("ENABLE", 0, 1, "RW"), _fld("CLEAR", 1, 1, "PULSE")]),
                 ("CHK_TIMEOUT", 0x1C4, "RW", 0, None),
                 ("CHK_OK_CNT", 0x1C8, "RO", 0, None),
                 ("CHK_ERR_CNT", 0x1CC, "RO", 0, None),
-                ("CHK_STATUS", 0x1D0, "RO", 0, None),
+                ("CHK_STATUS", 0x1D0, "RO", 0, [_fld("FIFO_LEVEL", 0, 4, "RO"), _fld("FIFO_OVF", 4, 1, "RO")]),
             ]
         for suf, off, acc, rst, flds in ch_defs:
             regs.append(_reg(prefix + suf, page_base + off, acc, rst, flds))
@@ -197,6 +198,7 @@ class SimClient:
         self.locked = False
         self.bridge_logs: list[str] = []
         self.added_configs: list = []
+        self._sched_t0: float | None = None
 
         self._regs: dict[int, int] = {}
         self._name_by_off: dict[int, str] = {}
@@ -214,11 +216,76 @@ class SimClient:
 
         self._channels: dict[str, _SimChannel] = {}
         if has_txbit:
-            self._channels["TB"] = _SimChannel(12, 1, seed + 100)
+            tb_sim = _SimChannel(12, 1, seed + 100)
+            # Simüle edilmiş TX BIT hata kaydını anlamlı bir WORD_MISMATCH (bit 8) yap
+            if 0 in tb_sim.emem:
+                tb_sim.emem[0][2] = 1 << 8
+            self._channels["TB"] = tb_sim
+            if "TX_WORD_CNT" in self._off_by_name:
+                self._regs[self._off_by_name["TX_WORD_CNT"]] = 12
+            if "TB_CHK_CTRL" in self._off_by_name:
+                self._regs[self._off_by_name["TB_CHK_CTRL"]] = 1
+                self._regs[self._off_by_name["TB_CHK_TIMEOUT"]] = 50000
+                self._regs[self._off_by_name["TB_CHK_OK_CNT"]] = 11
+                self._regs[self._off_by_name["TB_CHK_ERR_CNT"]] = 1
+                self._regs[self._off_by_name["TB_CHK_STATUS"]] = 0
         for n in range(num_rx):
             self._channels[f"RX{n}"] = _SimChannel(23 - n * 5, 3 + n, seed + n)
+        self._apply_tx_preset(0)
+        for ch in self._channels:
+            self._apply_rx_preset(ch, 0)
         self._now = max((c.now for c in self._channels.values()), default=1_000_000)
         self._latched_msb = self._now >> 32
+
+    def _apply_tx_preset(self, sel: int):
+        st_off = self._off_by_name.get("TX_STATUS")
+        if st_off is not None:
+            self._regs[st_off] = (self._regs.get(st_off, 0) & ~0xC) | ((sel & 3) << 2)
+        presets = {
+            0: {"PULSE_DUR": 250, "NULL_DUR": 250, "GAP_DUR": 2000, "SLP": 1},     # 50 MHz High Speed
+            1: {"PULSE_DUR": 2000, "NULL_DUR": 2000, "GAP_DUR": 16000, "SLP": 0},  # 50 MHz Low Speed
+        }
+        if sel in presets:
+            for s, val in presets[sel].items():
+                ao = self._off_by_name.get("TX_ACT_" + s)
+                if ao is not None:
+                    self._regs[ao] = val
+        else:
+            for s in ("PULSE_DUR", "NULL_DUR", "GAP_DUR", "SLP"):
+                co, ao = self._off_by_name.get("TX_CUST_" + s), self._off_by_name.get("TX_ACT_" + s)
+                if co is not None and ao is not None:
+                    self._regs[ao] = self._regs.get(co, 0)
+
+    def _apply_rx_preset(self, ch: str, sel: int):
+        p = channel_prefix(ch)
+        st_off = self._off_by_name.get(p + "STATUS")
+        if st_off is not None:
+            self._regs[st_off] = (self._regs.get(st_off, 0) & ~0x300) | ((sel & 3) << 8)
+        presets = {
+            0: {  # 50 MHz High Speed preset
+                "GLITCH_FILTER_SIZE": 10, "MIN_PULSE": 150, "MAX_PULSE": 350,
+                "MIN_BIT": 400, "MAX_BIT": 600, "MAX_PULSE_ERR": 50,
+                "MAX_NULL_ERR": 50, "MAX_GAP_ERR": 200, "PARITY_MODE": 1,
+            },
+            1: {  # 50 MHz Low Speed preset
+                "GLITCH_FILTER_SIZE": 80, "MIN_PULSE": 1200, "MAX_PULSE": 2800,
+                "MIN_BIT": 3200, "MAX_BIT": 4800, "MAX_PULSE_ERR": 400,
+                "MAX_NULL_ERR": 400, "MAX_GAP_ERR": 1600, "PARITY_MODE": 1,
+            },
+        }
+        if sel in presets:
+            for s, val in presets[sel].items():
+                ao = self._off_by_name.get(p + "ACT_" + s)
+                if ao is not None:
+                    self._regs[ao] = val
+        else:
+            for s in (
+                "GLITCH_FILTER_SIZE", "MIN_PULSE", "MAX_PULSE", "MIN_BIT", "MAX_BIT",
+                "MAX_PULSE_ERR", "MAX_NULL_ERR", "MAX_GAP_ERR", "PARITY_MODE",
+            ):
+                co, ao = self._off_by_name.get(p + "CUST_" + s), self._off_by_name.get(p + "ACT_" + s)
+                if co is not None and ao is not None:
+                    self._regs[ao] = self._regs.get(co, 0)
 
     def _to_off(self, offset=0, addr=None) -> int:
         if addr is not None:
@@ -268,28 +335,71 @@ class SimClient:
         v = int(value) & 0xFFFFFFFF
         name = self._name_by_off.get(off, "")
         if name == "TX_CFG_APPLY" and (v & 1):
-            for s in ("PULSE_DUR", "NULL_DUR", "GAP_DUR", "SLP"):
-                co, ao = self._off_by_name.get("TX_CUST_" + s), self._off_by_name.get("TX_ACT_" + s)
-                if co is not None and ao is not None:
-                    self._regs[ao] = self._regs.get(co, 0)
+            sel = self._regs.get(self._off_by_name.get("TX_CFG_SEL", -1), 0) & 3
+            self._apply_tx_preset(sel)
+            return
+        if name == "TX_SCHED_EN":
+            was_on = bool(self._regs.get(off, 0) & 1)
+            now_on = bool(v & 1)
+            if not was_on and now_on:
+                self._sched_t0 = time.monotonic()
+            elif was_on and not now_on and self._sched_t0 is not None:
+                sent = max(1, min(10000, round((time.monotonic() - self._sched_t0) * 1000)))
+                self._sched_t0 = None
+                cnt_off = self._off_by_name.get("TX_WORD_CNT")
+                if cnt_off is not None:
+                    self._regs[cnt_off] = (self._regs.get(cnt_off, 0) + sent) & 0xFFFFFFFF
+                chk_off = self._off_by_name.get("TB_CHK_CTRL")
+                ok_off = self._off_by_name.get("TB_CHK_OK_CNT")
+                if chk_off is not None and ok_off is not None and (self._regs.get(chk_off, 0) & 1):
+                    self._regs[ok_off] = (self._regs.get(ok_off, 0) + sent) & 0xFFFFFFFF
+            self._regs[off] = v
             return
         if name == "TX_SEND_CMD" and (v & 1):
             cnt_off = self._off_by_name.get("TX_WORD_CNT")
             if cnt_off is not None:
                 self._regs[cnt_off] = (self._regs.get(cnt_off, 0) + 1) & 0xFFFFFFFF
+            if "TB" in self._channels:
+                chk_off = self._off_by_name.get("TB_CHK_CTRL")
+                if chk_off is not None and (self._regs.get(chk_off, 0) & 1):
+                    ok_off = self._off_by_name.get("TB_CHK_OK_CNT")
+                    if ok_off is not None:
+                        self._regs[ok_off] = (self._regs.get(ok_off, 0) + 1) & 0xFFFFFFFF
+            return
+        if name == "TB_CHK_CTRL":
+            if v & 2:       # FIFO CLEAR darbesi
+                st_off = self._off_by_name.get("TB_CHK_STATUS")
+                if st_off is not None:
+                    self._regs[st_off] = 0
+            self._regs[off] = v & ~2
             return
         if name == "SOFT_RESET":
+            if v & 1:
+                self._apply_tx_preset(0)
+                for ch in self._channels:
+                    self._apply_rx_preset(ch, 0)
+            else:
+                if v & 2:
+                    self._apply_tx_preset(0)
+                if (v & 4) and "TB" in self._channels:
+                    self._apply_rx_preset("TB", 0)
+                for ch in self._channels:
+                    if ch.startswith("RX") and (v & (1 << (16 + int(ch[2:])))):
+                        self._apply_rx_preset(ch, 0)
             return
-        for ch in self._channels:
+        for ch, sim in self._channels.items():
             p = channel_prefix(ch)
+            if name == p + "CTRL":
+                if v & 4:           # CLEAR darbesi (kendiliğinden 0'a döner)
+                    sim.wtot = 0
+                    sim.etot = 0
+                    sim.drop = 0
+                    sim.wmem.clear(); sim.emem.clear(); sim.bmem.clear()
+                self._regs[off] = v & ~4
+                return
             if name == p + "CFG_APPLY" and (v & 1):
-                for s in (
-                    "GLITCH_FILTER_SIZE", "MIN_PULSE", "MAX_PULSE", "MIN_BIT", "MAX_BIT",
-                    "MAX_PULSE_ERR", "MAX_NULL_ERR", "MAX_GAP_ERR", "PARITY_MODE",
-                ):
-                    co, ao = self._off_by_name.get(p + "CUST_" + s), self._off_by_name.get(p + "ACT_" + s)
-                    if co is not None and ao is not None:
-                        self._regs[ao] = self._regs.get(co, 0)
+                sel = self._regs.get(self._off_by_name.get(p + "CFG_SEL", -1), 0) & 3
+                self._apply_rx_preset(ch, sel)
                 return
         self._regs[off] = v
 

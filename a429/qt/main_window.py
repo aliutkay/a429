@@ -10,27 +10,30 @@ from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication, QComboBox, QFileDialog, QHBoxLayout, QInputDialog, QLabel, QMenu,
-    QMessageBox, QPlainTextEdit, QProgressBar, QTabWidget, QToolButton, QVBoxLayout, QWidget,
+    QMessageBox, QTabWidget, QToolButton, QVBoxLayout, QWidget,
 )
 
 from .. import project as P
 from ..decode import DecodeSettings, export_txt, import_txt
 from ..ip import (
-    DEFAULT_OUT_DIR, ReadSettings, native_dir, read_channel, send_rx_config,
-    send_tx_config, soft_reset, tx_write as ip_tx_write,
+    DEFAULT_OUT_DIR, ReadSettings, clear_channel, clear_tx_checker_fifo, native_dir,
+    read_channel, read_channel_status, read_rx_active_config, read_tx_active_config,
+    read_tx_bit_status, recompare_active_config, send_rx_config, send_tx_config,
+    set_channel_enable, set_tx_checker, soft_reset, tx_write as ip_tx_write,
 )
 from ..model import ConfigInputs, compute
 from ..regs import RegMap, channel_label, channel_prefix
 from ..txcfg import compute_tx
 from . import look
 from .config_tab import ConfigTab
+from .control_tab import ControlTab
 from .dialogs import (
-    APP, ArincProfilesDialog, FpgaStandardsDialog, GlitchDialog, IcProfileDialog, ReadSettingsDialog,
+    APP, ActiveConfigDialog, ArincProfilesDialog, FpgaStandardsDialog, GlitchDialog,
+    IcProfileDialog, TxDriverDialog, TxFpgaDialog,
 )
 from .figpanel import ChartWindow
 from .read_tab import ReadTab
 from .tx_sent_tab import TxSentTab
-from .txwindow import TxLiveWindow
 from .worker import Worker
 
 
@@ -52,6 +55,7 @@ class MainWindow(QWidget):
         self.rs = ReadSettings(out_dir=DEFAULT_OUT_DIR)
         self.ds = DecodeSettings()
         self.sessions: list[dict] = []
+        self.tx_history: list[dict] = []
         self.cur_session: dict | None = None
         self.project_path: str | None = None
         self.dirty = False
@@ -67,7 +71,8 @@ class MainWindow(QWidget):
 
         self._dialogs: dict[str, QWidget] = {}
         self._charts: dict[tuple[str, str], ChartWindow] = {}
-        self._tx_win: TxLiveWindow | None = None
+        self._last_rx_act: dict | None = None
+        self._last_tx_act: dict | None = None
 
         self._recalc_timer = QTimer(self)
         self._recalc_timer.setSingleShot(True)
@@ -92,6 +97,7 @@ class MainWindow(QWidget):
         self._connect_signals()
 
         self.config_tab.load_from_model()
+        self.control_tab.load_from_model()
         self.read_tab.load_settings()
         self._populate_channels()
         if client and isinstance(client.settings.get("a429"), dict):
@@ -103,6 +109,10 @@ class MainWindow(QWidget):
         self.recalc()
         self._update_header()
         self._update_controls()
+        if self.connected:
+            QTimer.singleShot(50, self.do_refresh_status)
+            QTimer.singleShot(120, self.do_refresh_tx_bit)
+            QTimer.singleShot(160, self.do_check_tx_config)
 
         QShortcut(QKeySequence.StandardKey.Save, self, self.save_project)
         QShortcut(QKeySequence.StandardKey.Open, self, self.open_project)
@@ -120,7 +130,7 @@ class MainWindow(QWidget):
 
         # Dosya menüsü
         self.btn_file = QToolButton()
-        self.btn_file.setText("Dosya ▾")
+        self.btn_file.setText("Dosya")
         self.btn_file.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
         menu = QMenu(self)
         self._add_act(menu, "Yeni proje", self.new_project)
@@ -166,67 +176,29 @@ class MainWindow(QWidget):
         head.lay.addLayout(hrow)
         outer.addWidget(head)
 
-        # ---- Sekmeler (Config, RX Okunan Veriler, TX Gönderilen Veriler)
+        # ---- Sekmeler (Config, Kontrol, RX Okunan Veriler, TX Gönderilen Veriler)
         self.tabs = QTabWidget()
         self.tabs.setDocumentMode(True)
-        tab_card = look.Card(margins=0, spacing=0)
-        tab_card.lay.addWidget(self.tabs)
-        outer.addWidget(tab_card, 1)
+        outer.addWidget(look.wrap_tabs(self.tabs, "Card"), 1)
 
         self.config_tab = ConfigTab(self)
+        self.control_tab = ControlTab(self)
         self.read_tab = ReadTab(self)
         self.tx_sent_tab = TxSentTab(self)
         self.tabs.addTab(self.config_tab, "Config")
+        self.tabs.addTab(self.control_tab, "Kontrol")
         self.tabs.addTab(self.read_tab, "RX Okunan Veriler")
         self.tabs.addTab(self.tx_sent_tab, "TX Gönderilen Veriler")
 
-        # ---- Alt işlem çubuğu + katlanabilir log
-        foot = look.Card(margins=8, spacing=6)
-        brow = QHBoxLayout()
-        brow.setSpacing(6)
-        self.btn_send_rx = look.button("RX Config gönder", "primary", self.do_send_rx_cfg)
-        self.btn_read_rx = look.button("RX verilerini oku", "primary", self.do_read)
-        self.btn_all = look.button("Config + oku", None, self.do_all)
-        self.btn_read_opts = look.button("Okuma ayarları…", None, self.open_read_settings)
-        self.btn_send_tx = look.button("TX Config gönder", None, self.do_send_tx_cfg)
-        self.btn_tx_live = look.button("TX Canlı Kontrol…", None, self.open_tx_live)
-        self.btn_reset = look.button("IP reset", "danger", self.do_ip_reset)
-        self.btn_stop = look.button("Durdur", None, self.do_stop)
-        self.btn_log_toggle = look.button("Log ▾", None, self._toggle_log)
-
-        for b in (
-            self.btn_send_rx, self.btn_read_rx, self.btn_all, self.btn_read_opts,
-            self.btn_send_tx, self.btn_tx_live, self.btn_reset, self.btn_stop,
-        ):
-            brow.addWidget(b)
-        brow.addStretch(1)
-        brow.addWidget(self.btn_log_toggle)
-        foot.lay.addLayout(brow)
-
-        self.prog = QProgressBar()
-        self.prog.setRange(0, 100)
-        self.prog.setValue(0)
-        self.prog.setVisible(False)
-        foot.lay.addWidget(self.prog)
-
-        self.log_box = QWidget()
-        llay = QVBoxLayout(self.log_box)
-        llay.setContentsMargins(0, 0, 0, 0)
-        llay.setSpacing(4)
-        self.log_txt = QPlainTextEdit()
-        self.log_txt.setReadOnly(True)
-        self.log_txt.setFont(look.mono_font(-1))
-        self.log_txt.setMaximumBlockCount(4000)
-        self.log_txt.setFixedHeight(130)
-        llay.addWidget(self.log_txt)
-        lbar = QHBoxLayout()
-        lbar.addWidget(look.button("Logu temizle", None, self.log_txt.clear))
-        lbar.addWidget(look.button("Logu kaydet…", None, self._save_log))
-        lbar.addStretch(1)
-        llay.addLayout(lbar)
-        self.log_box.setVisible(False)
-        foot.lay.addWidget(self.log_box)
-        outer.addWidget(foot)
+        # Kontrol sekmesindeki bileşenlere kısa referanslar
+        self.btn_send_rx = self.control_tab.btn_send_rx
+        self.btn_read_rx = self.control_tab.btn_read_rx
+        self.btn_send_tx = self.control_tab.btn_send_tx
+        self.btn_tx_live = self.control_tab.btn_tx_live
+        self.btn_reset = self.control_tab.btn_reset
+        self.btn_stop = self.control_tab.btn_stop
+        self.prog = self.control_tab.prog
+        self.log_txt = self.control_tab.log_txt
 
         # Durum satırı
         self.lbl_status = look.label("Hazır.", "muted")
@@ -265,27 +237,45 @@ class MainWindow(QWidget):
         self.cb_channel.blockSignals(False)
 
     def _on_channel_changed(self):
+        self._last_rx_act = None
+        self.control_tab.update_rx_active_config(None)
         self.recalc()
         self._update_controls()
         self._schedule_studio_settings()
+        if self.connected and not self.busy:
+            self.do_refresh_status()
 
     def _on_studio_event(self, ev: dict):
         kind = ev.get("event")
         if kind == "connection":
             self._update_header()
             self._update_controls()
+            if self.connected:
+                QTimer.singleShot(50, self.do_refresh_status)
+                QTimer.singleShot(120, self.do_check_tx_config)
+            else:
+                self._last_rx_act = None
+                self._last_tx_act = None
+                self.control_tab.update_rx_active_config(None)
+                self.control_tab.update_tx_active_config(None)
         elif kind == "ip":
             self.rm = RegMap(self.client.ip if self.client else None)
+            self._last_rx_act = None
+            self._last_tx_act = None
             self._populate_channels()
             self.recalc()
             self._update_header()
             self._update_controls()
+            if self.connected:
+                QTimer.singleShot(50, self.do_refresh_status)
+                QTimer.singleShot(120, self.do_check_tx_config)
         elif kind == "ip_removed":
             QMessageBox.warning(self, APP, f"{self.rm.name} artık adres haritasında değil.")
             self._closing = True
             self.close()
         elif kind == "theme":
             look.apply(QApplication.instance(), ev.get("theme"))
+            self.config_tab.restyle_icons()
             self.recalc()
             self.read_tab.refresh()
         elif kind == "raise":
@@ -334,18 +324,39 @@ class MainWindow(QWidget):
 
         cfg_btn(self.btn_send_rx, not rx_cfg_miss, rx_cfg_miss, f"{channel_label(ch)} kanalına Custom RX Config yazar ve doğrular")
         cfg_btn(self.btn_read_rx, not rx_rd_miss, rx_rd_miss, f"{channel_label(ch)} kanalından Word, Error ve Bit Diagnostic verilerini okur")
-        cfg_btn(self.btn_all, not rx_cfg_miss and not rx_rd_miss, rx_cfg_miss + rx_rd_miss, "RX Config gönder + verileri oku")
         cfg_btn(self.btn_send_tx, not tx_cfg_miss, tx_cfg_miss, "TX Config register'larını yazar ve doğrular")
         cfg_btn(self.btn_reset, not rst_miss, rst_miss, "SOFT_RESET.ALL darbesi gönderir")
-        self.btn_tx_live.setEnabled(not self.busy)
-        if tx_live_miss and self.client:
-            self.btn_tx_live.setToolTip("Bazı TX register'ları haritada eksik: " + ", ".join(tx_live_miss[:6]))
-        else:
-            self.btn_tx_live.setToolTip("TX Canlı Kontrol penceresini açar")
+        p_ctrl = channel_prefix(ch) + "CTRL"
+        has_ctrl = self.rm.is_loaded() and self.rm.has(p_ctrl)
+        p_st = channel_prefix(ch) + "STATUS"
+        has_rx_act = self.rm.is_loaded() and (self.rm.has(p_st) or self.rm.has(channel_prefix(ch) + "ACT_MIN_PULSE"))
+        has_tx_act = self.rm.is_loaded() and (self.rm.has("TX_STATUS") or self.rm.has("TX_ACT_PULSE_DUR"))
+        self.control_tab.chk_rx_en.setEnabled(conn and has_ctrl)
+        self.control_tab.btn_clear_ch.setEnabled(conn and has_ctrl)
+        self.control_tab.btn_refresh_stat.setEnabled(conn and has_ctrl)
+        cfg_btn(
+            self.control_tab.btn_check_rx, has_rx_act, [] if has_rx_act else [p_st],
+            f"{channel_label(ch)} kanalının karttaki aktif config'ini (STATUS.ACT_CFG + ACT_*) okur ve karşılaştırır",
+        )
+        cfg_btn(
+            self.control_tab.btn_check_tx, has_tx_act, [] if has_tx_act else ["TX_STATUS"],
+            "TX kanalının karttaki aktif config'ini (TX_STATUS.ACT_CFG + TX_ACT_*) okur ve karşılaştırır",
+        )
+        has_tb = self.rm.is_loaded() and not self.rm.missing_for_rx_read("TB")
+        has_chk = self.rm.is_loaded() and self.rm.has("TB_CHK_CTRL")
+        self.tx_sent_tab.set_controls_enabled(self.connected, has_tb, has_chk, self.busy)
+        tx_tip = (
+            "Çevrimdışı modda kapalı (AXIL Studio Debug Bridge'den açın)." if not self.client
+            else ("Debug Bridge karta bağlı değil." if not self.connected
+                  else ("Eksik TX register'ları: " + ", ".join(tx_live_miss[:6]) if tx_live_miss else ""))
+        )
+        self.control_tab.tx_panel.set_io_enabled(conn and not tx_live_miss, tx_tip)
+        self.btn_tx_live.setEnabled(True)
         self.btn_stop.setEnabled(self.busy)
         self.btn_show_bridge.setEnabled(self.client is not None)
         self.config_tab.btn_rx_add_cfg.setEnabled(self.client is not None and not rx_cfg_miss)
         self.config_tab.btn_tx_add_cfg.setEnabled(self.client is not None and not tx_cfg_miss)
+        self.control_tab.update_map_summary(self.client, self.rm, ch)
 
     def _show_in_bridge(self):
         if self.client:
@@ -383,17 +394,6 @@ class MainWindow(QWidget):
         self.prog.setValue(min(done, max(1, total)))
         self.set_status(msg)
 
-    def _toggle_log(self):
-        vis = not self.log_box.isVisible()
-        self.log_box.setVisible(vis)
-        self.btn_log_toggle.setText("Log ▴" if vis else "Log ▾")
-
-    def _save_log(self):
-        p, _ = QFileDialog.getSaveFileName(self, "Logu kaydet", "", "Metin (*.txt)")
-        if p:
-            with open(p, "w", encoding="utf-8") as f:
-                f.write(self.log_txt.toPlainText())
-
     def schedule_recalc(self):
         self.mark_dirty()
         self._recalc_timer.start()
@@ -408,11 +408,36 @@ class MainWindow(QWidget):
             return
         self.recalc_tx()
         self.config_tab.update_results(self.res, self.res_tx)
+        self.control_tab.tx_panel.refresh()
+        self.control_tab.update_map_summary(self.client, self.rm, self.current_channel())
+        self._recompare_cached_active_configs()
         for win in list(self._charts.values()):
             if win.isVisible():
                 win.draw()
         self.read_tab.refresh()
         self.set_status("Config hesaplandı.")
+
+    def _expected_rx_cfg(self) -> dict[str, int] | None:
+        return dict(self.res.rx_values) if self.res else None
+
+    def _expected_tx_cfg(self) -> dict[str, int] | None:
+        if not self.res_tx:
+            return None
+        return {r: v for r, v in self.res_tx["writes"] if r.startswith("TX_CUST_")}
+
+    def _recompare_cached_active_configs(self):
+        if self._last_rx_act and self._last_rx_act.get("channel") == self.current_channel():
+            self._last_rx_act = recompare_active_config(self._last_rx_act, self._expected_rx_cfg())
+            self.control_tab.update_rx_active_config(self._last_rx_act)
+            dlg = self._dialogs.get("rx_act_cfg")
+            if isinstance(dlg, ActiveConfigDialog) and dlg.isVisible():
+                dlg.update_info(self._last_rx_act)
+        if self._last_tx_act:
+            self._last_tx_act = recompare_active_config(self._last_tx_act, self._expected_tx_cfg())
+            self.control_tab.update_tx_active_config(self._last_tx_act)
+            dlg = self._dialogs.get("tx_act_cfg")
+            if isinstance(dlg, ActiveConfigDialog) and dlg.isVisible():
+                dlg.update_info(self._last_tx_act)
 
     def recalc_tx(self):
         try:
@@ -459,6 +484,12 @@ class MainWindow(QWidget):
     def open_glitch_dialog(self):
         self._open_dialog("glitch", lambda: GlitchDialog(self))
 
+    def open_tx_driver_dialog(self):
+        self._open_dialog("tx_driver", lambda: TxDriverDialog(self))
+
+    def open_tx_fpga_dialog(self):
+        self._open_dialog("tx_fpga", lambda: TxFpgaDialog(self))
+
     def open_chart(self, kind: str, case: str):
         win = self._charts.get((kind, case))
         if win is not None and win.isVisible():
@@ -469,18 +500,8 @@ class MainWindow(QWidget):
         self._charts[(kind, case)] = win
         win.show()
 
-    def open_read_settings(self):
-        dlg = ReadSettingsDialog(self, self.rs)
-        if dlg.exec():
-            self.mark_dirty()
-
     def open_tx_live(self):
-        if self._tx_win is not None and self._tx_win.isVisible():
-            self._tx_win.raise_()
-            self._tx_win.activateWindow()
-            return
-        self._tx_win = TxLiveWindow(self)
-        self._tx_win.show()
+        self.control_tab.popout_tx()
 
     # ================================================================ Debug Bridge config listesi
     def add_rx_to_bridge_config(self):
@@ -531,14 +552,15 @@ class MainWindow(QWidget):
             return False
         self._stop_flag.clear()
         self.busy = True
-        self.prog.setVisible(show_progress)
+        self.prog.setRange(0, 100)
         self.prog.setValue(0)
         self._update_controls()
         self.set_status(f"{title}…")
 
         def ok(result):
             self.busy = False
-            self.prog.setVisible(False)
+            if show_progress:
+                self.prog.setValue(self.prog.maximum())
             self._flush_write_log()
             self._update_controls()
             self.set_status(f"{title}: tamam.")
@@ -549,7 +571,7 @@ class MainWindow(QWidget):
 
         def fail(exc):
             self.busy = False
-            self.prog.setVisible(False)
+            self.prog.setValue(0)
             self._flush_write_log()
             self._update_controls()
             self.log(f"HATA ({title}): {exc}")
@@ -574,7 +596,11 @@ class MainWindow(QWidget):
             send_rx_config(self.client, rm, ch, vals, verify=True, log=self.log, on_write=self._record_write)
             self.client.log(f"ARINC 429: {ch} RX Config gönderildi ve doğrulandı.")
 
-        self._run_job(f"{channel_label(ch)} RX Config gönderiliyor", job)
+        self._run_job(
+            f"{channel_label(ch)} RX Config gönderiliyor",
+            job,
+            on_ok=lambda _: self.do_check_rx_config(show_dialog=False),
+        )
 
     def do_read(self):
         self.recalc()
@@ -598,9 +624,234 @@ class MainWindow(QWidget):
             s = P.new_session(data, self.ci, self.rs, self.ds)
             s["clk_mhz"] = mhz
             self.add_session(s, save_file=True)
-            self.tabs.setCurrentIndex(1)
+            sm = data.get("summary", {})
+            self.control_tab.set_last_read_summary(
+                f"Son okuma ({channel_label(ch)}): {len(data.get('words', []))} Word, "
+                f"{len(data.get('errors', []))} Error, {len(data.get('bits', [])) // 32} Word Bit Diag"
+            )
+            self.control_tab.update_live_stats({
+                "enable": self.control_tab.chk_rx_en.isChecked(),
+                "word_cnt": sm.get("total_word_cnt"),
+                "err_cnt": sm.get("total_error_cnt"),
+                "drop_cnt": sm.get("drop_cnt"),
+                "last_word": data["words"][0]["w"][2] if data.get("words") else None,
+            })
+            self.tabs.setCurrentWidget(self.read_tab)
 
         self._run_job(f"{channel_label(ch)} RX verileri okunuyor", job, on_ok=done, show_progress=True)
+
+    def do_refresh_status(self):
+        if not self.connected or self.busy:
+            return
+        ch = self.current_channel()
+        rm = self.rm
+        if not rm.has(channel_prefix(ch) + "CTRL"):
+            self.control_tab.update_live_stats(None)
+        else:
+            self.bus.run(
+                lambda: read_channel_status(self.client, rm, ch, quiet=True),
+                ok=lambda info: self.control_tab.update_live_stats(info),
+                err=lambda e: self.log(f"Durum okunamadı ({ch}): {e}"),
+            )
+        self.do_check_rx_config(show_dialog=False)
+
+    def _show_active_config_dialog(self, key: str, info: dict, on_refresh, on_send):
+        dlg = self._dialogs.get(key)
+        if isinstance(dlg, ActiveConfigDialog) and dlg.isVisible():
+            dlg.update_info(info)
+            dlg.raise_()
+            dlg.activateWindow()
+            return
+        dlg = ActiveConfigDialog(self, info, on_refresh=on_refresh, on_send=on_send)
+        self._dialogs[key] = dlg
+        dlg.show()
+
+    def do_check_rx_config_dialog(self):
+        self.do_check_rx_config(show_dialog=True)
+
+    def do_check_rx_config(self, show_dialog: bool = False):
+        if not self.connected or self.busy:
+            if not self.connected:
+                self.control_tab.update_rx_active_config(None)
+            return
+        ch = self.current_channel()
+        rm = self.rm
+        p = channel_prefix(ch)
+        if not (rm.has(p + "STATUS") or rm.has(p + "ACT_MIN_PULSE")):
+            self.control_tab.update_rx_active_config(None)
+            return
+        exp = self._expected_rx_cfg()
+
+        def ok(info: dict):
+            if ch != self.current_channel():
+                return
+            self._last_rx_act = info
+            self.control_tab.update_rx_active_config(info)
+            if show_dialog:
+                st = (
+                    "Arayüzdeki Config ile tam eşleşiyor."
+                    if info["all_match"]
+                    else f"{info['mismatch']} parametre arayüzden farklı."
+                )
+                self.log(f"[{channel_label(ch)} Aktif Config] {info['mode_name']} — {st}")
+                self._show_active_config_dialog(
+                    "rx_act_cfg",
+                    info,
+                    on_refresh=lambda: self.do_check_rx_config(show_dialog=True),
+                    on_send=self.do_send_rx_cfg,
+                )
+            else:
+                dlg = self._dialogs.get("rx_act_cfg")
+                if isinstance(dlg, ActiveConfigDialog) and dlg.isVisible():
+                    dlg.update_info(info)
+
+        def fail(exc):
+            if show_dialog:
+                QMessageBox.warning(self, f"{channel_label(ch)} Aktif Config", str(exc))
+            else:
+                self.log(f"Aktif RX config okunamadı ({ch}): {exc}")
+
+        self.bus.run(
+            lambda: read_rx_active_config(self.client, rm, ch, expected=exp, quiet=not show_dialog),
+            ok=ok,
+            err=fail,
+        )
+
+    def do_check_tx_config_dialog(self):
+        self.do_check_tx_config(show_dialog=True)
+
+    def do_check_tx_config(self, show_dialog: bool = False):
+        if not self.connected or self.busy:
+            if not self.connected:
+                self.control_tab.update_tx_active_config(None)
+            return
+        rm = self.rm
+        if not (rm.has("TX_STATUS") or rm.has("TX_ACT_PULSE_DUR")):
+            self.control_tab.update_tx_active_config(None)
+            return
+        exp = self._expected_tx_cfg()
+
+        def ok(info: dict):
+            self._last_tx_act = info
+            self.control_tab.update_tx_active_config(info)
+            if show_dialog:
+                st = (
+                    "Arayüzdeki Config ile tam eşleşiyor."
+                    if info["all_match"]
+                    else f"{info['mismatch']} parametre arayüzden farklı."
+                )
+                self.log(f"[TX Aktif Config] {info['mode_name']} — {st}")
+                self._show_active_config_dialog(
+                    "tx_act_cfg",
+                    info,
+                    on_refresh=lambda: self.do_check_tx_config(show_dialog=True),
+                    on_send=self.do_send_tx_cfg,
+                )
+            else:
+                dlg = self._dialogs.get("tx_act_cfg")
+                if isinstance(dlg, ActiveConfigDialog) and dlg.isVisible():
+                    dlg.update_info(info)
+
+        def fail(exc):
+            if show_dialog:
+                QMessageBox.warning(self, "TX Aktif Config", str(exc))
+            else:
+                self.log(f"Aktif TX config okunamadı: {exc}")
+
+        self.bus.run(
+            lambda: read_tx_active_config(self.client, rm, expected=exp, quiet=not show_dialog),
+            ok=ok,
+            err=fail,
+        )
+
+    def do_toggle_rx_enable(self, enable: bool):
+        if not self.connected:
+            return
+        ch = self.current_channel()
+        rm = self.rm
+        self._run_job(
+            f"{channel_label(ch)} Logger {'açılıyor' if enable else 'kapatılıyor'}",
+            lambda: set_channel_enable(self.client, rm, ch, enable, log=self.log, on_write=self._record_write),
+            on_ok=lambda _: self.do_refresh_status(),
+        )
+
+    def do_clear_channel(self):
+        ch = self.current_channel()
+        if not look.confirm(self, APP, f"{channel_label(ch)} kanalının Word/Error sayaçları temizlensin mi?", "Temizle"):
+            return
+        rm = self.rm
+        self._run_job(
+            f"{channel_label(ch)} sayaçları temizleniyor",
+            lambda: clear_channel(self.client, rm, ch, log=self.log, on_write=self._record_write),
+            on_ok=lambda _: self.do_refresh_status(),
+        )
+
+    def record_tx_event(self, cat: str, kind: str, word: int | None = None, detail: str = "", ok: bool = True):
+        now = datetime.datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        self.tx_history.append({"time": now, "cat": cat, "kind": kind, "word": word, "detail": detail, "ok": ok})
+        if len(self.tx_history) > 2000:
+            self.tx_history = self.tx_history[-2000:]
+        self.tx_sent_tab.refresh_history()
+        self.mark_dirty()
+        if ok and self.connected:
+            QTimer.singleShot(80, self.do_refresh_tx_bit)
+
+    def do_refresh_tx_bit(self):
+        if not self.connected or self.busy:
+            if not self.connected:
+                self.tx_sent_tab.update_tx_bit_status(None)
+            return
+        rm = self.rm
+        if not any(rm.has(r) for r in ("TX_WORD_CNT", "TB_WORD_CNT", "TB_CHK_CTRL")):
+            self.tx_sent_tab.update_tx_bit_status(None)
+            return
+        self.bus.run(
+            lambda: read_tx_bit_status(self.client, rm, quiet=True),
+            ok=lambda info: self.tx_sent_tab.update_tx_bit_status(info),
+            err=lambda e: self.log(f"TX BIT durumu okunamadı: {e}"),
+        )
+
+    def do_apply_tx_checker(self, enable: bool, timeout_clk: int):
+        rm = self.rm
+        self._run_job(
+            "TX BIT Checker ayarları yazılıyor",
+            lambda: set_tx_checker(self.client, rm, enable, timeout_clk, log=self.log, on_write=self._record_write),
+            on_ok=lambda _: self.do_refresh_tx_bit(),
+        )
+
+    def do_clear_tx_checker_fifo(self):
+        rm = self.rm
+        self._run_job(
+            "TX BIT Checker FIFO temizleniyor",
+            lambda: clear_tx_checker_fifo(self.client, rm, log=self.log, on_write=self._record_write),
+            on_ok=lambda _: self.do_refresh_tx_bit(),
+        )
+
+    def do_read_tx_bit(self):
+        self.recalc()
+        if not self.res:
+            return
+        opts = copy.deepcopy(self.rs)
+        rm = self.rm
+        mhz = self.ci.clk_mhz
+
+        def job():
+            return read_channel(
+                self.client, rm, "TB", opts,
+                progress=lambda d, t, m: self._prog_sig.emit(d, t, m),
+                stop_flag=self._stop_flag,
+                log=self.log,
+                on_write=self._record_write,
+            )
+
+        def done(data):
+            s = P.new_session(data, self.ci, self.rs, self.ds)
+            s["clk_mhz"] = mhz
+            self.add_session(s, save_file=True)
+            self.do_refresh_tx_bit()
+            self.tabs.setCurrentWidget(self.read_tab)
+
+        self._run_job("TX BIT (TB) verileri okunuyor", job, on_ok=done, show_progress=True)
 
     def do_all(self):
         self.recalc()
@@ -626,7 +877,8 @@ class MainWindow(QWidget):
             s = P.new_session(data, self.ci, self.rs, self.ds)
             s["clk_mhz"] = mhz
             self.add_session(s, save_file=True)
-            self.tabs.setCurrentIndex(1)
+            self.do_check_rx_config(show_dialog=False)
+            self.tabs.setCurrentWidget(self.read_tab)
 
         self._run_job(f"{channel_label(ch)} Config + okuma", job, on_ok=done, show_progress=True)
 
@@ -643,7 +895,11 @@ class MainWindow(QWidget):
             send_tx_config(self.client, rm, writes, verify=True, log=self.log, on_write=self._record_write)
             self.client.log("ARINC 429: TX Config gönderildi ve doğrulandı.")
 
-        self._run_job("TX Config gönderiliyor", job)
+        self._run_job(
+            "TX Config gönderiliyor",
+            job,
+            on_ok=lambda _: self.do_check_tx_config(show_dialog=False),
+        )
 
     def tx_write(self, title: str, writes: list[tuple[str, int]], on_done=None, quiet: bool = False, verify: bool = True) -> bool:
         if not self.connected:
@@ -660,11 +916,52 @@ class MainWindow(QWidget):
 
         return self._run_job(title, job, on_done=on_done)
 
+    def tx_scheduler_write(self, enable: bool, writes: list[tuple[str, int]], on_result=None) -> bool:
+        """Scheduler başlatırken öncesinde, durdururken sonrasında TX_WORD_CNT okur; on_result(ok, word_cnt)."""
+        if not self.connected:
+            QMessageBox.information(self, APP, "Debug Bridge bağlı değil (çevrimdışı modda yazma yapılamaz).")
+            return False
+        miss = self.rm.missing([r for r, _ in writes])
+        if miss:
+            QMessageBox.warning(self, APP, "IP haritasında eksik TX register'ları:\n" + ", ".join(miss))
+            return False
+        rm = self.rm
+        has_cnt = rm.has("TX_WORD_CNT")
+        cnt_off = rm.offset("TX_WORD_CNT") if has_cnt else None
+
+        def job():
+            cnt = self.client.read(cnt_off, quiet=True) if (enable and has_cnt) else None
+            ip_tx_write(self.client, rm, writes, verify=True, quiet=False, log=self.log, on_write=self._record_write)
+            if not enable and has_cnt:
+                cnt = self.client.read(cnt_off, quiet=True)
+            return cnt
+
+        def ok_cb(cnt):
+            if on_result:
+                on_result(True, cnt)
+
+        def done_cb(ok):
+            if not ok and on_result:
+                on_result(False, None)
+
+        title = "TX Scheduler " + ("başlatılıyor" if enable else "durduruluyor")
+        return self._run_job(title, job, on_ok=ok_cb, on_done=done_cb)
+
     def do_ip_reset(self):
         if not look.confirm(self, APP, "ARINC 429 IP bloğu resetlensin mi? (SOFT_RESET.ALL darbesi gönderilir)", "Resetle"):
             return
         rm = self.rm
-        self._run_job("IP reset", lambda: soft_reset(self.client, rm, "ALL", log=self.log, on_write=self._record_write))
+
+        def after_reset(_):
+            self.do_refresh_status()
+            self.do_check_tx_config(show_dialog=False)
+            self.do_refresh_tx_bit()
+
+        self._run_job(
+            "IP reset",
+            lambda: soft_reset(self.client, rm, "ALL", log=self.log, on_write=self._record_write),
+            on_ok=after_reset,
+        )
 
     def do_stop(self):
         self._stop_flag.set()
@@ -696,6 +993,7 @@ class MainWindow(QWidget):
         self.cur_session = s
         self.mark_dirty()
         self.read_tab.refresh_sessions()
+        self.tx_sent_tab.refresh_tb_session()
 
     def rename_session(self):
         if not self.cur_session:
@@ -720,6 +1018,7 @@ class MainWindow(QWidget):
         self.cur_session = self.sessions[-1] if self.sessions else None
         self.mark_dirty()
         self.read_tab.refresh_sessions()
+        self.tx_sent_tab.refresh_tb_session()
 
     def _confirm_discard(self) -> bool:
         if not self.dirty:
@@ -739,11 +1038,14 @@ class MainWindow(QWidget):
             return
         out = self.rs.out_dir
         self.ci, self.rs, self.ds = ConfigInputs(), ReadSettings(out_dir=out), DecodeSettings()
-        self.sessions, self.cur_session, self.project_path, self.dirty = [], None, None, False
+        self.sessions, self.tx_history, self.cur_session, self.project_path, self.dirty = [], [], None, None, False
         self.config_tab.load_from_model()
+        self.control_tab.load_from_model()
         self.read_tab.load_settings()
         self.recalc()
         self.read_tab.refresh_sessions()
+        self.tx_sent_tab.refresh_history()
+        self.tx_sent_tab.refresh_tb_session()
         self._update_header()
 
     def open_project(self):
@@ -754,6 +1056,7 @@ class MainWindow(QWidget):
             return
         try:
             self.ci, self.rs, self.ds, self.sessions = P.load_project(p)
+            self.tx_history = P.load_tx_history(p)
             self.rs.out_dir = native_dir(self.rs.out_dir)
         except Exception as e:
             QMessageBox.critical(self, APP, f"Proje açılamadı:\n{e}")
@@ -761,9 +1064,12 @@ class MainWindow(QWidget):
         self.project_path, self.dirty = p, False
         self.cur_session = self.sessions[-1] if self.sessions else None
         self.config_tab.load_from_model()
+        self.control_tab.load_from_model()
         self.read_tab.load_settings()
         self.recalc()
         self.read_tab.refresh_sessions()
+        self.tx_sent_tab.refresh_history()
+        self.tx_sent_tab.refresh_tb_session()
         self._update_header()
         self.set_status(f"Proje açıldı: {p} ({len(self.sessions)} okuma)")
 
@@ -782,7 +1088,7 @@ class MainWindow(QWidget):
             if not p.endswith(".a429proj"):
                 p += ".a429proj"
         try:
-            P.save_project(p, self.ci, self.rs, self.ds, self.sessions)
+            P.save_project(p, self.ci, self.rs, self.ds, self.sessions, tx_history=self.tx_history)
         except Exception as e:
             QMessageBox.critical(self, APP, f"Kaydedilemedi:\n{e}")
             return False
@@ -796,12 +1102,14 @@ class MainWindow(QWidget):
         if not p:
             return
         try:
-            self.ci, rs, self.ds = P.load_config(p)
-            self.rs.out_dir = native_dir(rs.out_dir or self.rs.out_dir)
+            old_out = self.rs.out_dir
+            self.ci, self.rs, self.ds = P.load_config(p)
+            self.rs.out_dir = native_dir(self.rs.out_dir or old_out)
         except Exception as e:
             QMessageBox.critical(self, APP, f"Config açılamadı:\n{e}")
             return
         self.config_tab.load_from_model()
+        self.control_tab.load_from_model()
         self.read_tab.load_settings()
         self.recalc()
         self.mark_dirty()
@@ -881,8 +1189,7 @@ class MainWindow(QWidget):
                 ev.ignore()
                 return
         self._stop_flag.set()
-        if self._tx_win is not None:
-            self._tx_win.close()
+        self.control_tab.close_floating()
         if self.client is not None:
             self.client.on_event = lambda _: None
         super().closeEvent(ev)

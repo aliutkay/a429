@@ -112,6 +112,8 @@ DEFAULT_FIELDS: dict[str, dict[str, tuple[int, int, str]]] = {
     "CAPS": {"NUM_RX": (0, 5, "RO"), "TX": (8, 1, "RO"), "TXBIT": (9, 1, "RO"), "RX_TEST": (10, 1, "RO"), "BITDIAG": (11, 1, "RO")},
     "CAPS_MEM": {"WORD_DEPTH_LOG2": (0, 8, "RO"), "ERR_DEPTH_LOG2": (8, 8, "RO"), "BITDIAG_WORDS_LOG2": (16, 8, "RO")},
     "SOFT_RESET": {"ALL": (0, 1, "PULSE"), "TX": (1, 1, "PULSE"), "TXBIT": (2, 1, "PULSE")},
+    "CHK_CTRL": {"ENABLE": (0, 1, "RW"), "CLEAR": (1, 1, "PULSE")},
+    "CHK_STATUS": {"FIFO_LEVEL": (0, 4, "RO"), "FIFO_OVF": (4, 1, "RO")},
 }
 
 

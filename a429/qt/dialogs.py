@@ -10,7 +10,7 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QButtonGroup, QCheckBox, QComboBox, QDialog, QFileDialog, QGridLayout, QGroupBox,
+    QButtonGroup, QCheckBox, QComboBox, QDialog, QFileDialog, QFrame, QGridLayout, QGroupBox,
     QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMessageBox, QPushButton, QRadioButton,
     QVBoxLayout, QWidget,
 )
@@ -18,7 +18,9 @@ from PySide6.QtWidgets import (
 from ..formulas import draw_formula
 from ..ip import ReadSettings
 from ..model import HB_50, HB_ARINC
+from ..regs import channel_label
 from . import look
+from .celltable import Cell, CellTable
 
 APP = "ARINC 429 Test Aracı"
 GF_RATIO, GF_CLOCK = "Süreye oranlı", "Clock sayısı"
@@ -422,6 +424,275 @@ class IcProfileDialog(QDialog):
         self.load()
 
 
+class TxDriverDialog(QDialog):
+    """TX Line Driver entegresi parametreleri penceresi."""
+
+    ROWS = [
+        ("tplh", "Propagation Delay tPLH (ns)"),
+        ("tphl", "Propagation Delay tPHL (ns)"),
+        ("tr_hs", "High Speed Rise Time tr (%10–%90, µs)"),
+        ("tf_hs", "High Speed Fall Time tf (%10–%90, µs)"),
+        ("tr_ls", "Low Speed Rise Time tr (%10–%90, µs)"),
+        ("tf_ls", "Low Speed Fall Time tf (%10–%90, µs)"),
+        ("vdiff", "Diferansiyel çıkış genliği Vdiff (V)"),
+    ]
+
+    def __init__(self, app):
+        super().__init__(app)
+        self.app = app
+        self.setWindowTitle("TX Line Driver entegresi")
+        self._loading = False
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(12, 12, 12, 12)
+        lay.setSpacing(8)
+
+        bar = QHBoxLayout()
+        self.cb = QComboBox()
+        self.cb.setMinimumWidth(180)
+        self.cb.currentTextChanged.connect(self._selected)
+        bar.addWidget(self.cb)
+        bar.addWidget(look.button("Yeni", None, self._new))
+        bar.addWidget(look.button("Adlandır", None, self._rename))
+        bar.addWidget(look.button("Sil", None, self._delete))
+        bar.addStretch(1)
+        lay.addLayout(bar)
+
+        grid = QGridLayout()
+        grid.setSpacing(4)
+        for j, h in enumerate(("MIN", "NOM", "MAX"), 1):
+            hl = look.label(h, "cardTitle")
+            hl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            grid.addWidget(hl, 0, j)
+
+        self.edits: dict[str, list[QLineEdit]] = {}
+        for r, (key, text) in enumerate(self.ROWS, 1):
+            grid.addWidget(QLabel(text), r, 0)
+            row_ed = []
+            for j in range(3):
+                ed = QLineEdit()
+                ed.setFixedWidth(84)
+                ed.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                ed.textChanged.connect(self._changed)
+                grid.addWidget(ed, r, j + 1)
+                row_ed.append(ed)
+            self.edits[key] = row_ed
+
+        r = len(self.ROWS) + 1
+        grid.addWidget(QLabel("Giriş eşiği VIL MAX / VIH MIN (V)"), r, 0)
+        self.ed_vil = QLineEdit(); self.ed_vil.setFixedWidth(84); self.ed_vil.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.ed_vih = QLineEdit(); self.ed_vih.setFixedWidth(84); self.ed_vih.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.ed_vil.textChanged.connect(self._changed)
+        self.ed_vih.textChanged.connect(self._changed)
+        grid.addWidget(self.ed_vil, r, 1)
+        grid.addWidget(self.ed_vih, r, 3)
+
+        r += 1
+        grid.addWidget(QLabel("Pulse Skew |tPLH − tPHL| MAX (ns, 0 = bağımsız)"), r, 0)
+        self.ed_skew = QLineEdit(); self.ed_skew.setFixedWidth(84); self.ed_skew.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.ed_skew.textChanged.connect(self._changed)
+        grid.addWidget(self.ed_skew, r, 3)
+        lay.addLayout(grid)
+
+        flags = QHBoxLayout()
+        self.chk_slp = QCheckBox("Dijital SLP eğim pini var (1: 1.5 µs, 0: 10 µs)")
+        self.chk_slp.toggled.connect(self._changed)
+        self.chk_hiz = QCheckBox("HIGH-Z (11) desteği var")
+        self.chk_hiz.toggled.connect(self._changed)
+        flags.addWidget(self.chk_slp)
+        flags.addWidget(self.chk_hiz)
+        flags.addStretch(1)
+        lay.addLayout(flags)
+
+        lay.addWidget(look.label(
+            "Pulse Skew > 0 ise en kötü durum darbe kayması ±Skew ile sınırlanır; 0 ise tPHL_min − tPLH_max bağımsız alınır.",
+            "muted", True,
+        ))
+        foot = QHBoxLayout()
+        foot.addWidget(look.label("Değişiklikler sonuçlara anında yansır.", "muted"))
+        foot.addStretch(1)
+        foot.addWidget(look.button("Kapat", "primary", self.close))
+        lay.addLayout(foot)
+
+        self.load()
+
+    def load(self):
+        self._loading = True
+        self.cb.blockSignals(True)
+        self.cb.clear()
+        self.cb.addItems([d.name for d in self.app.ci.tx_drivers])
+        self.cb.setCurrentText(self.app.ci.driver.name)
+        self.cb.blockSignals(False)
+        drv = self.app.ci.driver
+        for key, eds in self.edits.items():
+            for ed, val in zip(eds, getattr(drv, key)):
+                ed.setText(f"{val:g}")
+                _set_bad(ed, False)
+        self.ed_vil.setText(f"{drv.vil_max:g}"); _set_bad(self.ed_vil, False)
+        self.ed_vih.setText(f"{drv.vih_min:g}"); _set_bad(self.ed_vih, False)
+        self.ed_skew.setText(f"{drv.skew_max:g}"); _set_bad(self.ed_skew, False)
+        self.chk_slp.setChecked(drv.has_slp)
+        self.chk_hiz.setChecked(drv.has_hiz)
+        self._loading = False
+
+    def _selected(self, name: str):
+        if self._loading or not name:
+            return
+        self.app.select_profile("tx_driver", name)
+        self.load()
+
+    def _changed(self):
+        if self._loading:
+            return
+        drv = self.app.ci.driver
+        ok_all = True
+        for key, eds in self.edits.items():
+            vals = []
+            for ed in eds:
+                try:
+                    vals.append(float(ed.text().strip().replace(",", ".")))
+                    _set_bad(ed, False)
+                except ValueError:
+                    _set_bad(ed, True)
+                    ok_all = False
+            if len(vals) == 3:
+                setattr(drv, key, tuple(vals))
+        for attr, ed in (("vil_max", self.ed_vil), ("vih_min", self.ed_vih), ("skew_max", self.ed_skew)):
+            try:
+                v = float(ed.text().strip().replace(",", "."))
+                if v < 0:
+                    raise ValueError
+                setattr(drv, attr, v)
+                _set_bad(ed, False)
+            except ValueError:
+                _set_bad(ed, True)
+                ok_all = False
+        drv.has_slp = self.chk_slp.isChecked()
+        drv.has_hiz = self.chk_hiz.isChecked()
+        if ok_all:
+            self.app.schedule_recalc()
+
+    def _new(self):
+        cur = self.app.ci.driver
+        name, ok = QInputDialog.getText(self, APP, "Yeni Line Driver profili adı:", text=f"{cur.name} kopya")
+        name = name.strip()
+        if not ok or not name:
+            return
+        if any(d.name == name for d in self.app.ci.tx_drivers):
+            QMessageBox.warning(self, APP, f"'{name}' adında bir profil zaten var.")
+            return
+        self.app.ci.tx_drivers.append(dataclasses.replace(cur, name=name))
+        self.app.ci.tx_driver = name
+        self.app.refresh_profiles()
+        self.load()
+
+    def _rename(self):
+        cur = self.app.ci.driver
+        name, ok = QInputDialog.getText(self, APP, "Yeni ad:", text=cur.name)
+        name = name.strip()
+        if not ok or not name or name == cur.name:
+            return
+        if any(d.name == name for d in self.app.ci.tx_drivers):
+            QMessageBox.warning(self, APP, f"'{name}' adında bir profil zaten var.")
+            return
+        cur.name = name
+        self.app.ci.tx_driver = name
+        self.app.refresh_profiles()
+        self.load()
+
+    def _delete(self):
+        if len(self.app.ci.tx_drivers) <= 1:
+            QMessageBox.information(self, APP, "En az bir profil kalmalı.")
+            return
+        cur = self.app.ci.driver
+        if not look.confirm(self, APP, f"'{cur.name}' profili silinsin mi?", "Sil"):
+            return
+        self.app.ci.tx_drivers.remove(cur)
+        self.app.ci.tx_driver = self.app.ci.tx_drivers[0].name
+        self.app.refresh_profiles()
+        self.load()
+
+
+class TxFpgaDialog(QDialog):
+    """TX FPGA çıkış standartları penceresi."""
+
+    def __init__(self, app):
+        super().__init__(app)
+        self.app = app
+        self.setWindowTitle("TX FPGA çıkış standartları")
+        self._loading = False
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(12, 12, 12, 12)
+        lay.setSpacing(8)
+
+        grid = QGridLayout()
+        for j, h in enumerate(("Standart", "VOH MIN (V)", "VOL MAX (V)", "VCC (V)", "tr (ns)", "tf (ns)")):
+            hl = look.label(h, "cardTitle")
+            hl.setAlignment(Qt.AlignmentFlag.AlignCenter if j > 0 else Qt.AlignmentFlag.AlignLeft)
+            grid.addWidget(hl, 0, j)
+
+        self.rows: list[list[QLineEdit]] = []
+        for i in range(len(self.app.ci.tx_fpga_table)):
+            eds = []
+            for j, w in enumerate((115, 76, 76, 70, 68, 68)):
+                ed = QLineEdit()
+                ed.setFixedWidth(w)
+                if j > 0:
+                    ed.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                ed.textChanged.connect(self._changed)
+                grid.addWidget(ed, i + 1, j)
+                eds.append(ed)
+            self.rows.append(eds)
+        lay.addLayout(grid)
+
+        lay.addWidget(look.label(
+            "FPGA VOH MIN ≥ Line Driver VIH MIN ve VOL MAX ≤ VIL MAX koşulları kontrol edilir; tr/tf giriş eşiği kayması için kullanılır.",
+            "muted", True,
+        ))
+        foot = QHBoxLayout()
+        foot.addStretch(1)
+        foot.addWidget(look.button("Kapat", "primary", self.close))
+        lay.addLayout(foot)
+        self.load()
+
+    def load(self):
+        self._loading = True
+        for eds, row in zip(self.rows, self.app.ci.tx_fpga_table):
+            eds[0].setText(str(row[0]))
+            for ed, val in zip(eds[1:], row[1:]):
+                ed.setText(f"{float(val):g}")
+                _set_bad(ed, False)
+        self._loading = False
+
+    def _changed(self):
+        if self._loading:
+            return
+        old_names = [r[0] for r in self.app.ci.tx_fpga_table]
+        new_table = []
+        ok_all = True
+        for i, eds in enumerate(self.rows):
+            name = eds[0].text().strip() or old_names[i]
+            vals = [name]
+            for j, ed in enumerate(eds[1:], 1):
+                try:
+                    v = float(ed.text().strip().replace(",", "."))
+                    _set_bad(ed, False)
+                    vals.append(v)
+                except ValueError:
+                    _set_bad(ed, True)
+                    ok_all = False
+                    vals.append(float(self.app.ci.tx_fpga_table[i][j]))
+            new_table.append(vals)
+        if ok_all:
+            sel = self.app.ci.tx_fpga_std
+            new_names = [r[0] for r in new_table]
+            if sel in old_names and sel not in new_names:
+                sel = new_names[old_names.index(sel)]
+            self.app.ci.tx_fpga_table = new_table
+            self.app.ci.tx_fpga_std = sel if sel in new_names else new_names[0]
+            self.app.refresh_fpga_combo()
+            self.app.schedule_recalc()
+
+
 class FpgaStandardsDialog(QDialog):
     """RX FPGA giriş standartları penceresi."""
 
@@ -731,3 +1002,116 @@ class ReadSettingsDialog(QDialog):
         rs.auto_write_log = self.chk_wlog.isChecked()
         rs.verbose_bridge_log = self.chk_verb.isChecked()
         self.accept()
+
+
+class ActiveConfigDialog(QDialog):
+    """Karttaki aktif RX veya TX config register'larını arayüzdeki hesaplanan Config ile karşılaştırır."""
+
+    def __init__(self, parent, info: dict, on_refresh=None, on_send=None):
+        super().__init__(parent)
+        self._on_refresh = on_refresh
+        self._on_send = on_send
+        self.resize(780, 390)
+        self.setMinimumSize(640, 300)
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(12, 12, 12, 12)
+        lay.setSpacing(10)
+
+        # Üst özet şeridi
+        top = QFrame()
+        top.setObjectName("SubPanel")
+        tl = QHBoxLayout(top)
+        tl.setContentsMargins(10, 8, 10, 8)
+        tl.setSpacing(8)
+        tl.addWidget(look.label("Hedef:", "muted"))
+        self.ch_pill = look.Pill("", "accent")
+        tl.addWidget(self.ch_pill)
+        tl.addSpacing(6)
+        tl.addWidget(look.label("Aktif Mod:", "muted"))
+        self.mode_pill = look.Pill("", "accent")
+        tl.addWidget(self.mode_pill)
+        tl.addStretch(1)
+        self.match_pill = look.Pill("", "")
+        tl.addWidget(self.match_pill)
+        lay.addWidget(top)
+
+        # Karşılaştırma tablosu
+        self.table = CellTable(
+            ["Parametre", "Register", "Karttaki (ACT)", "Arayüzdeki (Config)", "Durum"],
+            [175, 205, 110, 145, 95],
+            parent=self,
+        )
+        self.table.horizontalHeader().setStretchLastSection(True)
+        lay.addWidget(self.table, 1)
+
+        # Alt buton şeridi
+        foot = QHBoxLayout()
+        foot.setSpacing(8)
+        self.lbl_note = look.label("Karttaki STATUS.ACT_CFG ve ACT_* register'larından canlı okundu.", "muted")
+        foot.addWidget(self.lbl_note, 1)
+        self.btn_refresh = look.button("↻ Yeniden Oku", None, self._do_refresh)
+        self.btn_refresh.setVisible(on_refresh is not None)
+        foot.addWidget(self.btn_refresh)
+        self.btn_send = look.button("Config'i Karta Gönder", "primary", self._do_send)
+        self.btn_send.setVisible(on_send is not None)
+        foot.addWidget(self.btn_send)
+        foot.addWidget(look.button("Kapat", None, self.close))
+        lay.addLayout(foot)
+
+        self.update_info(info)
+
+    def _do_refresh(self):
+        if self._on_refresh:
+            self._on_refresh()
+
+    def _do_send(self):
+        if self._on_send:
+            self._on_send()
+
+    @staticmethod
+    def _fmt(val) -> str:
+        if val is None:
+            return "—"
+        if isinstance(val, int):
+            return f"{val:,}"
+        return str(val)
+
+    def update_info(self, info: dict):
+        ch = info.get("channel", "")
+        ch_lbl = "TX" if ch == "TX" else channel_label(ch)
+        self.setWindowTitle(f"Karttaki Aktif Config — {ch_lbl}")
+        self.ch_pill.set(ch_lbl, "accent")
+
+        mode = info.get("mode")
+        mode_name = info.get("mode_name", "Bilinmiyor")
+        self.mode_pill.set(mode_name, "ok" if mode == 2 else "accent")
+
+        mismatch = info.get("mismatch", 0)
+        if info.get("all_match"):
+            self.match_pill.set("✓ Arayüzdeki Config ile eşleşiyor", "ok")
+        elif mismatch > 0:
+            self.match_pill.set(f"! {mismatch} parametre arayüzden farklı", "warn")
+        else:
+            self.match_pill.set("Karşılaştırma yok", "")
+
+        trows = []
+        for disp, rname, actual, exp, match in info.get("rows", []):
+            act_s = self._fmt(actual)
+            exp_s = self._fmt(exp)
+            if match is True:
+                st = Cell("Eşleşiyor", True, "Karttaki aktif değer arayüzdeki Config ile aynı.")
+                act_c = Cell(act_s, True, "Eşleşiyor")
+            elif match is False:
+                st = Cell("Farklı", False, f"Kartta {act_s}, arayüzde {exp_s}. Config'i karta göndererek eşitleyebilirsiniz.")
+                act_c = Cell(act_s, False, f"Beklenen: {exp_s}")
+            else:
+                st = Cell("Bilgi", None, "Salt okunur donanım durumu")
+                act_c = Cell(act_s)
+            trows.append([Cell(disp), Cell(rname), act_c, Cell(exp_s), st])
+        self.table.set_rows(trows)
+        self.lbl_note.setText(
+            "TX_STATUS.ACT_CFG ve TX_ACT_* register'larından okundu."
+            if ch == "TX"
+            else f"{ch_lbl} STATUS.ACT_CFG ve ACT_* register'larından okundu."
+        )

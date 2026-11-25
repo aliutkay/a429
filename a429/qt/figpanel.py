@@ -11,7 +11,7 @@ from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolb
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QComboBox, QDialog, QHBoxLayout, QLabel, QLineEdit, QVBoxLayout, QWidget
 
-from ..charts import draw_examples, draw_single, relayout
+from ..charts import draw_examples, draw_single, draw_tx_examples, draw_tx_single, relayout
 
 TIME_UNITS = ["clk", "ns", "µs", "ms"]
 
@@ -114,12 +114,19 @@ class FigPanel(QWidget):
 
 
 class ChartWindow(QDialog):
-    """Tek bir RX Config grafiğini ayrı pencerede gösterir."""
+    """Tek bir RX veya TX Config grafiğini ayrı pencerede gösterir."""
+
+    TITLES = {
+        "example": "RX Örnek dalga formu",
+        "single": "RX Tek Bit analizi",
+        "tx_example": "TX Örnek dalga formu",
+        "tx_single": "TX Tek Bit analizi",
+    }
 
     def __init__(self, app, kind: str, case: str):
         super().__init__(app)
         self.app, self.kind, self.case = app, kind, case
-        self.setWindowTitle(f"RX {'Örnek dalga formu' if kind == 'example' else 'Tek Bit analizi'} – {case}")
+        self.setWindowTitle(f"{self.TITLES.get(kind, kind)} – {case}")
         self.resize(1160, 620)
         lay = QVBoxLayout(self)
         bar = QHBoxLayout()
@@ -130,7 +137,7 @@ class ChartWindow(QDialog):
         bar.addWidget(self.unit_cb)
 
         self.pat_edit = None
-        if kind == "example":
+        if kind in ("example", "tx_example"):
             bar.addSpacing(12)
             bar.addWidget(QLabel("Bit deseni (1/0):"))
             self.pat_edit = QLineEdit("10110010")
@@ -146,14 +153,20 @@ class ChartWindow(QDialog):
 
     def draw(self):
         app = self.app
-        if not app.res:
+        is_tx = self.kind.startswith("tx_")
+        if (is_tx and not app.res_tx) or (not is_tx and not app.res):
             return
         try:
             unit = self.unit_cb.currentText()
-            if self.kind == "example":
+            if self.kind in ("example", "tx_example"):
                 txt = self.pat_edit.text() if self.pat_edit else "10110010"
                 pat = [1 if c == "1" else 0 for c in txt if c in "01"] or [1, 0]
-                draw_examples(self.panel.fig, app.res, app.ci.clk_mhz, unit, pat[:16], only=self.case)
+                if is_tx:
+                    draw_tx_examples(self.panel.fig, app.res_tx, app.ci.clk_mhz, unit, pat[:16], only=self.case)
+                else:
+                    draw_examples(self.panel.fig, app.res, app.ci.clk_mhz, unit, pat[:16], only=self.case)
+            elif is_tx:
+                draw_tx_single(self.panel.fig, app.res_tx, app.ci.clk_mhz, unit, self.case)
             else:
                 draw_single(self.panel.fig, app.res, app.ci.clk_mhz, unit, self.case)
             self.panel.draw()

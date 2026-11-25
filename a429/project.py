@@ -65,7 +65,7 @@ def load_session(path):
     return s
 
 
-def save_project(path, ci, rs, ds, sessions):
+def save_project(path, ci, rs, ds, sessions, tx_history=None):
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
         idx = []
         for i, s in enumerate(sessions):
@@ -75,6 +75,8 @@ def save_project(path, ci, rs, ds, sessions):
             idx.append(fn)
         proj = settings_dict(ci, rs, ds)
         proj["sessions"] = idx
+        if tx_history:
+            proj["tx_history"] = list(tx_history)
         z.writestr("project.json", json.dumps(proj, ensure_ascii=False, indent=1))
 
 
@@ -84,3 +86,9 @@ def load_project(path):
         sessions = [json.loads(z.read(fn).decode("utf-8")) for fn in proj.get("sessions", [])]
     ci, rs, ds = settings_from(proj)
     return ci, rs, ds, sessions
+
+
+def load_tx_history(path) -> list[dict]:
+    with zipfile.ZipFile(path) as z:
+        proj = json.loads(z.read("project.json").decode("utf-8"))
+    return list(proj.get("tx_history", []))

@@ -13,6 +13,7 @@ from .regs import RegMap, RX_CONFIG_SPECS, channel_prefix
 
 DEFAULT_OUT_DIR = os.path.join(os.path.expanduser("~"), "ARINC429_okumalar")
 BATCH_RECORDS = 16
+CFG_MODE_NAMES = {0: "High Speed (Preset)", 1: "Low Speed (Preset)", 2: "Custom"}
 
 
 def native_dir(path: str) -> str:
@@ -59,15 +60,16 @@ def _record_write(on_write, reg_name: str, offset: int, value: int):
 
 
 def set_field(bus, rm: RegMap, reg_name: str, field_name: str, value: int, quiet=True, on_write=None):
-    """Tek bir bit alanını yazar. PULSE alanına doğrudan, RW alanına read-modify-write uygular."""
+    """Tek bir bit alanını yazar. Yalnız PULSE register'a doğrudan, RW alan içeren register'a read-modify-write uygular."""
     off = rm.offset(reg_name)
+    entry = rm.get(reg_name)
     fe = rm.field(reg_name, field_name)
     if fe is None:
         v = int(value) & 0xFFFFFFFF
         bus.write(off, v, quiet=quiet)
         _record_write(on_write, reg_name, off, v)
         return
-    if fe.kind == "PULSE":
+    if fe.kind == "PULSE" and (entry is None or entry.is_pulse_only()):
         v = fe.insert(0, value)
         bus.write(off, v, quiet=quiet)
         _record_write(on_write, reg_name, off, v)
@@ -240,6 +242,225 @@ def soft_reset(bus, rm: RegMap, target: str = "ALL", log=None, on_write=None):
     set_field(bus, rm, "SOFT_RESET", target, 1, quiet=False, on_write=on_write)
     if log:
         log(f"[Reset] SOFT_RESET.{target} darbesi gönderildi.")
+
+
+def read_channel_status(bus, rm: RegMap, ch: str, quiet: bool = True) -> dict:
+    """Seçili kanalın canlı sayaçlarını ve CTRL durumunu tek batch'te okur."""
+    p = channel_prefix(ch)
+    names = [r for r in (p + "CTRL", p + "WORD_CNT", p + "ERR_CNT", p + "DROP_CNT", p + "LAST_WORD") if rm.has(r)]
+    if not names:
+        raise IpError(f"{ch} durum register'ları IP haritasında yok.")
+    vals = bus.batch([("read", rm.offset(r)) for r in names], quiet=quiet)
+    got = dict(zip(names, vals))
+    ctrl = got.get(p + "CTRL", 0)
+    en_fe = rm.field(p + "CTRL", "ENABLE")
+    fr_fe = rm.field(p + "CTRL", "FREEZE")
+    return {
+        "enable": bool(en_fe.extract(ctrl)) if en_fe else bool(ctrl & 1),
+        "freeze": bool(fr_fe.extract(ctrl)) if fr_fe else bool(ctrl & 2),
+        "word_cnt": got.get(p + "WORD_CNT"),
+        "err_cnt": got.get(p + "ERR_CNT"),
+        "drop_cnt": got.get(p + "DROP_CNT"),
+        "last_word": got.get(p + "LAST_WORD"),
+    }
+
+
+def set_channel_enable(bus, rm: RegMap, ch: str, enable: bool, log=None, on_write=None):
+    """Seçili kanalın CTRL.ENABLE bitini ayarlar."""
+    p = channel_prefix(ch)
+    set_field(bus, rm, p + "CTRL", "ENABLE", 1 if enable else 0, quiet=False, on_write=on_write)
+    if log:
+        log(f"[{ch}] Logger Enable = {1 if enable else 0}")
+
+
+def clear_channel(bus, rm: RegMap, ch: str, log=None, on_write=None):
+    """Seçili kanalın CTRL.CLEAR darbesini gönderir (sayaçlar ve RAM işaretçileri sıfırlanır)."""
+    p = channel_prefix(ch)
+    set_field(bus, rm, p + "CTRL", "CLEAR", 1, quiet=False, on_write=on_write)
+    if log:
+        log(f"[{ch}] Kanal sayaçları temizlendi (CTRL.CLEAR).")
+
+
+def read_tx_bit_status(bus, rm: RegMap, quiet: bool = True) -> dict:
+    """TX ve TX BIT (TB_) Checker durum ve sayaçlarını tek batch'te okur."""
+    candidates = [
+        "TX_STATUS", "TX_WORD_CNT",
+        "TB_WORD_CNT", "TB_ERR_CNT",
+        "TB_CHK_CTRL", "TB_CHK_TIMEOUT", "TB_CHK_OK_CNT", "TB_CHK_ERR_CNT", "TB_CHK_STATUS",
+    ]
+    names = [r for r in candidates if rm.has(r)]
+    if not names:
+        raise IpError("TX / TX BIT durum register'ları IP haritasında yok.")
+    vals = bus.batch([("read", rm.offset(r)) for r in names], quiet=quiet)
+    got = dict(zip(names, vals))
+    tx_st = got.get("TX_STATUS", 0)
+    chk_ctrl = got.get("TB_CHK_CTRL", 0)
+    chk_st = got.get("TB_CHK_STATUS", 0)
+    return {
+        "tx_busy": bool(rm.field("TX_STATUS", "BUSY").extract(tx_st)) if "TX_STATUS" in got else None,
+        "tx_sched_active": bool(rm.field("TX_STATUS", "SCHED_ACTIVE").extract(tx_st)) if "TX_STATUS" in got else None,
+        "tx_word_cnt": got.get("TX_WORD_CNT"),
+        "tb_word_cnt": got.get("TB_WORD_CNT"),
+        "tb_err_cnt": got.get("TB_ERR_CNT"),
+        "has_checker": "TB_CHK_CTRL" in got,
+        "chk_en": bool(rm.field("TB_CHK_CTRL", "ENABLE").extract(chk_ctrl)) if "TB_CHK_CTRL" in got else False,
+        "chk_timeout": got.get("TB_CHK_TIMEOUT"),
+        "chk_ok_cnt": got.get("TB_CHK_OK_CNT"),
+        "chk_err_cnt": got.get("TB_CHK_ERR_CNT"),
+        "chk_fifo_level": rm.field("TB_CHK_STATUS", "FIFO_LEVEL").extract(chk_st) if "TB_CHK_STATUS" in got else None,
+        "chk_fifo_ovf": bool(rm.field("TB_CHK_STATUS", "FIFO_OVF").extract(chk_st)) if "TB_CHK_STATUS" in got else False,
+    }
+
+
+def set_tx_checker(bus, rm: RegMap, enable: bool, timeout_clk: int, log=None, on_write=None):
+    """TX BIT Checker timeout ve enable ayarlarını yazar."""
+    if not rm.has("TB_CHK_CTRL"):
+        raise IpError("IP haritasında TB_CHK_CTRL register'ı yok.")
+    if rm.has("TB_CHK_TIMEOUT"):
+        off = rm.offset("TB_CHK_TIMEOUT")
+        v = int(timeout_clk) & 0xFFFFFFFF
+        bus.write(off, v, quiet=False)
+        _record_write(on_write, "TB_CHK_TIMEOUT", off, v)
+    set_field(bus, rm, "TB_CHK_CTRL", "ENABLE", 1 if enable else 0, quiet=False, on_write=on_write)
+    if log:
+        log(f"[TX BIT] Checker Enable={1 if enable else 0}, Timeout={int(timeout_clk):,} clk")
+
+
+def clear_tx_checker_fifo(bus, rm: RegMap, log=None, on_write=None):
+    """TX BIT Checker FIFO'sunu temizler (TB_CHK_CTRL.CLEAR darbesi)."""
+    if not rm.has("TB_CHK_CTRL"):
+        raise IpError("IP haritasında TB_CHK_CTRL register'ı yok.")
+    set_field(bus, rm, "TB_CHK_CTRL", "CLEAR", 1, quiet=False, on_write=on_write)
+    if log:
+        log("[TX BIT] Checker FIFO temizlendi.")
+
+
+def read_rx_active_config(bus, rm: RegMap, ch: str, expected: dict[str, int] | None = None, quiet: bool = True) -> dict:
+    """Seçili RX/TB kanalının karttaki aktif config'ini (STATUS.ACT_CFG + ACT_*) okur ve arayüzdeki değerlerle karşılaştırır."""
+    p = channel_prefix(ch)
+    to_read: list[str] = []
+    status_reg = p + "STATUS"
+    if rm.has(status_reg):
+        to_read.append(status_reg)
+    spec_regs: list[tuple[str, str, str]] = []   # (görünen ad, CUST soneki, okunacak register)
+    for disp, cust_suf, _, _ in RX_CONFIG_SPECS:
+        act_name = p + "ACT_" + cust_suf[5:]
+        rname = act_name if rm.has(act_name) else (p + cust_suf)
+        if rm.has(rname):
+            spec_regs.append((disp, cust_suf, rname))
+            to_read.append(rname)
+    parity_reg = p + "ACT_PARITY_MODE"
+    if rm.has(parity_reg):
+        to_read.append(parity_reg)
+    if not to_read:
+        raise IpError(f"{ch} aktif config register'ları IP haritasında yok.")
+
+    vals = bus.batch([("read", rm.offset(r)) for r in to_read], quiet=quiet)
+    got = dict(zip(to_read, vals))
+
+    mode = None
+    if status_reg in got:
+        fe = rm.field(status_reg, "ACT_CFG")
+        mode = fe.extract(got[status_reg]) if fe else ((got[status_reg] >> 8) & 3)
+    mode_name = CFG_MODE_NAMES.get(mode, f"Bilinmeyen ({mode})") if mode is not None else "Bilinmiyor"
+
+    rows = []
+    mismatch = 0
+    for disp, cust_suf, rname in spec_regs:
+        actual = got[rname]
+        exp = expected.get(cust_suf) if expected else None
+        match = (actual == exp) if exp is not None else None
+        if match is False:
+            mismatch += 1
+        rows.append((disp, rname, actual, exp, match))
+    if parity_reg in got:
+        pnames = {0: "0 (Kapalı)", 1: "1 (Odd)", 2: "2 (Even)"}
+        rows.append(("Parity Modu", parity_reg, pnames.get(got[parity_reg], str(got[parity_reg])), None, None))
+
+    return {
+        "channel": ch,
+        "mode": mode,
+        "mode_name": mode_name,
+        "rows": rows,
+        "cust_keys": [cust_suf for _, cust_suf, _ in spec_regs],
+        "mismatch": mismatch,
+        "all_match": mismatch == 0 and bool(spec_regs),
+    }
+
+
+def read_tx_active_config(bus, rm: RegMap, expected: dict[str, int] | None = None, quiet: bool = True) -> dict:
+    """TX kanalının karttaki aktif config'ini (TX_STATUS.ACT_CFG + TX_ACT_*) okur ve arayüzle karşılaştırır."""
+    specs = [
+        ("Pulse süresi (clk)", "TX_CUST_PULSE_DUR", "TX_ACT_PULSE_DUR"),
+        ("Null süresi (clk)", "TX_CUST_NULL_DUR", "TX_ACT_NULL_DUR"),
+        ("Word Gap süresi (clk)", "TX_CUST_GAP_DUR", "TX_ACT_GAP_DUR"),
+        ("SLP hız seçimi", "TX_CUST_SLP", "TX_ACT_SLP"),
+    ]
+    to_read: list[str] = []
+    if rm.has("TX_STATUS"):
+        to_read.append("TX_STATUS")
+    present: list[tuple[str, str, str]] = []
+    for disp, cust_name, act_name in specs:
+        rname = act_name if rm.has(act_name) else cust_name
+        if rm.has(rname):
+            present.append((disp, cust_name, rname))
+            to_read.append(rname)
+    if not to_read:
+        raise IpError("TX aktif config register'ları IP haritasında yok.")
+
+    vals = bus.batch([("read", rm.offset(r)) for r in to_read], quiet=quiet)
+    got = dict(zip(to_read, vals))
+
+    mode = None
+    if "TX_STATUS" in got:
+        fe = rm.field("TX_STATUS", "ACT_CFG")
+        mode = fe.extract(got["TX_STATUS"]) if fe else ((got["TX_STATUS"] >> 2) & 3)
+    mode_name = CFG_MODE_NAMES.get(mode, f"Bilinmeyen ({mode})") if mode is not None else "Bilinmiyor"
+
+    rows = []
+    mismatch = 0
+    for disp, cust_name, rname in present:
+        actual = got[rname]
+        exp = expected.get(cust_name) if expected else None
+        match = (actual == exp) if exp is not None else None
+        if match is False:
+            mismatch += 1
+        rows.append((disp, rname, actual, exp, match))
+
+    return {
+        "channel": "TX",
+        "mode": mode,
+        "mode_name": mode_name,
+        "rows": rows,
+        "cust_keys": [cust_name for _, cust_name, _ in present],
+        "mismatch": mismatch,
+        "all_match": mismatch == 0 and bool(present),
+    }
+
+
+def recompare_active_config(info: dict, expected: dict[str, int] | None) -> dict:
+    """Önceden karttan okunmuş aktif config sonucunu güncel arayüz değerleriyle yeniden karşılaştırır."""
+    cust_keys = info.get("cust_keys") or []
+    new_rows = []
+    mismatch = 0
+    checked = 0
+    for idx, (disp, rname, actual, _old_exp, _old_match) in enumerate(info.get("rows", [])):
+        if idx < len(cust_keys):
+            exp = expected.get(cust_keys[idx]) if expected else None
+            match = (actual == exp) if exp is not None else None
+            if match is not None:
+                checked += 1
+            if match is False:
+                mismatch += 1
+            new_rows.append((disp, rname, actual, exp, match))
+        else:
+            new_rows.append((disp, rname, actual, None, None))
+    return {
+        **info,
+        "rows": new_rows,
+        "mismatch": mismatch,
+        "all_match": mismatch == 0 and checked > 0,
+    }
 
 
 def _limit(available: int, mode: str, n: int) -> int:
