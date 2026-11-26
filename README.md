@@ -14,10 +14,16 @@ okumaları inceleme) çalışır.
    ```bash
    pip install -r requirements.txt
    ```
-2. AXIL Studio → **UART-to-AXI Debug Bridge** → *Debug* menüsü → *IP arayüzü klasörleri…* bölümüne bu
-   reponun klasörünü (`axil-interface.json` dosyasının bulunduğu dizin) ekleyin.
-3. AXIL Studio **Register Map Editor**'da ARINC 429 IP'sinin *IP arayüzü* (`panel`) alanına `arinc429` yazın.
-4. Debug Bridge'de IP seçilince **ARINC 429 arayüzü** düğmesi görünür.
+2. **IP kütüphanesi (önerilen):** AXIL Studio → **IP Library** → *Kütüphaneler* → bu reponun kökündeki
+   `arinc429.axlib.json` dosyasını açın. Kütüphanede `ARINC429` IP'si (sürüm `1.0.0`, 171 register,
+   *IP arayüzü* `arinc429`, Wrapper için tam `regspec`) bulunur; *Projeye al* / *Adres haritasına ekle* ile
+   projeye yerleştirin. Kütüphane `axil-interface.json` ile aynı klasörde olduğundan Debug Bridge arayüzü
+   ek ayar olmadan bulur.
+   - Alternatif: Debug Bridge → *Debug* menüsü → *IP arayüzü klasörleri…* bölümüne bu reponun klasörünü
+     ekleyin ve Register Map Editor'da IP'nin *IP arayüzü* (`panel`) alanına `arinc429` yazın.
+   - Kütüphane, register haritasıyla birlikte `python3 vhdl/scripts/gen_axil_spec.py` ile yeniden üretilir
+     (`--library` ile yol değiştirilebilir).
+3. Debug Bridge'de IP seçilince **ARINC 429 arayüzü** düğmesi görünür.
 
 ### Bağımsız / Simülatör çalıştırma
 

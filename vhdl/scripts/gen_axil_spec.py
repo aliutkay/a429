@@ -4,8 +4,8 @@
 Kullanım:
   python3 vhdl/scripts/gen_axil_spec.py -o vhdl/axil --num-rx 2 --axil-studio /yol/axil-studio
 
-AXIL Studio yolu verilmezse yalnızca arinc429_axil.regspec.json ve arinc429.axproj.json
-dosyalarını üretir; bu dosyalar doğrudan AXIL Studio'da açılıp Slave Interface Wrapper ile
+AXIL Studio yolu verilmezse yalnızca arinc429_axil.regspec.json, arinc429.axproj.json ve
+IP kütüphanesi arinc429.axlib.json (depo kökü, --library) dosyalarını üretir; bu dosyalar doğrudan AXIL Studio'da açılıp Slave Interface Wrapper ile
 AXI4-Lite slave (arinc429_axil.v / arinc429_axil_pk.v / testbench) üretilebilir.
 """
 from __future__ import annotations
@@ -285,6 +285,34 @@ def build_axproj(spec: dict, ip_name: str = "ARINC429", base: int = 0x40000000) 
                 "fixed": True,
             }
         ],
+    }
+
+
+def build_axlib(proj: dict, updated: str = "") -> dict:
+    """AXIL Studio IP kütüphanesi (.axlib.json, format "axil-ip-library" v1).
+
+    axil_studio/core/library.py LibEntry biçimi: "ip" adressiz IPBlock (register haritası,
+    sürüm, IP arayüzü kimliği "panel"), "regspec" ayrı anahtarda (Wrapper HDL'i yeniden üretebilsin).
+    Kütüphane depo kökünde axil-interface.json (id "arinc429") ile aynı klasörde durursa
+    Debug Bridge ARINC 429 arayüzünü ek ayar olmadan bulur.
+    """
+    import datetime
+
+    entries = []
+    for ip in proj["ips"]:
+        ipd = {k: ip[k] for k in ("name", "desc", "version", "panel") if ip.get(k)}
+        ipd["registers"] = ip["registers"]
+        entry = {"ip": ipd, "updated": updated or datetime.date.today().isoformat()}
+        if ip.get("regspec"):
+            entry["regspec"] = ip["regspec"]
+        entries.append(entry)
+    return {
+        "format": "axil-ip-library",
+        "version": 1,
+        "name": "ARINC 429",
+        "desc": "ARINC 429 IP (RX/TX/TX BIT, AXI4-Lite, easyaxil wrapper + VHDL çekirdek, vhdl/rtl). "
+                "IP arayüzü: arinc429 (a429_ui.py).",
+        "entries": entries,
     }
 
 
@@ -771,6 +799,8 @@ def main():
     ap.add_argument("--no-txbit", action="store_true", help="TX BIT kanalını kapat")
     ap.add_argument("--clk-hz", type=int, default=50_000_000, help="Sistem clock frekansı (Hz)")
     ap.add_argument("--base", type=lambda s: int(s, 0), default=0x40000000, help="Proje base adresi")
+    ap.add_argument("--library", default="arinc429.axlib.json",
+                    help="AXIL Studio IP kütüphanesi yolu (varsayılan: depo kökünde arinc429.axlib.json; '' = yazma)")
     ap.add_argument("--axil-studio", default="", help="AXIL Studio repo yolu (verilirse easyaxil Verilog dosyaları da üretilir)")
     a = ap.parse_args()
 
@@ -792,6 +822,24 @@ def main():
     with open(proj_path, "w", encoding="utf-8") as fh:
         json.dump(proj, fh, indent=2, ensure_ascii=False)
     print(f"Wrote {proj_path}")
+
+    if a.library:
+        lib = build_axlib(proj)
+        if os.path.exists(a.library):
+            # Register haritası değişmediyse tarih korunur (gereksiz diff olmasın)
+            try:
+                with open(a.library, encoding="utf-8") as fh:
+                    old = json.load(fh)
+                for e_new, e_old in zip(lib["entries"], old.get("entries", [])):
+                    if {k: v for k, v in e_new.items() if k != "updated"} == \
+                       {k: v for k, v in e_old.items() if k != "updated"}:
+                        e_new["updated"] = e_old.get("updated", e_new["updated"])
+            except (OSError, ValueError):
+                pass
+        with open(a.library, "w", encoding="utf-8") as fh:
+            json.dump(lib, fh, indent=2, ensure_ascii=False)
+            fh.write("\n")
+        print(f"Wrote {a.library}")
 
     if a.top_vhd:
         os.makedirs(os.path.dirname(os.path.abspath(a.top_vhd)), exist_ok=True)
