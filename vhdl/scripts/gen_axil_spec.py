@@ -320,6 +320,33 @@ def _vhdl_type(width: int) -> str:
     return "std_logic" if width == 1 else f"std_logic_vector({width - 1} downto 0)"
 
 
+# AXIL Studio paketli (HDL Designer) AXI4-Lite arayüzü: <module>_pk.v ile aynı düzen (32-bit adres/veri)
+_PK_REQ_W = 111
+_PK_RSP_W = 41
+_PK_HDR = [
+    "--   REQ-1 : Dış bus arayüzü HDL Designer uyumlu paketli 32-bit AXI4-Lite Slave",
+    "--           (SLAVE_AXI_REQ / SLAVE_AXI_RSP) olup tek saat domain'inde",
+    "--           (S_AXI_ACLK, S_AXI_ARESETN) çalışır. Paket düzeni (arinc429_axil_pk.v):",
+    "--             REQ[110:0] = AWADDR[110:79] AWPROT[78:76] AWVALID[75] WDATA[74:43]",
+    "--                          WSTRB[42:39] WVALID[38] BREADY[37] ARADDR[36:5]",
+    "--                          ARPROT[4:2] ARVALID[1] RREADY[0]",
+    "--             RSP[40:0]  = AWREADY[40] WREADY[39] BRESP[38:37] BVALID[36]",
+    "--                          ARREADY[35] RDATA[34:3] RRESP[2:1] RVALID[0]",
+]
+_PK_ENT_PORTS = [
+    "        -- AXI4-Lite Slave, HDL Designer paketli (AXIL Studio arinc429_axil_pk)",
+    "        S_AXI_ACLK    : in  std_logic;",
+    "        S_AXI_ARESETN : in  std_logic;",
+    f"        SLAVE_AXI_REQ : in  std_logic_vector({_PK_REQ_W - 1} downto 0);",
+    f"        SLAVE_AXI_RSP : out std_logic_vector({_PK_RSP_W - 1} downto 0);",
+]
+
+
+def _is_axi_chan(name: str) -> bool:
+    """S_AXI_* kanal sinyali mi (saat ve reset hariç)."""
+    return name.startswith("S_AXI_") and name not in ("S_AXI_ACLK", "S_AXI_ARESETN")
+
+
 def build_top_vhd(
     module: str = "arinc429_axil",
     num_rx: int = 2,
@@ -328,8 +355,15 @@ def build_top_vhd(
     wdepth_log2: int = 8,
     edepth_log2: int = 8,
     bitdiag_log2: int = 3,
+    packed: bool = True,
 ) -> str:
-    """AXIL Studio arinc429_axil (AXI4-Lite slave) + arinc429_core (VHDL) top wrapper üretir."""
+    """AXIL Studio arinc429_axil (AXI4-Lite slave) + arinc429_core (VHDL) top wrapper üretir.
+
+    packed=True (varsayılan): HDL Designer uyumlu top. İçeride AXIL Studio'nun paketli wrapper'ı
+    <module>_pk örneklenir; dış AXI4-Lite arayüzü SLAVE_AXI_REQ[110:0] / SLAVE_AXI_RSP[40:0]
+    vektörleridir (adres genişliği 32 bit sabit, generic yok).
+    packed=False: eski düz S_AXI_* portlu top (<module> doğrudan).
+    """
     if not has_tx:
         has_txbit = False
     n_rx_vec = max(num_rx, 1)
@@ -479,18 +513,29 @@ def build_top_vhd(
     for n in range(num_rx):
         add_ch_comp(f"rx{n}_", False)
 
+    if packed:
+        # S_AXI_* kanalları paketli vektörlere: <module>_pk port sırası (saat/reset başta, REQ/RSP sonda)
+        comp_ports = [cp for cp in comp_ports if not _is_axi_chan(cp[0])] + [
+            ("SLAVE_AXI_REQ", "in", f"std_logic_vector({_PK_REQ_W - 1} downto 0)"),
+            ("SLAVE_AXI_RSP", "out", f"std_logic_vector({_PK_RSP_W - 1} downto 0)"),
+        ]
+
     lines = [
         "--------------------------------------------------------------------------------",
         "-- Dosya       : arinc429_ip.vhd",
         "-- Standart    : VHDL-93 / VHDL-2008 uyumlu",
         "--",
         "-- Amaç:",
-        f"--   AXIL Studio'nun ürettiği {module}.v (AXI4-Lite slave, ZipCPU easyaxil)",
+        (f"--   AXIL Studio'nun ürettiği {module}_pk.v (HDL Designer paketli AXI4-Lite slave," if packed else
+         f"--   AXIL Studio'nun ürettiği {module}.v (AXI4-Lite slave, ZipCPU easyaxil)"),
+        *([f"--   içinde {module}.v / ZipCPU easyaxil)"] if packed else []),
         "--   ile saf VHDL arinc429_core çekirdeğini tek üst modülde birleştirir.",
         "--",
         "-- Gereksinimler:",
+        *(_PK_HDR if packed else [
         "--   REQ-1 : Dış bus arayüzü standart 32-bit AXI4-Lite Slave (S_AXI_*) olup",
         "--           tek saat domain'inde (S_AXI_ACLK, S_AXI_ARESETN) çalışır.",
+        ]),
         "--   REQ-2 : Tüm o_* / i_* register portları ve RAM wr_strobe / rd_strobe",
         "--           sinyalleri arinc429_core record portlarına 1-1 bağlanır.",
         "--   REQ-3 : Bu dosya vhdl/scripts/gen_axil_spec.py ile otomatik üretilir;",
@@ -502,11 +547,12 @@ def build_top_vhd(
         "",
         "entity arinc429_ip is",
         "    generic (",
-        "        C_AXI_ADDR_WIDTH     : positive := 32;",
+        *([] if packed else ["        C_AXI_ADDR_WIDTH     : positive := 32;"]),
         "        G_SYNC_STAGES        : positive := 4;",
         "        G_CHK_FIFO_DEPTH     : positive := 4",
         "    );",
         "    port (",
+        *(_PK_ENT_PORTS if packed else [
         "        -- AXI4-Lite Slave (AXIL Studio / easyaxil)",
         "        S_AXI_ACLK    : in  std_logic;",
         "        S_AXI_ARESETN : in  std_logic;",
@@ -529,6 +575,7 @@ def build_top_vhd(
         "        S_AXI_RREADY  : in  std_logic;",
         "        S_AXI_RDATA   : out std_logic_vector(31 downto 0);",
         "        S_AXI_RRESP   : out std_logic_vector(1 downto 0);",
+        ]),
         "",
         "        -- Fiziksel ARINC 429 pinleri",
         "        tx_high       : out std_logic;",
@@ -543,10 +590,12 @@ def build_top_vhd(
         "",
         "architecture rtl of arinc429_ip is",
         "",
-        f"    component {module} is",
+        f"    component {module}_pk is" if packed else f"    component {module} is",
+        *([] if packed else [
         "        generic (",
         "            C_AXI_ADDR_WIDTH : integer := 32",
         "        );",
+        ]),
         "        port (",
     ]
     for i, (pname, pdir, ptyp) in enumerate(comp_ports):
@@ -731,10 +780,16 @@ def build_top_vhd(
                 (f"i_{p}chk_status_fifo_ovf", f"{rout}.chk_fifo_ovf"),
             ]
 
+    if packed:
+        pmap = [pm for pm in pmap if not _is_axi_chan(pm[0])] + [
+            ("SLAVE_AXI_REQ", "SLAVE_AXI_REQ"),
+            ("SLAVE_AXI_RSP", "SLAVE_AXI_RSP"),
+        ]
+
     lines += [
         "",
-        f"    u_axil : {module}",
-        "        generic map (C_AXI_ADDR_WIDTH => C_AXI_ADDR_WIDTH)",
+        f"    u_axil : {module}_pk" if packed else f"    u_axil : {module}",
+        *([] if packed else ["        generic map (C_AXI_ADDR_WIDTH => C_AXI_ADDR_WIDTH)"]),
         "        port map (",
     ]
     for i, (pn, sig) in enumerate(pmap):
@@ -799,6 +854,8 @@ def main():
     ap.add_argument("--no-txbit", action="store_true", help="TX BIT kanalını kapat")
     ap.add_argument("--clk-hz", type=int, default=50_000_000, help="Sistem clock frekansı (Hz)")
     ap.add_argument("--base", type=lambda s: int(s, 0), default=0x40000000, help="Proje base adresi")
+    ap.add_argument("--plain-top", action="store_true",
+                    help="Top'u düz S_AXI_* portlarıyla üret (varsayılan: HDL Designer paketli arinc429_axil_pk)")
     ap.add_argument("--library", default="arinc429.axlib.json",
                     help="AXIL Studio IP kütüphanesi yolu (varsayılan: depo kökünde arinc429.axlib.json; '' = yazma)")
     ap.add_argument("--axil-studio", default="", help="AXIL Studio repo yolu (verilirse easyaxil Verilog dosyaları da üretilir)")
@@ -849,6 +906,7 @@ def main():
                 num_rx=a.num_rx,
                 has_tx=not a.no_tx,
                 has_txbit=not a.no_txbit,
+                packed=not a.plain_top,
             ))
         print(f"Wrote {a.top_vhd}")
 

@@ -3,12 +3,19 @@
 -- Standart    : VHDL-93 / VHDL-2008 uyumlu
 --
 -- Amaç:
---   AXIL Studio'nun ürettiği arinc429_axil.v (AXI4-Lite slave, ZipCPU easyaxil)
+--   AXIL Studio'nun ürettiği arinc429_axil_pk.v (HDL Designer paketli AXI4-Lite slave,
+--   içinde arinc429_axil.v / ZipCPU easyaxil)
 --   ile saf VHDL arinc429_core çekirdeğini tek üst modülde birleştirir.
 --
 -- Gereksinimler:
---   REQ-1 : Dış bus arayüzü standart 32-bit AXI4-Lite Slave (S_AXI_*) olup
---           tek saat domain'inde (S_AXI_ACLK, S_AXI_ARESETN) çalışır.
+--   REQ-1 : Dış bus arayüzü HDL Designer uyumlu paketli 32-bit AXI4-Lite Slave
+--           (SLAVE_AXI_REQ / SLAVE_AXI_RSP) olup tek saat domain'inde
+--           (S_AXI_ACLK, S_AXI_ARESETN) çalışır. Paket düzeni (arinc429_axil_pk.v):
+--             REQ[110:0] = AWADDR[110:79] AWPROT[78:76] AWVALID[75] WDATA[74:43]
+--                          WSTRB[42:39] WVALID[38] BREADY[37] ARADDR[36:5]
+--                          ARPROT[4:2] ARVALID[1] RREADY[0]
+--             RSP[40:0]  = AWREADY[40] WREADY[39] BRESP[38:37] BVALID[36]
+--                          ARREADY[35] RDATA[34:3] RRESP[2:1] RVALID[0]
 --   REQ-2 : Tüm o_* / i_* register portları ve RAM wr_strobe / rd_strobe
 --           sinyalleri arinc429_core record portlarına 1-1 bağlanır.
 --   REQ-3 : Bu dosya vhdl/scripts/gen_axil_spec.py ile otomatik üretilir;
@@ -20,33 +27,15 @@ use work.a429_pkg.all;
 
 entity arinc429_ip is
     generic (
-        C_AXI_ADDR_WIDTH     : positive := 32;
         G_SYNC_STAGES        : positive := 4;
         G_CHK_FIFO_DEPTH     : positive := 4
     );
     port (
-        -- AXI4-Lite Slave (AXIL Studio / easyaxil)
+        -- AXI4-Lite Slave, HDL Designer paketli (AXIL Studio arinc429_axil_pk)
         S_AXI_ACLK    : in  std_logic;
         S_AXI_ARESETN : in  std_logic;
-        S_AXI_AWVALID : in  std_logic;
-        S_AXI_AWREADY : out std_logic;
-        S_AXI_AWADDR  : in  std_logic_vector(C_AXI_ADDR_WIDTH - 1 downto 0);
-        S_AXI_AWPROT  : in  std_logic_vector(2 downto 0);
-        S_AXI_WVALID  : in  std_logic;
-        S_AXI_WREADY  : out std_logic;
-        S_AXI_WDATA   : in  std_logic_vector(31 downto 0);
-        S_AXI_WSTRB   : in  std_logic_vector(3 downto 0);
-        S_AXI_BVALID  : out std_logic;
-        S_AXI_BREADY  : in  std_logic;
-        S_AXI_BRESP   : out std_logic_vector(1 downto 0);
-        S_AXI_ARVALID : in  std_logic;
-        S_AXI_ARREADY : out std_logic;
-        S_AXI_ARADDR  : in  std_logic_vector(C_AXI_ADDR_WIDTH - 1 downto 0);
-        S_AXI_ARPROT  : in  std_logic_vector(2 downto 0);
-        S_AXI_RVALID  : out std_logic;
-        S_AXI_RREADY  : in  std_logic;
-        S_AXI_RDATA   : out std_logic_vector(31 downto 0);
-        S_AXI_RRESP   : out std_logic_vector(1 downto 0);
+        SLAVE_AXI_REQ : in  std_logic_vector(110 downto 0);
+        SLAVE_AXI_RSP : out std_logic_vector(40 downto 0);
 
         -- Fiziksel ARINC 429 pinleri
         tx_high       : out std_logic;
@@ -61,32 +50,10 @@ end entity arinc429_ip;
 
 architecture rtl of arinc429_ip is
 
-    component arinc429_axil is
-        generic (
-            C_AXI_ADDR_WIDTH : integer := 32
-        );
+    component arinc429_axil_pk is
         port (
             S_AXI_ACLK                     : in  std_logic;
             S_AXI_ARESETN                  : in  std_logic;
-            S_AXI_AWVALID                  : in  std_logic;
-            S_AXI_AWREADY                  : out std_logic;
-            S_AXI_AWADDR                   : in  std_logic_vector(C_AXI_ADDR_WIDTH - 1 downto 0);
-            S_AXI_AWPROT                   : in  std_logic_vector(2 downto 0);
-            S_AXI_WVALID                   : in  std_logic;
-            S_AXI_WREADY                   : out std_logic;
-            S_AXI_WDATA                    : in  std_logic_vector(31 downto 0);
-            S_AXI_WSTRB                    : in  std_logic_vector(3 downto 0);
-            S_AXI_BVALID                   : out std_logic;
-            S_AXI_BREADY                   : in  std_logic;
-            S_AXI_BRESP                    : out std_logic_vector(1 downto 0);
-            S_AXI_ARVALID                  : in  std_logic;
-            S_AXI_ARREADY                  : out std_logic;
-            S_AXI_ARADDR                   : in  std_logic_vector(C_AXI_ADDR_WIDTH - 1 downto 0);
-            S_AXI_ARPROT                   : in  std_logic_vector(2 downto 0);
-            S_AXI_RVALID                   : out std_logic;
-            S_AXI_RREADY                   : in  std_logic;
-            S_AXI_RDATA                    : out std_logic_vector(31 downto 0);
-            S_AXI_RRESP                    : out std_logic_vector(1 downto 0);
             o_soft_reset_rst_all           : out std_logic;
             o_soft_reset_tx                : out std_logic;
             o_soft_reset_txbit             : out std_logic;
@@ -298,7 +265,9 @@ architecture rtl of arinc429_ip is
             i_rx1_bit_rd_pulse_err         : in  std_logic_vector(15 downto 0);
             i_rx1_bit_rd_null              : in  std_logic_vector(15 downto 0);
             i_rx1_bit_rd_null_err          : in  std_logic_vector(15 downto 0);
-            o_rx1_bit_rd_null_err_rd       : out std_logic
+            o_rx1_bit_rd_null_err_rd       : out std_logic;
+            SLAVE_AXI_REQ                  : in  std_logic_vector(110 downto 0);
+            SLAVE_AXI_RSP                  : out std_logic_vector(40 downto 0)
         );
     end component;
 
@@ -341,30 +310,10 @@ begin
     rx_reg_in(1).err_raddr  <= (15 downto 8 => '0') & s_rx1_err_raddr;
     rx_reg_in(1).bit_raddr_word <= (7 downto 3 => '0') & s_rx1_bit_widx;
 
-    u_axil : arinc429_axil
-        generic map (C_AXI_ADDR_WIDTH => C_AXI_ADDR_WIDTH)
+    u_axil : arinc429_axil_pk
         port map (
             S_AXI_ACLK                     => S_AXI_ACLK,
             S_AXI_ARESETN                  => S_AXI_ARESETN,
-            S_AXI_AWVALID                  => S_AXI_AWVALID,
-            S_AXI_AWREADY                  => S_AXI_AWREADY,
-            S_AXI_AWADDR                   => S_AXI_AWADDR,
-            S_AXI_AWPROT                   => S_AXI_AWPROT,
-            S_AXI_WVALID                   => S_AXI_WVALID,
-            S_AXI_WREADY                   => S_AXI_WREADY,
-            S_AXI_WDATA                    => S_AXI_WDATA,
-            S_AXI_WSTRB                    => S_AXI_WSTRB,
-            S_AXI_BVALID                   => S_AXI_BVALID,
-            S_AXI_BREADY                   => S_AXI_BREADY,
-            S_AXI_BRESP                    => S_AXI_BRESP,
-            S_AXI_ARVALID                  => S_AXI_ARVALID,
-            S_AXI_ARREADY                  => S_AXI_ARREADY,
-            S_AXI_ARADDR                   => S_AXI_ARADDR,
-            S_AXI_ARPROT                   => S_AXI_ARPROT,
-            S_AXI_RVALID                   => S_AXI_RVALID,
-            S_AXI_RREADY                   => S_AXI_RREADY,
-            S_AXI_RDATA                    => S_AXI_RDATA,
-            S_AXI_RRESP                    => S_AXI_RRESP,
             o_soft_reset_rst_all           => rst_all,
             o_soft_reset_tx                => rst_tx,
             o_soft_reset_txbit             => rst_txbit,
@@ -576,7 +525,9 @@ begin
             i_rx1_bit_rd_pulse_err         => rx_reg_out(1).bit_rd_pulse_err,
             i_rx1_bit_rd_null              => rx_reg_out(1).bit_rd_null,
             i_rx1_bit_rd_null_err          => rx_reg_out(1).bit_rd_null_err,
-            o_rx1_bit_rd_null_err_rd       => rx_reg_in(1).bit_rd_last
+            o_rx1_bit_rd_null_err_rd       => rx_reg_in(1).bit_rd_last,
+            SLAVE_AXI_REQ                  => SLAVE_AXI_REQ,
+            SLAVE_AXI_RSP                  => SLAVE_AXI_RSP
         );
 
     u_core : entity work.arinc429_core

@@ -10,8 +10,13 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
 ## 1. Genel Mimari
 
 ```text
-                AXI4-Lite (S_AXI_*) — IP clock (S_AXI_ACLK)
+      AXI4-Lite paketli (SLAVE_AXI_REQ[110:0] / SLAVE_AXI_RSP[40:0])
+                    — IP clock (S_AXI_ACLK, S_AXI_ARESETN)
                                     │
+                  ┌─────────────────▼─────────────────┐
+                  │ arinc429_axil_pk.v (HDL Designer) │  paketli <-> S_AXI_* açma
+                  └─────────────────┬─────────────────┘
+                                    │ S_AXI_*
                   ┌─────────────────▼─────────────────┐
                   │  arinc429_axil.v (AXIL Studio)    │  <- vhdl/axil/arinc429_axil.regspec.json
                   │  easyaxil tabanlı AXI4-Lite slave │     (171 register, 64 KB pencere)
@@ -62,7 +67,8 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
 | `vhdl/rtl/a429_tx_word_evt.vhd` | `tx_busy` kenarından `word_start` / `word_done` darbesi |
 | `vhdl/rtl/a429_tx_channel.vhd` | TX kanalı (`tx_cfg_sel` + `tx_core` + `tx_word_evt` + `TX_WORD_CNT`) |
 | `vhdl/rtl/arinc429_core.vhd` | Bus-bağımsız saf VHDL çekirdek (`G_NUM_RX`, `G_TX_EN`, `G_TXBIT_EN` generic) |
-| `vhdl/rtl/arinc429_ip.vhd` | `arinc429_axil` (Verilog) + `arinc429_core` (VHDL) karma-dil AXI4-Lite üst modülü |
+| `vhdl/rtl/arinc429_ip.vhd` | HDL Designer uyumlu karma-dil üst modül: `arinc429_axil_pk` (Verilog, paketli `SLAVE_AXI_REQ/RSP`) + `arinc429_core` (VHDL). Düz `S_AXI_*` portlu eski top için üreteçte `--plain-top` |
+| `vhdl/tb/tb_arinc429_ip_pk.v` | Top entegrasyon testi: `ghdl --synth` netlist + `arinc429_axil_pk` ile paketli arayüzden register okuma/yazma |
 | `vhdl/tb/tb_*.vhd` | Her RTL bloğu için ayrı kendi kendini doğrulayan 19 adet birim/entegrasyon testbench'i |
 | `vhdl/scripts/run_tests.sh` | Tüm 19 VHDL testini hem VHDL-93 hem VHDL-2008 ile + Icarus Verilog AXIL testini koşar |
 
@@ -97,6 +103,8 @@ Tam bit-bazlı tablo: [`vhdl/axil/arinc429_axil_regs.md`](../axil/arinc429_axil_
    python3 vhdl/scripts/gen_axil_spec.py -o vhdl/axil --num-rx 4 --clk-hz 50000000 --axil-studio /yol/axil-studio
    ```
    Bu komut `arinc429_axil.regspec.json`, `arinc429.axproj.json`, `arinc429_axil*.v` ve `vhdl/rtl/arinc429_ip.vhd` dosyalarını eşzamanlı günceller.
+   `arinc429_ip.vhd` varsayılan olarak `arinc429_axil_pk`'yi örnekler (HDL Designer, paketli `SLAVE_AXI_REQ/RSP`, 32-bit adres sabit);
+   düz `S_AXI_*` portlu top için `--plain-top` verin.
 
 ---
 

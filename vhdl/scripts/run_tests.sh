@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Tüm ARINC 429 VHDL birim/entegrasyon testlerini hem VHDL-93 hem VHDL-2008 ile,
-# ayrıca AXIL Studio easyaxil AXI4-Lite testbench'ini Icarus Verilog ile çalıştırır.
+# ayrıca AXIL Studio easyaxil AXI4-Lite testbench'ini ve HDL Designer paketli
+# arinc429_ip top entegrasyon testini (ghdl --synth + Icarus Verilog) çalıştırır.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -68,7 +69,7 @@ run_vhdl_suite() {
     out="$(
       cd "$work"
       ghdl -e --std="$std" "$@" "$tb" 2>/dev/null || ghdl -e --std="$std" "$@" "$tb"
-      "./${tb}" --assert-level=error 2>&1
+      ghdl -r --std="$std" "$@" "$tb" --assert-level=error 2>&1
     )"
     printf "%s\n" "$out" | grep -E "PASS:|SONUC:"
   done
@@ -83,3 +84,13 @@ echo " Icarus Verilog (AXIL Studio arinc429_axil_tb.v)"
 echo "============================================================"
 iverilog -g2005 -o /tmp/arinc429_axil_tb.vvp vhdl/axil/arinc429_axil.v vhdl/axil/arinc429_axil_tb.v
 vvp /tmp/arinc429_axil_tb.vvp
+
+echo "============================================================"
+echo " arinc429_ip top (HDL Designer arinc429_axil_pk) entegrasyon testi"
+echo "============================================================"
+ghdl --synth --std=08 --workdir=/tmp/a429_ghdl_08 --out=verilog arinc429_ip > /tmp/arinc429_ip_syn.v 2>/dev/null
+iverilog -g2012 -o /tmp/tb_arinc429_ip_pk.vvp /tmp/arinc429_ip_syn.v \
+  vhdl/axil/arinc429_axil_pk.v vhdl/axil/arinc429_axil.v vhdl/tb/tb_arinc429_ip_pk.v
+out="$(vvp /tmp/tb_arinc429_ip_pk.vvp)"
+printf "%s\n" "$out"
+printf "%s\n" "$out" | grep -q "^PASS:"
