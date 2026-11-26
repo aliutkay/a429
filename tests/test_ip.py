@@ -44,7 +44,9 @@ def test_rx_config_and_read_channel():
 
     writes = []
     send_rx_config(sim, rm, "RX0", res.rx_values, verify=True, on_write=lambda n, o, v: writes.append((n, v)))
-    assert any(n == "RX0_CFG_APPLY" for n, _ in writes)
+    # Gruplanmış harita: CFG_SEL ve APPLY tek register'da (RX0_CFG.APPLY = bit 4), APPLY en son yazılır
+    assert writes[-1][0] == "RX0_CFG" and writes[-1][1] == (2 | (1 << 4))
+    assert writes[0] == ("RX0_CFG", 2)
 
     rs = ReadSettings()
     data = read_channel(sim, rm, "RX0", rs)
@@ -196,6 +198,7 @@ def test_active_config_check_and_recompare():
     sim = SimClient(num_rx=2, has_tx=True, has_txbit=True)
     rm = RegMap(sim.ip)
     ci = ConfigInputs()
+    ci.err = 0.10          # preset'ten (±%5) farklı Custom config
     res = compute(ci, rm, "RX0")
     tx = compute_tx(ci, "Kapalı", rm)
     tx_exp = {r: v for r, v in tx["writes"] if r.startswith("TX_CUST_")}
@@ -245,3 +248,91 @@ def test_generated_axil_project_matches_regmap():
     assert rm.missing_for_tx_config() == []
     assert rm.missing_for_tx_live() == []
     assert rm.missing_for_reset() == []
+
+
+# ---------------------------------------------------------------- IP 2.x gruplanmış harita
+from a429 import ipmap
+from a429.regs import channel_prefix
+from a429.ip import RecordReader, apply_fix, check_ip, plan_writes, read_fields, tx_write, write_fields
+
+
+def test_ipmap_logical_names_resolve_and_bindings_complete():
+    rm = RegMap(ipmap.to_ip_dict(num_rx=2))
+    assert rm.grouped()
+    for name, (reg, fld) in ipmap.LOGICAL_TX.items():
+        r = rm.resolve(name)
+        assert r is not None and r[0].name == reg and r[1].name == fld, name
+    for ch in ("RX0", "RX1", "TB"):
+        p = channel_prefix(ch)
+        for suf in ipmap.LOGICAL_CH:
+            assert rm.has(p + suf), p + suf
+    # Her IP tarafı alan/strobe portunun bir VHDL bağlantısı var ve adlar benzersiz
+    binds = ipmap.port_bindings(num_rx=2)
+    names = [b[0] for b in binds]
+    assert len(names) == len(set(names))
+    assert ("o_tx_word_label_val", "out", 8, "tx_reg_in.label_val") in binds
+    assert ("i_rx1_bit_rd_null_err", "in", 16, "rx_reg_out(1).bit_rd_null_err") in binds
+    assert ("o_rx1_bit_rd_null_rd", "out", 1, "rx_reg_in(1).bit_rd_last") in binds
+    # 16 bitlik çiftler tek register'da
+    assert rm.location("RX0_CUST_MAX_PULSE") == "RX0_CUST_PULSE.MAX @ 0x4040[31:16]"
+    assert rm.location("TX_LABEL") == "TX_WORD.LABEL_VAL @ 0x0404[7:0]"
+
+
+def test_grouped_writes_merge_and_keep_other_fields():
+    sim = SimClient()
+    rm = RegMap(sim.ip)
+    ops = plan_writes(rm, [("TX_LABEL", 0o310), ("TX_SDI", 1), ("TX_DATA", 0x12345), ("TX_SSM", 3), ("TX_PARITY_TYPE", 1)])
+    assert len(ops) == 1 and ops[0][0] == "TX_WORD"
+    assert ops[0][2] == 0o310 | (1 << 8) | (0x12345 << 10) | (3 << 29) | (1 << 31)
+    # Kısmi yazma: TX_CTRL'deki diğer bitler korunur
+    write_fields(sim, rm, [("TX_TRANSMITTER_EN", 1), ("TX_BUILDER_EN", 1)])
+    tx_write(sim, rm, [("TX_MSG_SCHED_EN", 1)], verify=True)
+    got = read_fields(sim, rm, ["TX_TRANSMITTER_EN", "TX_MSG_SCHED_EN", "TX_BUILDER_EN", "TX_SCHED_EN"])
+    assert got == {"TX_TRANSMITTER_EN": 1, "TX_MSG_SCHED_EN": 1, "TX_BUILDER_EN": 1, "TX_SCHED_EN": 0}
+    # CFG_SEL ... CUST ... CFG_APPLY: APPLY en son ve SEL korunarak
+    ops = plan_writes(rm, [("TX_CFG_SEL", 2), ("TX_CUST_PULSE_DUR", 100), ("TX_CUST_NULL_DUR", 90), ("TX_CFG_APPLY", 1)])
+    assert [o[0] for o in ops] == ["TX_CFG", "TX_CUST_TIMING", "TX_CFG"]
+    assert ops[1][2] == 100 | (90 << 16) and ops[2][2] == 2 | (1 << 4)
+
+
+def test_old_ungrouped_map_still_works():
+    """IP 1.x (tek alanlı register'lar) haritası: aynı mantıksal adlar register'ın tamamına çözülür."""
+    def reg(name, off, width=32):
+        return {"name": name, "offset": hex(off), "access": "RO", "reset": "0",
+                "fields": [{"name": name, "lsb": 0, "width": width, "kind": "RO"}]}
+    old = RegMap({"registers": [reg("TX_LABEL", 0x40C, 8), reg("RX0_ERR_RD_TS_MSB", 0x4124), reg("RX0_ERR_RD_TS_LSB", 0x4128),
+                                reg("RX0_ERR_RD_CODE", 0x412C, 16), reg("RX0_ERR_RD_ADDR", 0x4130, 16), reg("RX0_ERR_RD_DATA", 0x4134)]})
+    assert not old.grouped()
+    assert old.location("TX_LABEL") == "TX_LABEL @ 0x040C"
+    rec = RecordReader(old, ["RX0_ERR_RD_TS_MSB", "RX0_ERR_RD_TS_LSB", "RX0_ERR_RD_CODE", "RX0_ERR_RD_ADDR", "RX0_ERR_RD_DATA"])
+    assert len(rec) == 5 and rec.decode([1, 2, 3, 4, 5]) == [1, 2, 3, 4, 5]
+    new = RegMap(ipmap.to_ip_dict())
+    rec2 = RecordReader(new, ["RX0_ERR_RD_TS_MSB", "RX0_ERR_RD_TS_LSB", "RX0_ERR_RD_CODE", "RX0_ERR_RD_ADDR", "RX0_ERR_RD_DATA"])
+    assert len(rec2) == 4 and rec2.decode([1, 2, 3 | (4 << 16), 5]) == [1, 2, 3, 4, 5]
+    assert new.regs[rec2.phys[-1]].name == "RX0_ERR_RD_DATA"      # rd_strobe'lu register en son okunur
+
+
+def test_ip_health_check_finds_disabled_logger_and_stuck_line():
+    sim = SimClient(num_rx=1)
+    rm = RegMap(sim.ip)
+    res = check_ip(sim, rm, clk_hz=50_000_000)
+    rx_off = [f for f in res["findings"] if f["area"] == "RX0" and f["fix"] == ("enable", "RX0")]
+    assert res["worst"] == "error" and rx_off and rx_off[0]["level"] == "error"
+    apply_fix(sim, rm, rx_off[0]["fix"])
+    apply_fix(sim, rm, ("enable", "TB"))
+    res = check_ip(sim, rm, clk_hz=50_000_000)
+    assert not any(f["fix"] == ("enable", "RX0") for f in res["findings"])
+    assert any(f["area"] == "IP" and f["title"].startswith("IP sürümü 2.") for f in res["findings"])
+
+    sim.sim_line["RX0"] = (1, 1)            # ters bağlı alıcı: boşta 11
+    res = check_ip(sim, rm)
+    assert any(f["area"] == "RX0" and f["level"] == "error" and "11" in f["title"] for f in res["findings"])
+    st = read_channel_status(sim, rm, "RX0")
+    assert st["line_high"] and st["line_low"] and st["sync_wait"]
+
+    # Saat uyuşmazlığı ve TX/TB hız uyuşmazlığı
+    res = check_ip(sim, rm, clk_hz=100_000_000)
+    assert any("MHz" in f["title"] for f in res["findings"] if f["level"] == "warn")
+    write_fields(sim, rm, [("TX_CFG_SEL", 1), ("TX_CFG_APPLY", 1)])   # TX Low Speed, TB High Speed
+    res = check_ip(sim, rm)
+    assert any(f["area"] == "TX BIT" and "kabul aralığı" in f["title"] and f["level"] == "warn" for f in res["findings"])

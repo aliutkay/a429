@@ -76,7 +76,12 @@ entity a429_rx_core is
 
         -- Glitch istatistiği
         glitch_tick         : out std_logic;
-        glitch_total_cnt    : out std_logic_vector(G_CNT_W - 1 downto 0)
+        glitch_total_cnt    : out std_logic_vector(G_CNT_W - 1 downto 0);
+
+        -- Teşhis (STATUS): senkronlanmış ham hat seviyesi ve decoder senkron bekleme durumu
+        line_high           : out std_logic;
+        line_low            : out std_logic;
+        sync_wait           : out std_logic
     );
 end entity a429_rx_core;
 
@@ -91,6 +96,9 @@ architecture rtl of a429_rx_core is
 begin
 
     pin_vec <= pin_high & pin_low;
+
+    line_high <= sync_vec(1);
+    line_low  <= sync_vec(0);
 
     u_cdc : entity work.a429_cdc_sync
         generic map (G_STAGES => G_SYNC_STAGES, G_WIDTH => 2, G_RST_VALUE => '0')
@@ -149,7 +157,8 @@ begin
             err_bit_timeout     => err_bit_timeout,
             err_parity          => err_parity,
             err_addr            => err_addr,
-            err_data            => err_data
+            err_data            => err_data,
+            sync_wait           => sync_wait
         );
 
 end architecture rtl;

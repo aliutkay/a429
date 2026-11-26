@@ -94,3 +94,12 @@ iverilog -g2012 -o /tmp/tb_arinc429_ip_pk.vvp /tmp/arinc429_ip_syn.v \
 out="$(vvp /tmp/tb_arinc429_ip_pk.vvp)"
 printf "%s\n" "$out"
 printf "%s\n" "$out" | grep -q "^PASS:"
+
+echo "============================================================"
+echo " arinc429_ip TX -> RX0 loopback (ENABLE, gruplanmis register'lar, hat teshisi)"
+echo "============================================================"
+iverilog -g2012 -o /tmp/tb_arinc429_ip_loopback.vvp /tmp/arinc429_ip_syn.v \
+  vhdl/axil/arinc429_axil_pk.v vhdl/axil/arinc429_axil.v vhdl/tb/tb_arinc429_ip_loopback.v
+out="$(vvp /tmp/tb_arinc429_ip_loopback.vvp)"
+printf "%s\n" "$out"
+printf "%s\n" "$out" | grep -q "^PASS:"

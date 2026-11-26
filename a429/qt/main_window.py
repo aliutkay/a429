@@ -19,7 +19,7 @@ from ..ip import (
     DEFAULT_OUT_DIR, ReadSettings, clear_channel, clear_tx_checker_fifo, native_dir,
     read_channel, read_channel_status, read_rx_active_config, read_tx_active_config,
     read_tx_bit_status, recompare_active_config, send_rx_config, send_tx_config,
-    set_channel_enable, set_tx_checker, soft_reset, tx_write as ip_tx_write,
+    set_channel_enable, set_tx_checker, soft_reset, tx_write as ip_tx_write, check_ip, apply_fix, bridge_rows,
 )
 from ..model import ConfigInputs, compute
 from ..regs import RegMap, channel_label, channel_prefix
@@ -29,7 +29,7 @@ from .config_tab import ConfigTab
 from .control_tab import ControlTab
 from .dialogs import (
     APP, ActiveConfigDialog, ArincProfilesDialog, FpgaStandardsDialog, GlitchDialog,
-    IcProfileDialog, TxDriverDialog, TxFpgaDialog,
+    IcProfileDialog, IpHealthDialog, TxDriverDialog, TxFpgaDialog,
 )
 from .figpanel import ChartWindow
 from .read_tab import ReadTab
@@ -73,6 +73,7 @@ class MainWindow(QWidget):
         self._charts: dict[tuple[str, str], ChartWindow] = {}
         self._last_rx_act: dict | None = None
         self._last_tx_act: dict | None = None
+        self._last_health: dict | None = None
 
         self._recalc_timer = QTimer(self)
         self._recalc_timer.setSingleShot(True)
@@ -113,6 +114,7 @@ class MainWindow(QWidget):
             QTimer.singleShot(50, self.do_refresh_status)
             QTimer.singleShot(120, self.do_refresh_tx_bit)
             QTimer.singleShot(160, self.do_check_tx_config)
+            QTimer.singleShot(220, self.do_check_ip)
 
         QShortcut(QKeySequence.StandardKey.Save, self, self.save_project)
         QShortcut(QKeySequence.StandardKey.Open, self, self.open_project)
@@ -253,6 +255,7 @@ class MainWindow(QWidget):
             if self.connected:
                 QTimer.singleShot(50, self.do_refresh_status)
                 QTimer.singleShot(120, self.do_check_tx_config)
+                QTimer.singleShot(200, self.do_check_ip)
             else:
                 self._last_rx_act = None
                 self._last_tx_act = None
@@ -266,9 +269,12 @@ class MainWindow(QWidget):
             self.recalc()
             self._update_header()
             self._update_controls()
+            self._last_health = None
+            self.control_tab.update_health(None)
             if self.connected:
                 QTimer.singleShot(50, self.do_refresh_status)
                 QTimer.singleShot(120, self.do_check_tx_config)
+                QTimer.singleShot(200, self.do_check_ip)
         elif kind == "ip_removed":
             QMessageBox.warning(self, APP, f"{self.rm.name} artık adres haritasında değil.")
             self._closing = True
@@ -326,6 +332,8 @@ class MainWindow(QWidget):
         cfg_btn(self.btn_read_rx, not rx_rd_miss, rx_rd_miss, f"{channel_label(ch)} kanalından Word, Error ve Bit Diagnostic verilerini okur")
         cfg_btn(self.btn_send_tx, not tx_cfg_miss, tx_cfg_miss, "TX Config register'larını yazar ve doğrular")
         cfg_btn(self.btn_reset, not rst_miss, rst_miss, "SOFT_RESET.ALL darbesi gönderir")
+        cfg_btn(self.control_tab.btn_health, self.rm.is_loaded(), [],
+                "Logger enable/freeze, hat (LINE/SYNC_WAIT), IP sürümü, saat ve TX/RX hız uyumunu kontrol eder")
         p_ctrl = channel_prefix(ch) + "CTRL"
         has_ctrl = self.rm.is_loaded() and self.rm.has(p_ctrl)
         p_st = channel_prefix(ch) + "STATUS"
@@ -510,6 +518,7 @@ class MainWindow(QWidget):
         ch = self.current_channel()
         p = channel_prefix(ch)
         rows = [(p + "CFG_SEL", 2)] + [(p + k, v) for k, v in self.res.rx_values.items()] + [(p + "CFG_APPLY", 1)]
+        rows = bridge_rows(self.rm, rows)
         self.bus.run(
             lambda: self.client.add_config(rows),
             ok=lambda _: self.set_status(f"{channel_label(ch)} RX Config Debug Bridge listesine eklendi."),
@@ -519,7 +528,7 @@ class MainWindow(QWidget):
     def add_tx_to_bridge_config(self):
         if not self.client or not self.res_tx:
             return
-        rows = list(self.res_tx["writes"])
+        rows = bridge_rows(self.rm, self.res_tx["writes"])
         self.bus.run(
             lambda: self.client.add_config(rows),
             ok=lambda _: self.set_status("TX Config Debug Bridge listesine eklendi."),
@@ -764,6 +773,63 @@ class MainWindow(QWidget):
             err=fail,
         )
 
+    # ------------------------------------------------------------- IP durum kontrolü
+    def do_check_ip_dialog(self):
+        self.do_check_ip(show_dialog=True)
+
+    def do_check_ip(self, show_dialog: bool = False):
+        """IP'yi kontrol eder (logger enable/freeze, hat teşhisi, sürüm, saat, hız uyumu)."""
+        if not self.connected:
+            if show_dialog:
+                QMessageBox.information(self, "IP Durumu", "Debug Bridge bağlı değil.")
+            return
+        if self.busy:
+            return
+        rm = self.rm
+        clk_hz = int(round(self.ci.clk_mhz * 1e6)) if self.ci.clk_mhz else None
+
+        def ok(res: dict):
+            first = self._last_health is None
+            self._last_health = res
+            self.control_tab.update_health(res)
+            bad = [f for f in res["findings"] if f["level"] in ("error", "warn")]
+            if (first or show_dialog) and bad:
+                self.log(f"[IP Durumu] {len(bad)} sorun: " + "; ".join(f"[{f['area']}] {f['title']}" for f in bad[:4]))
+            dlg = self._dialogs.get("ip_health")
+            if show_dialog:
+                if isinstance(dlg, IpHealthDialog) and dlg.isVisible():
+                    dlg.update_result(res)
+                    dlg.raise_()
+                    dlg.activateWindow()
+                else:
+                    dlg = IpHealthDialog(self, res, on_refresh=lambda: self.do_check_ip(show_dialog=True),
+                                         on_fix=self.do_ip_fix)
+                    self._dialogs["ip_health"] = dlg
+                    dlg.show()
+            elif isinstance(dlg, IpHealthDialog) and dlg.isVisible():
+                dlg.update_result(res)
+
+        def fail(exc):
+            self.log(f"IP durumu kontrol edilemedi: {exc}")
+            if show_dialog:
+                QMessageBox.warning(self, "IP Durumu", str(exc))
+
+        self.bus.run(lambda: check_ip(self.client, rm, clk_hz=clk_hz), ok=ok, err=fail)
+
+    def do_ip_fix(self, fixes: list[tuple]):
+        rm = self.rm
+
+        def job():
+            for fx in fixes:
+                apply_fix(self.client, rm, fx, log=self.log, on_write=self._record_write)
+
+        def after(_):
+            dlg = self._dialogs.get("ip_health")
+            self.do_refresh_status()
+            self.do_check_ip(show_dialog=isinstance(dlg, IpHealthDialog) and dlg.isVisible())
+
+        self._run_job("IP durumu düzeltiliyor", job, on_ok=after)
+
     def do_toggle_rx_enable(self, enable: bool):
         if not self.connected:
             return
@@ -772,7 +838,7 @@ class MainWindow(QWidget):
         self._run_job(
             f"{channel_label(ch)} Logger {'açılıyor' if enable else 'kapatılıyor'}",
             lambda: set_channel_enable(self.client, rm, ch, enable, log=self.log, on_write=self._record_write),
-            on_ok=lambda _: self.do_refresh_status(),
+            on_ok=lambda _: (self.do_refresh_status(), self.do_check_ip()),
         )
 
     def do_clear_channel(self):
@@ -956,6 +1022,7 @@ class MainWindow(QWidget):
             self.do_refresh_status()
             self.do_check_tx_config(show_dialog=False)
             self.do_refresh_tx_bit()
+            self.do_check_ip()
 
         self._run_job(
             "IP reset",

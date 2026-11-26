@@ -12,7 +12,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QButtonGroup, QCheckBox, QComboBox, QDialog, QFileDialog, QFrame, QGridLayout, QGroupBox,
     QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMessageBox, QPushButton, QRadioButton,
-    QVBoxLayout, QWidget,
+    QScrollArea, QVBoxLayout, QWidget,
 )
 
 from ..formulas import draw_formula
@@ -1115,3 +1115,109 @@ class ActiveConfigDialog(QDialog):
             if ch == "TX"
             else f"{ch_lbl} STATUS.ACT_CFG ve ACT_* register'larından okundu."
         )
+
+
+class IpHealthDialog(QDialog):
+    """IP durum kontrolü: logger enable / freeze, hat teşhisi, sürüm, saat ve hız uyumu bulguları.
+
+    Düzeltilebilen bulgularda tek tıkla düzeltme (on_fix(fix_tuple)) sunar.
+    """
+
+    LEVELS = {"error": ("Hata", "err"), "warn": ("Uyarı", "warn"), "info": ("Bilgi", "accent"), "ok": ("Tamam", "ok")}
+
+    def __init__(self, parent, result: dict, on_refresh=None, on_fix=None):
+        super().__init__(parent)
+        self.setWindowTitle("IP Durum Kontrolü")
+        self._on_refresh = on_refresh
+        self._on_fix = on_fix
+        self._fixes: list[tuple] = []
+        self.resize(760, 460)
+        self.setMinimumSize(560, 320)
+
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(12, 12, 12, 12)
+        lay.setSpacing(10)
+
+        top = QFrame()
+        top.setObjectName("SubPanel")
+        tl = QHBoxLayout(top)
+        tl.setContentsMargins(10, 8, 10, 8)
+        tl.setSpacing(8)
+        tl.addWidget(look.label("Sonuç:", "muted"))
+        self.sum_pill = look.Pill("", "")
+        tl.addWidget(self.sum_pill)
+        tl.addStretch(1)
+        tl.addWidget(look.label("Karttan canlı okunur; RX/TB'nin sessizce kayıt tutmamasına yol açan ayarları gösterir.", "muted"))
+        lay.addWidget(top)
+
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.body = QWidget()
+        self.body_lay = QVBoxLayout(self.body)
+        self.body_lay.setContentsMargins(0, 0, 0, 0)
+        self.body_lay.setSpacing(6)
+        self.scroll.setWidget(self.body)
+        lay.addWidget(self.scroll, 1)
+
+        foot = QHBoxLayout()
+        foot.setSpacing(8)
+        foot.addStretch(1)
+        self.btn_fix_all = look.button("Tümünü Düzelt", "primary", self._fix_all)
+        foot.addWidget(self.btn_fix_all)
+        self.btn_refresh = look.button("↻ Yeniden Kontrol", None, lambda: self._on_refresh and self._on_refresh())
+        foot.addWidget(self.btn_refresh)
+        foot.addWidget(look.button("Kapat", None, self.close))
+        lay.addLayout(foot)
+        self.update_result(result)
+
+    def _row(self, f: dict) -> QFrame:
+        fr = QFrame()
+        fr.setObjectName("SubPanel")
+        hl = QHBoxLayout(fr)
+        hl.setContentsMargins(10, 7, 10, 7)
+        hl.setSpacing(10)
+        text, state = self.LEVELS.get(f["level"], ("?", ""))
+        pill = look.Pill(text, state)
+        pill.setFixedWidth(64)
+        pill.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hl.addWidget(pill, 0, Qt.AlignmentFlag.AlignTop)
+        area = look.label(f["area"], "mono")
+        area.setFixedWidth(58)
+        hl.addWidget(area, 0, Qt.AlignmentFlag.AlignTop)
+        col = QVBoxLayout()
+        col.setSpacing(2)
+        col.addWidget(look.label(f["title"], None, True))
+        if f.get("detail"):
+            col.addWidget(look.label(f["detail"], "muted", True))
+        hl.addLayout(col, 1)
+        if f.get("fix") and self._on_fix:
+            from ..ip import FIX_TEXT
+            b = look.button("Düzelt", "primary", lambda _=False, fx=f["fix"]: self._on_fix([fx]), FIX_TEXT.get(f["fix"][0], ""))
+            hl.addWidget(b, 0, Qt.AlignmentFlag.AlignTop)
+        return fr
+
+    def update_result(self, result: dict):
+        while self.body_lay.count():
+            it = self.body_lay.takeAt(0)
+            if it.widget():
+                it.widget().deleteLater()
+        findings = result.get("findings", [])
+        for f in findings:
+            self.body_lay.addWidget(self._row(f))
+        self.body_lay.addStretch(1)
+        # Toplu düzeltme yalnızca hata/uyarılar için (bilgi bulguları, ör. TX override, bilinçli olabilir)
+        self._fixes = [f["fix"] for f in findings if f.get("fix") and f["level"] in ("error", "warn")]
+        self.btn_fix_all.setVisible(bool(self._fixes) and self._on_fix is not None)
+        self.btn_fix_all.setText(f"Tümünü Düzelt ({len(self._fixes)})")
+        c = result.get("counts", {})
+        worst = result.get("worst", "ok")
+        if worst == "ok" or (not c.get("error") and not c.get("warn")):
+            self.sum_pill.set("Sorun yok ✓", "ok")
+        else:
+            parts = [f"{c[k]} {n}" for k, n in (("error", "hata"), ("warn", "uyarı")) if c.get(k)]
+            self.sum_pill.set(" · ".join(parts), "err" if c.get("error") else "warn")
+
+    def _fix_all(self):
+        if self._on_fix and self._fixes:
+            self._on_fix(list(self._fixes))

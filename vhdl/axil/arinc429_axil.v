@@ -47,55 +47,44 @@
 //          [31:0]   TS_LSB           RO
 //   0x30  TS_MSB           RO
 //          [31:0]   TS_MSB           RO
-//   0x400  TX_TRANSMITTER_EN RW
-//          [0]      TX_TRANSMITTER_EN RW
-//   0x404  TX_MSG_SCHED_EN  RW
-//          [0]      TX_MSG_SCHED_EN  RW
-//   0x408  TX_BUILDER_EN    RW
-//          [0]      TX_BUILDER_EN    RW
-//   0x40C  TX_LABEL         RW
-//          [7:0]    TX_LABEL         RW
-//   0x410  TX_SDI           RW
-//          [1:0]    TX_SDI           RW
-//   0x414  TX_DATA          RW
-//          [18:0]   TX_DATA          RW
-//   0x418  TX_SSM           RW
-//          [1:0]    TX_SSM           RW
-//   0x41C  TX_PARITY_TYPE   RW
-//          [0]      TX_PARITY_TYPE   RW
-//   0x420  TX_SCHED_EN      RW
-//          [0]      TX_SCHED_EN      RW
-//   0x424  TX_INITIAL_DELAY RW
-//          [31:0]   TX_INITIAL_DELAY RW
-//   0x428  TX_INTER_WORD_GAP RW
-//          [31:0]   TX_INTER_WORD_GAP RW
-//   0x42C  TX_SEND_CMD      WO
+//   0x400  TX_CTRL          RW
+//          [3]      SCHED_EN         RW
+//          [2]      BUILDER_EN       RW
+//          [1]      MSG_SCHED_EN     RW
+//          [0]      TRANSMITTER_EN   RW
+//   0x404  TX_WORD          RW
+//          [31]     PARITY_TYPE      RW
+//          [30:29]  SSM              RW
+//          [28:10]  DATA             RW
+//          [9:8]    SDI              RW
+//          [7:0]    LABEL_VAL        RW
+//   0x408  TX_SEND_CMD      WO
 //          [0]      SEND             PULSE
-//   0x430  TX_EXT_DATA      RW
+//   0x40C  TX_EXT_DATA      RW
 //          [31:0]   TX_EXT_DATA      RW
-//   0x434  TX_EXT_HIGH      RW
-//          [0]      TX_EXT_HIGH      RW
-//   0x438  TX_EXT_LOW       RW
-//          [0]      TX_EXT_LOW       RW
-//   0x440  TX_CFG_SEL       RW
-//          [1:0]    TX_CFG_SEL       RW
-//   0x444  TX_CFG_APPLY     WO
-//          [0]      APPLY            PULSE
-//   0x448  TX_CUST_PULSE_DUR RW
-//          [15:0]   TX_CUST_PULSE_DUR RW
-//   0x44C  TX_CUST_NULL_DUR RW
-//          [15:0]   TX_CUST_NULL_DUR RW
-//   0x450  TX_CUST_GAP_DUR  RW
+//   0x410  TX_EXT_LINE      RW
+//          [1]      LOW              RW
+//          [0]      HIGH             RW
+//   0x420  TX_INITIAL_DELAY RW
+//          [31:0]   TX_INITIAL_DELAY RW
+//   0x424  TX_INTER_WORD_GAP RW
+//          [31:0]   TX_INTER_WORD_GAP RW
+//   0x440  TX_CFG           RW
+//          [4]      APPLY            PULSE
+//          [1:0]    SEL              RW
+//   0x444  TX_CUST_TIMING   RW
+//          [31:16]  NULL_DUR         RW
+//          [15:0]   PULSE_DUR        RW
+//   0x448  TX_CUST_GAP_DUR  RW
 //          [31:0]   TX_CUST_GAP_DUR  RW
-//   0x454  TX_CUST_SLP      RW
+//   0x44C  TX_CUST_SLP      RW
 //          [0]      TX_CUST_SLP      RW
-//   0x460  TX_ACT_PULSE_DUR RO
-//          [15:0]   TX_ACT_PULSE_DUR RO
-//   0x464  TX_ACT_NULL_DUR  RO
-//          [15:0]   TX_ACT_NULL_DUR  RO
-//   0x468  TX_ACT_GAP_DUR   RO
+//   0x460  TX_ACT_TIMING    RO
+//          [31:16]  NULL_DUR         RO
+//          [15:0]   PULSE_DUR        RO
+//   0x464  TX_ACT_GAP_DUR   RO
 //          [31:0]   TX_ACT_GAP_DUR   RO
-//   0x46C  TX_ACT_SLP       RO
+//   0x468  TX_ACT_SLP       RO
 //          [0]      TX_ACT_SLP       RO
 //   0x480  TX_STATUS        RO
 //          [3:2]    ACT_CFG          RO
@@ -108,50 +97,44 @@
 //          [1]      FREEZE           RW
 //          [0]      ENABLE           RW
 //   0x804  TB_STATUS        RO
+//          [14]     SYNC_WAIT        RO
+//          [13]     LINE_LOW         RO
+//          [12]     LINE_HIGH        RO
 //          [9:8]    ACT_CFG          RO
 //          [6]      ERR_WRAP         RO
 //          [5]      WORD_WRAP        RO
 //          [4]      FROZEN           RO
-//   0x808  TB_CFG_SEL       RW
-//          [1:0]    TB_CFG_SEL       RW
-//   0x80C  TB_CFG_APPLY     WO
-//          [0]      APPLY            PULSE
-//   0x840  TB_CUST_GLITCH_FILTER_SIZE RW
-//          [15:0]   TB_CUST_GLITCH_FILTER_SIZE RW
-//   0x844  TB_CUST_MIN_PULSE RW
-//          [15:0]   TB_CUST_MIN_PULSE RW
-//   0x848  TB_CUST_MAX_PULSE RW
-//          [15:0]   TB_CUST_MAX_PULSE RW
-//   0x84C  TB_CUST_MIN_BIT  RW
-//          [15:0]   TB_CUST_MIN_BIT  RW
-//   0x850  TB_CUST_MAX_BIT  RW
-//          [15:0]   TB_CUST_MAX_BIT  RW
-//   0x854  TB_CUST_MAX_PULSE_ERR RW
-//          [15:0]   TB_CUST_MAX_PULSE_ERR RW
-//   0x858  TB_CUST_MAX_NULL_ERR RW
-//          [15:0]   TB_CUST_MAX_NULL_ERR RW
-//   0x85C  TB_CUST_MAX_GAP_ERR RW
-//          [15:0]   TB_CUST_MAX_GAP_ERR RW
-//   0x860  TB_CUST_PARITY_MODE RW
-//          [1:0]    TB_CUST_PARITY_MODE RW
-//   0x8A0  TB_ACT_GLITCH_FILTER_SIZE RO
-//          [15:0]   TB_ACT_GLITCH_FILTER_SIZE RO
-//   0x8A4  TB_ACT_MIN_PULSE RO
-//          [15:0]   TB_ACT_MIN_PULSE RO
-//   0x8A8  TB_ACT_MAX_PULSE RO
-//          [15:0]   TB_ACT_MAX_PULSE RO
-//   0x8AC  TB_ACT_MIN_BIT   RO
-//          [15:0]   TB_ACT_MIN_BIT   RO
-//   0x8B0  TB_ACT_MAX_BIT   RO
-//          [15:0]   TB_ACT_MAX_BIT   RO
-//   0x8B4  TB_ACT_MAX_PULSE_ERR RO
-//          [15:0]   TB_ACT_MAX_PULSE_ERR RO
-//   0x8B8  TB_ACT_MAX_NULL_ERR RO
-//          [15:0]   TB_ACT_MAX_NULL_ERR RO
-//   0x8BC  TB_ACT_MAX_GAP_ERR RO
-//          [15:0]   TB_ACT_MAX_GAP_ERR RO
-//   0x8C0  TB_ACT_PARITY_MODE RO
-//          [1:0]    TB_ACT_PARITY_MODE RO
+//   0x808  TB_CFG           RW
+//          [4]      APPLY            PULSE
+//          [1:0]    SEL              RW
+//   0x840  TB_CUST_PULSE    RW
+//          [31:16]  MAX              RW
+//          [15:0]   MIN              RW
+//   0x844  TB_CUST_BIT      RW
+//          [31:16]  MAX              RW
+//          [15:0]   MIN              RW
+//   0x848  TB_CUST_NOISE    RW
+//          [31:16]  NULL_ERR         RW
+//          [15:0]   PULSE_ERR        RW
+//   0x84C  TB_CUST_FILTER   RW
+//          [31:16]  GAP_ERR          RW
+//          [15:0]   GLITCH_SIZE      RW
+//   0x850  TB_CUST_PARITY   RW
+//          [1:0]    TB_CUST_PARITY   RW
+//   0x860  TB_ACT_PULSE     RO
+//          [31:16]  MAX              RO
+//          [15:0]   MIN              RO
+//   0x864  TB_ACT_BIT       RO
+//          [31:16]  MAX              RO
+//          [15:0]   MIN              RO
+//   0x868  TB_ACT_NOISE     RO
+//          [31:16]  NULL_ERR         RO
+//          [15:0]   PULSE_ERR        RO
+//   0x86C  TB_ACT_FILTER    RO
+//          [31:16]  GAP_ERR          RO
+//          [15:0]   GLITCH_SIZE      RO
+//   0x870  TB_ACT_PARITY    RO
+//          [1:0]    TB_ACT_PARITY    RO
 //   0x8E0  TB_WORD_CNT      RO
 //          [31:0]   TB_WORD_CNT      RO
 //   0x8E4  TB_ERR_CNT       RO
@@ -178,23 +161,20 @@
 //          [31:0]   TB_ERR_RD_TS_MSB RO
 //   0x928  TB_ERR_RD_TS_LSB RO
 //          [31:0]   TB_ERR_RD_TS_LSB RO
-//   0x92C  TB_ERR_RD_CODE   RO
-//          [15:0]   TB_ERR_RD_CODE   RO
-//   0x930  TB_ERR_RD_ADDR   RO
-//          [15:0]   TB_ERR_RD_ADDR   RO
-//   0x934  TB_ERR_RD_DATA   RO rd_strobe
+//   0x92C  TB_ERR_RD_INFO   RO
+//          [31:16]  ADDR             RO
+//          [15:0]   CODE             RO
+//   0x930  TB_ERR_RD_DATA   RO rd_strobe
 //          [31:0]   TB_ERR_RD_DATA   RO
 //   0x940  TB_BIT_RADDR     RW wr_strobe
 //          [10:8]   WORD_IDX         RW
 //          [4:0]    BIT_IDX          RW
 //   0x944  TB_BIT_RD_PULSE  RO
-//          [15:0]   TB_BIT_RD_PULSE  RO
-//   0x948  TB_BIT_RD_PULSE_ERR RO
-//          [15:0]   TB_BIT_RD_PULSE_ERR RO
-//   0x94C  TB_BIT_RD_NULL   RO
-//          [15:0]   TB_BIT_RD_NULL   RO
-//   0x950  TB_BIT_RD_NULL_ERR RO rd_strobe
-//          [15:0]   TB_BIT_RD_NULL_ERR RO
+//          [31:16]  ERR              RO
+//          [15:0]   DUR              RO
+//   0x948  TB_BIT_RD_NULL   RO rd_strobe
+//          [31:16]  ERR              RO
+//          [15:0]   DUR              RO
 //   0x9C0  TB_CHK_CTRL      RW
 //          [1]      CLEAR            PULSE
 //          [0]      ENABLE           RW
@@ -212,50 +192,44 @@
 //          [1]      FREEZE           RW
 //          [0]      ENABLE           RW
 //   0x4004  RX0_STATUS       RO
+//          [14]     SYNC_WAIT        RO
+//          [13]     LINE_LOW         RO
+//          [12]     LINE_HIGH        RO
 //          [9:8]    ACT_CFG          RO
 //          [6]      ERR_WRAP         RO
 //          [5]      WORD_WRAP        RO
 //          [4]      FROZEN           RO
-//   0x4008  RX0_CFG_SEL      RW
-//          [1:0]    RX0_CFG_SEL      RW
-//   0x400C  RX0_CFG_APPLY    WO
-//          [0]      APPLY            PULSE
-//   0x4040  RX0_CUST_GLITCH_FILTER_SIZE RW
-//          [15:0]   RX0_CUST_GLITCH_FILTER_SIZE RW
-//   0x4044  RX0_CUST_MIN_PULSE RW
-//          [15:0]   RX0_CUST_MIN_PULSE RW
-//   0x4048  RX0_CUST_MAX_PULSE RW
-//          [15:0]   RX0_CUST_MAX_PULSE RW
-//   0x404C  RX0_CUST_MIN_BIT RW
-//          [15:0]   RX0_CUST_MIN_BIT RW
-//   0x4050  RX0_CUST_MAX_BIT RW
-//          [15:0]   RX0_CUST_MAX_BIT RW
-//   0x4054  RX0_CUST_MAX_PULSE_ERR RW
-//          [15:0]   RX0_CUST_MAX_PULSE_ERR RW
-//   0x4058  RX0_CUST_MAX_NULL_ERR RW
-//          [15:0]   RX0_CUST_MAX_NULL_ERR RW
-//   0x405C  RX0_CUST_MAX_GAP_ERR RW
-//          [15:0]   RX0_CUST_MAX_GAP_ERR RW
-//   0x4060  RX0_CUST_PARITY_MODE RW
-//          [1:0]    RX0_CUST_PARITY_MODE RW
-//   0x40A0  RX0_ACT_GLITCH_FILTER_SIZE RO
-//          [15:0]   RX0_ACT_GLITCH_FILTER_SIZE RO
-//   0x40A4  RX0_ACT_MIN_PULSE RO
-//          [15:0]   RX0_ACT_MIN_PULSE RO
-//   0x40A8  RX0_ACT_MAX_PULSE RO
-//          [15:0]   RX0_ACT_MAX_PULSE RO
-//   0x40AC  RX0_ACT_MIN_BIT  RO
-//          [15:0]   RX0_ACT_MIN_BIT  RO
-//   0x40B0  RX0_ACT_MAX_BIT  RO
-//          [15:0]   RX0_ACT_MAX_BIT  RO
-//   0x40B4  RX0_ACT_MAX_PULSE_ERR RO
-//          [15:0]   RX0_ACT_MAX_PULSE_ERR RO
-//   0x40B8  RX0_ACT_MAX_NULL_ERR RO
-//          [15:0]   RX0_ACT_MAX_NULL_ERR RO
-//   0x40BC  RX0_ACT_MAX_GAP_ERR RO
-//          [15:0]   RX0_ACT_MAX_GAP_ERR RO
-//   0x40C0  RX0_ACT_PARITY_MODE RO
-//          [1:0]    RX0_ACT_PARITY_MODE RO
+//   0x4008  RX0_CFG          RW
+//          [4]      APPLY            PULSE
+//          [1:0]    SEL              RW
+//   0x4040  RX0_CUST_PULSE   RW
+//          [31:16]  MAX              RW
+//          [15:0]   MIN              RW
+//   0x4044  RX0_CUST_BIT     RW
+//          [31:16]  MAX              RW
+//          [15:0]   MIN              RW
+//   0x4048  RX0_CUST_NOISE   RW
+//          [31:16]  NULL_ERR         RW
+//          [15:0]   PULSE_ERR        RW
+//   0x404C  RX0_CUST_FILTER  RW
+//          [31:16]  GAP_ERR          RW
+//          [15:0]   GLITCH_SIZE      RW
+//   0x4050  RX0_CUST_PARITY  RW
+//          [1:0]    RX0_CUST_PARITY  RW
+//   0x4060  RX0_ACT_PULSE    RO
+//          [31:16]  MAX              RO
+//          [15:0]   MIN              RO
+//   0x4064  RX0_ACT_BIT      RO
+//          [31:16]  MAX              RO
+//          [15:0]   MIN              RO
+//   0x4068  RX0_ACT_NOISE    RO
+//          [31:16]  NULL_ERR         RO
+//          [15:0]   PULSE_ERR        RO
+//   0x406C  RX0_ACT_FILTER   RO
+//          [31:16]  GAP_ERR          RO
+//          [15:0]   GLITCH_SIZE      RO
+//   0x4070  RX0_ACT_PARITY   RO
+//          [1:0]    RX0_ACT_PARITY   RO
 //   0x40E0  RX0_WORD_CNT     RO
 //          [31:0]   RX0_WORD_CNT     RO
 //   0x40E4  RX0_ERR_CNT      RO
@@ -282,23 +256,20 @@
 //          [31:0]   RX0_ERR_RD_TS_MSB RO
 //   0x4128  RX0_ERR_RD_TS_LSB RO
 //          [31:0]   RX0_ERR_RD_TS_LSB RO
-//   0x412C  RX0_ERR_RD_CODE  RO
-//          [15:0]   RX0_ERR_RD_CODE  RO
-//   0x4130  RX0_ERR_RD_ADDR  RO
-//          [15:0]   RX0_ERR_RD_ADDR  RO
-//   0x4134  RX0_ERR_RD_DATA  RO rd_strobe
+//   0x412C  RX0_ERR_RD_INFO  RO
+//          [31:16]  ADDR             RO
+//          [15:0]   CODE             RO
+//   0x4130  RX0_ERR_RD_DATA  RO rd_strobe
 //          [31:0]   RX0_ERR_RD_DATA  RO
 //   0x4140  RX0_BIT_RADDR    RW wr_strobe
 //          [10:8]   WORD_IDX         RW
 //          [4:0]    BIT_IDX          RW
 //   0x4144  RX0_BIT_RD_PULSE RO
-//          [15:0]   RX0_BIT_RD_PULSE RO
-//   0x4148  RX0_BIT_RD_PULSE_ERR RO
-//          [15:0]   RX0_BIT_RD_PULSE_ERR RO
-//   0x414C  RX0_BIT_RD_NULL  RO
-//          [15:0]   RX0_BIT_RD_NULL  RO
-//   0x4150  RX0_BIT_RD_NULL_ERR RO rd_strobe
-//          [15:0]   RX0_BIT_RD_NULL_ERR RO
+//          [31:16]  ERR              RO
+//          [15:0]   DUR              RO
+//   0x4148  RX0_BIT_RD_NULL  RO rd_strobe
+//          [31:16]  ERR              RO
+//          [15:0]   DUR              RO
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -395,29 +366,29 @@ module	arinc429_axil #(
 		input	wire	[31:0]      	i_ts_lsb,	// TS_LSB.TS_LSB RO
 		output	wire	            	o_ts_lsb_rd,	// TS_LSB read strobe
 		input	wire	[31:0]      	i_ts_msb,	// TS_MSB.TS_MSB RO
-		output	wire	            	o_tx_transmitter_en,	// TX_TRANSMITTER_EN.TX_TRANSMITTER_EN RW
-		output	wire	            	o_tx_msg_sched_en,	// TX_MSG_SCHED_EN.TX_MSG_SCHED_EN RW
-		output	wire	            	o_tx_builder_en,	// TX_BUILDER_EN.TX_BUILDER_EN RW
-		output	wire	[7:0]       	o_tx_label,	// TX_LABEL.TX_LABEL RW
-		output	wire	[1:0]       	o_tx_sdi,	// TX_SDI.TX_SDI RW
-		output	wire	[18:0]      	o_tx_data,	// TX_DATA.TX_DATA RW
-		output	wire	[1:0]       	o_tx_ssm,	// TX_SSM.TX_SSM RW
-		output	wire	            	o_tx_parity_type,	// TX_PARITY_TYPE.TX_PARITY_TYPE RW
-		output	wire	            	o_tx_sched_en,	// TX_SCHED_EN.TX_SCHED_EN RW
-		output	wire	[31:0]      	o_tx_initial_delay,	// TX_INITIAL_DELAY.TX_INITIAL_DELAY RW
-		output	wire	[31:0]      	o_tx_inter_word_gap,	// TX_INTER_WORD_GAP.TX_INTER_WORD_GAP RW
+		output	wire	            	o_tx_ctrl_transmitter_en,	// TX_CTRL.TRANSMITTER_EN RW
+		output	wire	            	o_tx_ctrl_msg_sched_en,	// TX_CTRL.MSG_SCHED_EN RW
+		output	wire	            	o_tx_ctrl_builder_en,	// TX_CTRL.BUILDER_EN RW
+		output	wire	            	o_tx_ctrl_sched_en,	// TX_CTRL.SCHED_EN RW
+		output	wire	[7:0]       	o_tx_word_label_val,	// TX_WORD.LABEL_VAL RW
+		output	wire	[1:0]       	o_tx_word_sdi,	// TX_WORD.SDI RW
+		output	wire	[18:0]      	o_tx_word_data,	// TX_WORD.DATA RW
+		output	wire	[1:0]       	o_tx_word_ssm,	// TX_WORD.SSM RW
+		output	wire	            	o_tx_word_parity_type,	// TX_WORD.PARITY_TYPE RW
 		output	wire	            	o_tx_send_cmd_send,	// TX_SEND_CMD.SEND PULSE
 		output	wire	[31:0]      	o_tx_ext_data,	// TX_EXT_DATA.TX_EXT_DATA RW
-		output	wire	            	o_tx_ext_high,	// TX_EXT_HIGH.TX_EXT_HIGH RW
-		output	wire	            	o_tx_ext_low,	// TX_EXT_LOW.TX_EXT_LOW RW
-		output	wire	[1:0]       	o_tx_cfg_sel,	// TX_CFG_SEL.TX_CFG_SEL RW
-		output	wire	            	o_tx_cfg_apply_apply,	// TX_CFG_APPLY.APPLY PULSE
-		output	wire	[15:0]      	o_tx_cust_pulse_dur,	// TX_CUST_PULSE_DUR.TX_CUST_PULSE_DUR RW
-		output	wire	[15:0]      	o_tx_cust_null_dur,	// TX_CUST_NULL_DUR.TX_CUST_NULL_DUR RW
+		output	wire	            	o_tx_ext_line_high,	// TX_EXT_LINE.HIGH RW
+		output	wire	            	o_tx_ext_line_low,	// TX_EXT_LINE.LOW RW
+		output	wire	[31:0]      	o_tx_initial_delay,	// TX_INITIAL_DELAY.TX_INITIAL_DELAY RW
+		output	wire	[31:0]      	o_tx_inter_word_gap,	// TX_INTER_WORD_GAP.TX_INTER_WORD_GAP RW
+		output	wire	[1:0]       	o_tx_cfg_sel,	// TX_CFG.SEL RW
+		output	wire	            	o_tx_cfg_apply,	// TX_CFG.APPLY PULSE
+		output	wire	[15:0]      	o_tx_cust_timing_pulse_dur,	// TX_CUST_TIMING.PULSE_DUR RW
+		output	wire	[15:0]      	o_tx_cust_timing_null_dur,	// TX_CUST_TIMING.NULL_DUR RW
 		output	wire	[31:0]      	o_tx_cust_gap_dur,	// TX_CUST_GAP_DUR.TX_CUST_GAP_DUR RW
 		output	wire	            	o_tx_cust_slp,	// TX_CUST_SLP.TX_CUST_SLP RW
-		input	wire	[15:0]      	i_tx_act_pulse_dur,	// TX_ACT_PULSE_DUR.TX_ACT_PULSE_DUR RO
-		input	wire	[15:0]      	i_tx_act_null_dur,	// TX_ACT_NULL_DUR.TX_ACT_NULL_DUR RO
+		input	wire	[15:0]      	i_tx_act_timing_pulse_dur,	// TX_ACT_TIMING.PULSE_DUR RO
+		input	wire	[15:0]      	i_tx_act_timing_null_dur,	// TX_ACT_TIMING.NULL_DUR RO
 		input	wire	[31:0]      	i_tx_act_gap_dur,	// TX_ACT_GAP_DUR.TX_ACT_GAP_DUR RO
 		input	wire	            	i_tx_act_slp,	// TX_ACT_SLP.TX_ACT_SLP RO
 		input	wire	            	i_tx_status_busy,	// TX_STATUS.BUSY RO
@@ -431,26 +402,29 @@ module	arinc429_axil #(
 		input	wire	            	i_tb_status_word_wrap,	// TB_STATUS.WORD_WRAP RO
 		input	wire	            	i_tb_status_err_wrap,	// TB_STATUS.ERR_WRAP RO
 		input	wire	[1:0]       	i_tb_status_act_cfg,	// TB_STATUS.ACT_CFG RO
-		output	wire	[1:0]       	o_tb_cfg_sel,	// TB_CFG_SEL.TB_CFG_SEL RW
-		output	wire	            	o_tb_cfg_apply_apply,	// TB_CFG_APPLY.APPLY PULSE
-		output	wire	[15:0]      	o_tb_cust_glitch_filter_size,	// TB_CUST_GLITCH_FILTER_SIZE.TB_CUST_GLITCH_FILTER_SIZE RW
-		output	wire	[15:0]      	o_tb_cust_min_pulse,	// TB_CUST_MIN_PULSE.TB_CUST_MIN_PULSE RW
-		output	wire	[15:0]      	o_tb_cust_max_pulse,	// TB_CUST_MAX_PULSE.TB_CUST_MAX_PULSE RW
-		output	wire	[15:0]      	o_tb_cust_min_bit,	// TB_CUST_MIN_BIT.TB_CUST_MIN_BIT RW
-		output	wire	[15:0]      	o_tb_cust_max_bit,	// TB_CUST_MAX_BIT.TB_CUST_MAX_BIT RW
-		output	wire	[15:0]      	o_tb_cust_max_pulse_err,	// TB_CUST_MAX_PULSE_ERR.TB_CUST_MAX_PULSE_ERR RW
-		output	wire	[15:0]      	o_tb_cust_max_null_err,	// TB_CUST_MAX_NULL_ERR.TB_CUST_MAX_NULL_ERR RW
-		output	wire	[15:0]      	o_tb_cust_max_gap_err,	// TB_CUST_MAX_GAP_ERR.TB_CUST_MAX_GAP_ERR RW
-		output	wire	[1:0]       	o_tb_cust_parity_mode,	// TB_CUST_PARITY_MODE.TB_CUST_PARITY_MODE RW
-		input	wire	[15:0]      	i_tb_act_glitch_filter_size,	// TB_ACT_GLITCH_FILTER_SIZE.TB_ACT_GLITCH_FILTER_SIZE RO
-		input	wire	[15:0]      	i_tb_act_min_pulse,	// TB_ACT_MIN_PULSE.TB_ACT_MIN_PULSE RO
-		input	wire	[15:0]      	i_tb_act_max_pulse,	// TB_ACT_MAX_PULSE.TB_ACT_MAX_PULSE RO
-		input	wire	[15:0]      	i_tb_act_min_bit,	// TB_ACT_MIN_BIT.TB_ACT_MIN_BIT RO
-		input	wire	[15:0]      	i_tb_act_max_bit,	// TB_ACT_MAX_BIT.TB_ACT_MAX_BIT RO
-		input	wire	[15:0]      	i_tb_act_max_pulse_err,	// TB_ACT_MAX_PULSE_ERR.TB_ACT_MAX_PULSE_ERR RO
-		input	wire	[15:0]      	i_tb_act_max_null_err,	// TB_ACT_MAX_NULL_ERR.TB_ACT_MAX_NULL_ERR RO
-		input	wire	[15:0]      	i_tb_act_max_gap_err,	// TB_ACT_MAX_GAP_ERR.TB_ACT_MAX_GAP_ERR RO
-		input	wire	[1:0]       	i_tb_act_parity_mode,	// TB_ACT_PARITY_MODE.TB_ACT_PARITY_MODE RO
+		input	wire	            	i_tb_status_line_high,	// TB_STATUS.LINE_HIGH RO
+		input	wire	            	i_tb_status_line_low,	// TB_STATUS.LINE_LOW RO
+		input	wire	            	i_tb_status_sync_wait,	// TB_STATUS.SYNC_WAIT RO
+		output	wire	[1:0]       	o_tb_cfg_sel,	// TB_CFG.SEL RW
+		output	wire	            	o_tb_cfg_apply,	// TB_CFG.APPLY PULSE
+		output	wire	[15:0]      	o_tb_cust_pulse_min,	// TB_CUST_PULSE.MIN RW
+		output	wire	[15:0]      	o_tb_cust_pulse_max,	// TB_CUST_PULSE.MAX RW
+		output	wire	[15:0]      	o_tb_cust_bit_min,	// TB_CUST_BIT.MIN RW
+		output	wire	[15:0]      	o_tb_cust_bit_max,	// TB_CUST_BIT.MAX RW
+		output	wire	[15:0]      	o_tb_cust_noise_pulse_err,	// TB_CUST_NOISE.PULSE_ERR RW
+		output	wire	[15:0]      	o_tb_cust_noise_null_err,	// TB_CUST_NOISE.NULL_ERR RW
+		output	wire	[15:0]      	o_tb_cust_filter_glitch_size,	// TB_CUST_FILTER.GLITCH_SIZE RW
+		output	wire	[15:0]      	o_tb_cust_filter_gap_err,	// TB_CUST_FILTER.GAP_ERR RW
+		output	wire	[1:0]       	o_tb_cust_parity,	// TB_CUST_PARITY.TB_CUST_PARITY RW
+		input	wire	[15:0]      	i_tb_act_pulse_min,	// TB_ACT_PULSE.MIN RO
+		input	wire	[15:0]      	i_tb_act_pulse_max,	// TB_ACT_PULSE.MAX RO
+		input	wire	[15:0]      	i_tb_act_bit_min,	// TB_ACT_BIT.MIN RO
+		input	wire	[15:0]      	i_tb_act_bit_max,	// TB_ACT_BIT.MAX RO
+		input	wire	[15:0]      	i_tb_act_noise_pulse_err,	// TB_ACT_NOISE.PULSE_ERR RO
+		input	wire	[15:0]      	i_tb_act_noise_null_err,	// TB_ACT_NOISE.NULL_ERR RO
+		input	wire	[15:0]      	i_tb_act_filter_glitch_size,	// TB_ACT_FILTER.GLITCH_SIZE RO
+		input	wire	[15:0]      	i_tb_act_filter_gap_err,	// TB_ACT_FILTER.GAP_ERR RO
+		input	wire	[1:0]       	i_tb_act_parity,	// TB_ACT_PARITY.TB_ACT_PARITY RO
 		input	wire	[31:0]      	i_tb_word_cnt,	// TB_WORD_CNT.TB_WORD_CNT RO
 		input	wire	[31:0]      	i_tb_err_cnt,	// TB_ERR_CNT.TB_ERR_CNT RO
 		input	wire	[31:0]      	i_tb_drop_cnt,	// TB_DROP_CNT.TB_DROP_CNT RO
@@ -467,18 +441,18 @@ module	arinc429_axil #(
 		output	wire	            	o_tb_err_raddr_wr,	// TB_ERR_RADDR write strobe
 		input	wire	[31:0]      	i_tb_err_rd_ts_msb,	// TB_ERR_RD_TS_MSB.TB_ERR_RD_TS_MSB RO
 		input	wire	[31:0]      	i_tb_err_rd_ts_lsb,	// TB_ERR_RD_TS_LSB.TB_ERR_RD_TS_LSB RO
-		input	wire	[15:0]      	i_tb_err_rd_code,	// TB_ERR_RD_CODE.TB_ERR_RD_CODE RO
-		input	wire	[15:0]      	i_tb_err_rd_addr,	// TB_ERR_RD_ADDR.TB_ERR_RD_ADDR RO
+		input	wire	[15:0]      	i_tb_err_rd_info_code,	// TB_ERR_RD_INFO.CODE RO
+		input	wire	[15:0]      	i_tb_err_rd_info_addr,	// TB_ERR_RD_INFO.ADDR RO
 		input	wire	[31:0]      	i_tb_err_rd_data,	// TB_ERR_RD_DATA.TB_ERR_RD_DATA RO
 		output	wire	            	o_tb_err_rd_data_rd,	// TB_ERR_RD_DATA read strobe
 		output	wire	[4:0]       	o_tb_bit_raddr_bit_idx,	// TB_BIT_RADDR.BIT_IDX RW
 		output	wire	[2:0]       	o_tb_bit_raddr_word_idx,	// TB_BIT_RADDR.WORD_IDX RW
 		output	wire	            	o_tb_bit_raddr_wr,	// TB_BIT_RADDR write strobe
-		input	wire	[15:0]      	i_tb_bit_rd_pulse,	// TB_BIT_RD_PULSE.TB_BIT_RD_PULSE RO
-		input	wire	[15:0]      	i_tb_bit_rd_pulse_err,	// TB_BIT_RD_PULSE_ERR.TB_BIT_RD_PULSE_ERR RO
-		input	wire	[15:0]      	i_tb_bit_rd_null,	// TB_BIT_RD_NULL.TB_BIT_RD_NULL RO
-		input	wire	[15:0]      	i_tb_bit_rd_null_err,	// TB_BIT_RD_NULL_ERR.TB_BIT_RD_NULL_ERR RO
-		output	wire	            	o_tb_bit_rd_null_err_rd,	// TB_BIT_RD_NULL_ERR read strobe
+		input	wire	[15:0]      	i_tb_bit_rd_pulse_dur,	// TB_BIT_RD_PULSE.DUR RO
+		input	wire	[15:0]      	i_tb_bit_rd_pulse_err,	// TB_BIT_RD_PULSE.ERR RO
+		input	wire	[15:0]      	i_tb_bit_rd_null_dur,	// TB_BIT_RD_NULL.DUR RO
+		input	wire	[15:0]      	i_tb_bit_rd_null_err,	// TB_BIT_RD_NULL.ERR RO
+		output	wire	            	o_tb_bit_rd_null_rd,	// TB_BIT_RD_NULL read strobe
 		output	wire	            	o_tb_chk_ctrl_enable,	// TB_CHK_CTRL.ENABLE RW
 		output	wire	            	o_tb_chk_ctrl_clear,	// TB_CHK_CTRL.CLEAR PULSE
 		output	wire	[31:0]      	o_tb_chk_timeout,	// TB_CHK_TIMEOUT.TB_CHK_TIMEOUT RW
@@ -493,26 +467,29 @@ module	arinc429_axil #(
 		input	wire	            	i_rx0_status_word_wrap,	// RX0_STATUS.WORD_WRAP RO
 		input	wire	            	i_rx0_status_err_wrap,	// RX0_STATUS.ERR_WRAP RO
 		input	wire	[1:0]       	i_rx0_status_act_cfg,	// RX0_STATUS.ACT_CFG RO
-		output	wire	[1:0]       	o_rx0_cfg_sel,	// RX0_CFG_SEL.RX0_CFG_SEL RW
-		output	wire	            	o_rx0_cfg_apply_apply,	// RX0_CFG_APPLY.APPLY PULSE
-		output	wire	[15:0]      	o_rx0_cust_glitch_filter_size,	// RX0_CUST_GLITCH_FILTER_SIZE.RX0_CUST_GLITCH_FILTER_SIZE RW
-		output	wire	[15:0]      	o_rx0_cust_min_pulse,	// RX0_CUST_MIN_PULSE.RX0_CUST_MIN_PULSE RW
-		output	wire	[15:0]      	o_rx0_cust_max_pulse,	// RX0_CUST_MAX_PULSE.RX0_CUST_MAX_PULSE RW
-		output	wire	[15:0]      	o_rx0_cust_min_bit,	// RX0_CUST_MIN_BIT.RX0_CUST_MIN_BIT RW
-		output	wire	[15:0]      	o_rx0_cust_max_bit,	// RX0_CUST_MAX_BIT.RX0_CUST_MAX_BIT RW
-		output	wire	[15:0]      	o_rx0_cust_max_pulse_err,	// RX0_CUST_MAX_PULSE_ERR.RX0_CUST_MAX_PULSE_ERR RW
-		output	wire	[15:0]      	o_rx0_cust_max_null_err,	// RX0_CUST_MAX_NULL_ERR.RX0_CUST_MAX_NULL_ERR RW
-		output	wire	[15:0]      	o_rx0_cust_max_gap_err,	// RX0_CUST_MAX_GAP_ERR.RX0_CUST_MAX_GAP_ERR RW
-		output	wire	[1:0]       	o_rx0_cust_parity_mode,	// RX0_CUST_PARITY_MODE.RX0_CUST_PARITY_MODE RW
-		input	wire	[15:0]      	i_rx0_act_glitch_filter_size,	// RX0_ACT_GLITCH_FILTER_SIZE.RX0_ACT_GLITCH_FILTER_SIZE RO
-		input	wire	[15:0]      	i_rx0_act_min_pulse,	// RX0_ACT_MIN_PULSE.RX0_ACT_MIN_PULSE RO
-		input	wire	[15:0]      	i_rx0_act_max_pulse,	// RX0_ACT_MAX_PULSE.RX0_ACT_MAX_PULSE RO
-		input	wire	[15:0]      	i_rx0_act_min_bit,	// RX0_ACT_MIN_BIT.RX0_ACT_MIN_BIT RO
-		input	wire	[15:0]      	i_rx0_act_max_bit,	// RX0_ACT_MAX_BIT.RX0_ACT_MAX_BIT RO
-		input	wire	[15:0]      	i_rx0_act_max_pulse_err,	// RX0_ACT_MAX_PULSE_ERR.RX0_ACT_MAX_PULSE_ERR RO
-		input	wire	[15:0]      	i_rx0_act_max_null_err,	// RX0_ACT_MAX_NULL_ERR.RX0_ACT_MAX_NULL_ERR RO
-		input	wire	[15:0]      	i_rx0_act_max_gap_err,	// RX0_ACT_MAX_GAP_ERR.RX0_ACT_MAX_GAP_ERR RO
-		input	wire	[1:0]       	i_rx0_act_parity_mode,	// RX0_ACT_PARITY_MODE.RX0_ACT_PARITY_MODE RO
+		input	wire	            	i_rx0_status_line_high,	// RX0_STATUS.LINE_HIGH RO
+		input	wire	            	i_rx0_status_line_low,	// RX0_STATUS.LINE_LOW RO
+		input	wire	            	i_rx0_status_sync_wait,	// RX0_STATUS.SYNC_WAIT RO
+		output	wire	[1:0]       	o_rx0_cfg_sel,	// RX0_CFG.SEL RW
+		output	wire	            	o_rx0_cfg_apply,	// RX0_CFG.APPLY PULSE
+		output	wire	[15:0]      	o_rx0_cust_pulse_min,	// RX0_CUST_PULSE.MIN RW
+		output	wire	[15:0]      	o_rx0_cust_pulse_max,	// RX0_CUST_PULSE.MAX RW
+		output	wire	[15:0]      	o_rx0_cust_bit_min,	// RX0_CUST_BIT.MIN RW
+		output	wire	[15:0]      	o_rx0_cust_bit_max,	// RX0_CUST_BIT.MAX RW
+		output	wire	[15:0]      	o_rx0_cust_noise_pulse_err,	// RX0_CUST_NOISE.PULSE_ERR RW
+		output	wire	[15:0]      	o_rx0_cust_noise_null_err,	// RX0_CUST_NOISE.NULL_ERR RW
+		output	wire	[15:0]      	o_rx0_cust_filter_glitch_size,	// RX0_CUST_FILTER.GLITCH_SIZE RW
+		output	wire	[15:0]      	o_rx0_cust_filter_gap_err,	// RX0_CUST_FILTER.GAP_ERR RW
+		output	wire	[1:0]       	o_rx0_cust_parity,	// RX0_CUST_PARITY.RX0_CUST_PARITY RW
+		input	wire	[15:0]      	i_rx0_act_pulse_min,	// RX0_ACT_PULSE.MIN RO
+		input	wire	[15:0]      	i_rx0_act_pulse_max,	// RX0_ACT_PULSE.MAX RO
+		input	wire	[15:0]      	i_rx0_act_bit_min,	// RX0_ACT_BIT.MIN RO
+		input	wire	[15:0]      	i_rx0_act_bit_max,	// RX0_ACT_BIT.MAX RO
+		input	wire	[15:0]      	i_rx0_act_noise_pulse_err,	// RX0_ACT_NOISE.PULSE_ERR RO
+		input	wire	[15:0]      	i_rx0_act_noise_null_err,	// RX0_ACT_NOISE.NULL_ERR RO
+		input	wire	[15:0]      	i_rx0_act_filter_glitch_size,	// RX0_ACT_FILTER.GLITCH_SIZE RO
+		input	wire	[15:0]      	i_rx0_act_filter_gap_err,	// RX0_ACT_FILTER.GAP_ERR RO
+		input	wire	[1:0]       	i_rx0_act_parity,	// RX0_ACT_PARITY.RX0_ACT_PARITY RO
 		input	wire	[31:0]      	i_rx0_word_cnt,	// RX0_WORD_CNT.RX0_WORD_CNT RO
 		input	wire	[31:0]      	i_rx0_err_cnt,	// RX0_ERR_CNT.RX0_ERR_CNT RO
 		input	wire	[31:0]      	i_rx0_drop_cnt,	// RX0_DROP_CNT.RX0_DROP_CNT RO
@@ -529,18 +506,18 @@ module	arinc429_axil #(
 		output	wire	            	o_rx0_err_raddr_wr,	// RX0_ERR_RADDR write strobe
 		input	wire	[31:0]      	i_rx0_err_rd_ts_msb,	// RX0_ERR_RD_TS_MSB.RX0_ERR_RD_TS_MSB RO
 		input	wire	[31:0]      	i_rx0_err_rd_ts_lsb,	// RX0_ERR_RD_TS_LSB.RX0_ERR_RD_TS_LSB RO
-		input	wire	[15:0]      	i_rx0_err_rd_code,	// RX0_ERR_RD_CODE.RX0_ERR_RD_CODE RO
-		input	wire	[15:0]      	i_rx0_err_rd_addr,	// RX0_ERR_RD_ADDR.RX0_ERR_RD_ADDR RO
+		input	wire	[15:0]      	i_rx0_err_rd_info_code,	// RX0_ERR_RD_INFO.CODE RO
+		input	wire	[15:0]      	i_rx0_err_rd_info_addr,	// RX0_ERR_RD_INFO.ADDR RO
 		input	wire	[31:0]      	i_rx0_err_rd_data,	// RX0_ERR_RD_DATA.RX0_ERR_RD_DATA RO
 		output	wire	            	o_rx0_err_rd_data_rd,	// RX0_ERR_RD_DATA read strobe
 		output	wire	[4:0]       	o_rx0_bit_raddr_bit_idx,	// RX0_BIT_RADDR.BIT_IDX RW
 		output	wire	[2:0]       	o_rx0_bit_raddr_word_idx,	// RX0_BIT_RADDR.WORD_IDX RW
 		output	wire	            	o_rx0_bit_raddr_wr,	// RX0_BIT_RADDR write strobe
-		input	wire	[15:0]      	i_rx0_bit_rd_pulse,	// RX0_BIT_RD_PULSE.RX0_BIT_RD_PULSE RO
-		input	wire	[15:0]      	i_rx0_bit_rd_pulse_err,	// RX0_BIT_RD_PULSE_ERR.RX0_BIT_RD_PULSE_ERR RO
-		input	wire	[15:0]      	i_rx0_bit_rd_null,	// RX0_BIT_RD_NULL.RX0_BIT_RD_NULL RO
-		input	wire	[15:0]      	i_rx0_bit_rd_null_err,	// RX0_BIT_RD_NULL_ERR.RX0_BIT_RD_NULL_ERR RO
-		output	wire	            	o_rx0_bit_rd_null_err_rd	// RX0_BIT_RD_NULL_ERR read strobe
+		input	wire	[15:0]      	i_rx0_bit_rd_pulse_dur,	// RX0_BIT_RD_PULSE.DUR RO
+		input	wire	[15:0]      	i_rx0_bit_rd_pulse_err,	// RX0_BIT_RD_PULSE.ERR RO
+		input	wire	[15:0]      	i_rx0_bit_rd_null_dur,	// RX0_BIT_RD_NULL.DUR RO
+		input	wire	[15:0]      	i_rx0_bit_rd_null_err,	// RX0_BIT_RD_NULL.ERR RO
+		output	wire	            	o_rx0_bit_rd_null_rd	// RX0_BIT_RD_NULL read strobe
 		// }}}
 	);
 
@@ -568,9 +545,9 @@ module	arinc429_axil #(
 
 	localparam	REG_AW = 13;	// word address bits decoded
 
-	reg	[31:0]	r_global_freeze, r_ts_ctrl, r_tx_transmitter_en, r_tx_msg_sched_en, r_tx_builder_en, r_tx_label, r_tx_sdi, r_tx_data, r_tx_ssm, r_tx_parity_type, r_tx_sched_en, r_tx_initial_delay, r_tx_inter_word_gap, r_tx_ext_data, r_tx_ext_high, r_tx_ext_low, r_tx_cfg_sel, r_tx_cust_pulse_dur, r_tx_cust_null_dur, r_tx_cust_gap_dur, r_tx_cust_slp, r_tb_ctrl, r_tb_cfg_sel, r_tb_cust_glitch_filter_size, r_tb_cust_min_pulse, r_tb_cust_max_pulse, r_tb_cust_min_bit, r_tb_cust_max_bit, r_tb_cust_max_pulse_err, r_tb_cust_max_null_err, r_tb_cust_max_gap_err, r_tb_cust_parity_mode, r_tb_word_raddr, r_tb_err_raddr, r_tb_bit_raddr, r_tb_chk_ctrl, r_tb_chk_timeout, r_rx0_ctrl, r_rx0_cfg_sel, r_rx0_cust_glitch_filter_size, r_rx0_cust_min_pulse, r_rx0_cust_max_pulse, r_rx0_cust_min_bit, r_rx0_cust_max_bit, r_rx0_cust_max_pulse_err, r_rx0_cust_max_null_err, r_rx0_cust_max_gap_err, r_rx0_cust_parity_mode, r_rx0_word_raddr, r_rx0_err_raddr, r_rx0_bit_raddr;	// RW fields
-	wire	[31:0]	wskd_r_global_freeze, wskd_r_ts_ctrl, wskd_r_tx_transmitter_en, wskd_r_tx_msg_sched_en, wskd_r_tx_builder_en, wskd_r_tx_label, wskd_r_tx_sdi, wskd_r_tx_data, wskd_r_tx_ssm, wskd_r_tx_parity_type, wskd_r_tx_sched_en, wskd_r_tx_initial_delay, wskd_r_tx_inter_word_gap, wskd_r_tx_ext_data, wskd_r_tx_ext_high, wskd_r_tx_ext_low, wskd_r_tx_cfg_sel, wskd_r_tx_cust_pulse_dur, wskd_r_tx_cust_null_dur, wskd_r_tx_cust_gap_dur, wskd_r_tx_cust_slp, wskd_r_tb_ctrl, wskd_r_tb_cfg_sel, wskd_r_tb_cust_glitch_filter_size, wskd_r_tb_cust_min_pulse, wskd_r_tb_cust_max_pulse, wskd_r_tb_cust_min_bit, wskd_r_tb_cust_max_bit, wskd_r_tb_cust_max_pulse_err, wskd_r_tb_cust_max_null_err, wskd_r_tb_cust_max_gap_err, wskd_r_tb_cust_parity_mode, wskd_r_tb_word_raddr, wskd_r_tb_err_raddr, wskd_r_tb_bit_raddr, wskd_r_tb_chk_ctrl, wskd_r_tb_chk_timeout, wskd_r_rx0_ctrl, wskd_r_rx0_cfg_sel, wskd_r_rx0_cust_glitch_filter_size, wskd_r_rx0_cust_min_pulse, wskd_r_rx0_cust_max_pulse, wskd_r_rx0_cust_min_bit, wskd_r_rx0_cust_max_bit, wskd_r_rx0_cust_max_pulse_err, wskd_r_rx0_cust_max_null_err, wskd_r_rx0_cust_max_gap_err, wskd_r_rx0_cust_parity_mode, wskd_r_rx0_word_raddr, wskd_r_rx0_err_raddr, wskd_r_rx0_bit_raddr;
-	reg	[31:0]	p_soft_reset, p_ts_ctrl, p_tx_send_cmd, p_tx_cfg_apply, p_tb_ctrl, p_tb_cfg_apply, p_tb_chk_ctrl, p_rx0_ctrl, p_rx0_cfg_apply;	// PULSE fields
+	reg	[31:0]	r_global_freeze, r_ts_ctrl, r_tx_ctrl, r_tx_word, r_tx_ext_data, r_tx_ext_line, r_tx_initial_delay, r_tx_inter_word_gap, r_tx_cfg, r_tx_cust_timing, r_tx_cust_gap_dur, r_tx_cust_slp, r_tb_ctrl, r_tb_cfg, r_tb_cust_pulse, r_tb_cust_bit, r_tb_cust_noise, r_tb_cust_filter, r_tb_cust_parity, r_tb_word_raddr, r_tb_err_raddr, r_tb_bit_raddr, r_tb_chk_ctrl, r_tb_chk_timeout, r_rx0_ctrl, r_rx0_cfg, r_rx0_cust_pulse, r_rx0_cust_bit, r_rx0_cust_noise, r_rx0_cust_filter, r_rx0_cust_parity, r_rx0_word_raddr, r_rx0_err_raddr, r_rx0_bit_raddr;	// RW fields
+	wire	[31:0]	wskd_r_global_freeze, wskd_r_ts_ctrl, wskd_r_tx_ctrl, wskd_r_tx_word, wskd_r_tx_ext_data, wskd_r_tx_ext_line, wskd_r_tx_initial_delay, wskd_r_tx_inter_word_gap, wskd_r_tx_cfg, wskd_r_tx_cust_timing, wskd_r_tx_cust_gap_dur, wskd_r_tx_cust_slp, wskd_r_tb_ctrl, wskd_r_tb_cfg, wskd_r_tb_cust_pulse, wskd_r_tb_cust_bit, wskd_r_tb_cust_noise, wskd_r_tb_cust_filter, wskd_r_tb_cust_parity, wskd_r_tb_word_raddr, wskd_r_tb_err_raddr, wskd_r_tb_bit_raddr, wskd_r_tb_chk_ctrl, wskd_r_tb_chk_timeout, wskd_r_rx0_ctrl, wskd_r_rx0_cfg, wskd_r_rx0_cust_pulse, wskd_r_rx0_cust_bit, wskd_r_rx0_cust_noise, wskd_r_rx0_cust_filter, wskd_r_rx0_cust_parity, wskd_r_rx0_word_raddr, wskd_r_rx0_err_raddr, wskd_r_rx0_bit_raddr;
+	reg	[31:0]	p_soft_reset, p_ts_ctrl, p_tx_send_cmd, p_tx_cfg, p_tb_ctrl, p_tb_cfg, p_tb_chk_ctrl, p_rx0_ctrl, p_rx0_cfg;	// PULSE fields
 	// }}}
 	////////////////////////////////////////////////////////////////////////
 	//
@@ -713,104 +690,70 @@ module	arinc429_axil #(
 	// apply_wstrb(old_data, new_data, write_strobes)
 	assign	wskd_r_global_freeze = apply_wstrb(r_global_freeze, wskd_data, wskd_strb);
 	assign	wskd_r_ts_ctrl = apply_wstrb(r_ts_ctrl, wskd_data, wskd_strb);
-	assign	wskd_r_tx_transmitter_en = apply_wstrb(r_tx_transmitter_en, wskd_data, wskd_strb);
-	assign	wskd_r_tx_msg_sched_en = apply_wstrb(r_tx_msg_sched_en, wskd_data, wskd_strb);
-	assign	wskd_r_tx_builder_en = apply_wstrb(r_tx_builder_en, wskd_data, wskd_strb);
-	assign	wskd_r_tx_label = apply_wstrb(r_tx_label, wskd_data, wskd_strb);
-	assign	wskd_r_tx_sdi = apply_wstrb(r_tx_sdi, wskd_data, wskd_strb);
-	assign	wskd_r_tx_data = apply_wstrb(r_tx_data, wskd_data, wskd_strb);
-	assign	wskd_r_tx_ssm = apply_wstrb(r_tx_ssm, wskd_data, wskd_strb);
-	assign	wskd_r_tx_parity_type = apply_wstrb(r_tx_parity_type, wskd_data, wskd_strb);
-	assign	wskd_r_tx_sched_en = apply_wstrb(r_tx_sched_en, wskd_data, wskd_strb);
+	assign	wskd_r_tx_ctrl = apply_wstrb(r_tx_ctrl, wskd_data, wskd_strb);
+	assign	wskd_r_tx_word = apply_wstrb(r_tx_word, wskd_data, wskd_strb);
+	assign	wskd_r_tx_ext_data = apply_wstrb(r_tx_ext_data, wskd_data, wskd_strb);
+	assign	wskd_r_tx_ext_line = apply_wstrb(r_tx_ext_line, wskd_data, wskd_strb);
 	assign	wskd_r_tx_initial_delay = apply_wstrb(r_tx_initial_delay, wskd_data, wskd_strb);
 	assign	wskd_r_tx_inter_word_gap = apply_wstrb(r_tx_inter_word_gap, wskd_data, wskd_strb);
-	assign	wskd_r_tx_ext_data = apply_wstrb(r_tx_ext_data, wskd_data, wskd_strb);
-	assign	wskd_r_tx_ext_high = apply_wstrb(r_tx_ext_high, wskd_data, wskd_strb);
-	assign	wskd_r_tx_ext_low = apply_wstrb(r_tx_ext_low, wskd_data, wskd_strb);
-	assign	wskd_r_tx_cfg_sel = apply_wstrb(r_tx_cfg_sel, wskd_data, wskd_strb);
-	assign	wskd_r_tx_cust_pulse_dur = apply_wstrb(r_tx_cust_pulse_dur, wskd_data, wskd_strb);
-	assign	wskd_r_tx_cust_null_dur = apply_wstrb(r_tx_cust_null_dur, wskd_data, wskd_strb);
+	assign	wskd_r_tx_cfg = apply_wstrb(r_tx_cfg, wskd_data, wskd_strb);
+	assign	wskd_r_tx_cust_timing = apply_wstrb(r_tx_cust_timing, wskd_data, wskd_strb);
 	assign	wskd_r_tx_cust_gap_dur = apply_wstrb(r_tx_cust_gap_dur, wskd_data, wskd_strb);
 	assign	wskd_r_tx_cust_slp = apply_wstrb(r_tx_cust_slp, wskd_data, wskd_strb);
 	assign	wskd_r_tb_ctrl = apply_wstrb(r_tb_ctrl, wskd_data, wskd_strb);
-	assign	wskd_r_tb_cfg_sel = apply_wstrb(r_tb_cfg_sel, wskd_data, wskd_strb);
-	assign	wskd_r_tb_cust_glitch_filter_size = apply_wstrb(r_tb_cust_glitch_filter_size, wskd_data, wskd_strb);
-	assign	wskd_r_tb_cust_min_pulse = apply_wstrb(r_tb_cust_min_pulse, wskd_data, wskd_strb);
-	assign	wskd_r_tb_cust_max_pulse = apply_wstrb(r_tb_cust_max_pulse, wskd_data, wskd_strb);
-	assign	wskd_r_tb_cust_min_bit = apply_wstrb(r_tb_cust_min_bit, wskd_data, wskd_strb);
-	assign	wskd_r_tb_cust_max_bit = apply_wstrb(r_tb_cust_max_bit, wskd_data, wskd_strb);
-	assign	wskd_r_tb_cust_max_pulse_err = apply_wstrb(r_tb_cust_max_pulse_err, wskd_data, wskd_strb);
-	assign	wskd_r_tb_cust_max_null_err = apply_wstrb(r_tb_cust_max_null_err, wskd_data, wskd_strb);
-	assign	wskd_r_tb_cust_max_gap_err = apply_wstrb(r_tb_cust_max_gap_err, wskd_data, wskd_strb);
-	assign	wskd_r_tb_cust_parity_mode = apply_wstrb(r_tb_cust_parity_mode, wskd_data, wskd_strb);
+	assign	wskd_r_tb_cfg = apply_wstrb(r_tb_cfg, wskd_data, wskd_strb);
+	assign	wskd_r_tb_cust_pulse = apply_wstrb(r_tb_cust_pulse, wskd_data, wskd_strb);
+	assign	wskd_r_tb_cust_bit = apply_wstrb(r_tb_cust_bit, wskd_data, wskd_strb);
+	assign	wskd_r_tb_cust_noise = apply_wstrb(r_tb_cust_noise, wskd_data, wskd_strb);
+	assign	wskd_r_tb_cust_filter = apply_wstrb(r_tb_cust_filter, wskd_data, wskd_strb);
+	assign	wskd_r_tb_cust_parity = apply_wstrb(r_tb_cust_parity, wskd_data, wskd_strb);
 	assign	wskd_r_tb_word_raddr = apply_wstrb(r_tb_word_raddr, wskd_data, wskd_strb);
 	assign	wskd_r_tb_err_raddr = apply_wstrb(r_tb_err_raddr, wskd_data, wskd_strb);
 	assign	wskd_r_tb_bit_raddr = apply_wstrb(r_tb_bit_raddr, wskd_data, wskd_strb);
 	assign	wskd_r_tb_chk_ctrl = apply_wstrb(r_tb_chk_ctrl, wskd_data, wskd_strb);
 	assign	wskd_r_tb_chk_timeout = apply_wstrb(r_tb_chk_timeout, wskd_data, wskd_strb);
 	assign	wskd_r_rx0_ctrl = apply_wstrb(r_rx0_ctrl, wskd_data, wskd_strb);
-	assign	wskd_r_rx0_cfg_sel = apply_wstrb(r_rx0_cfg_sel, wskd_data, wskd_strb);
-	assign	wskd_r_rx0_cust_glitch_filter_size = apply_wstrb(r_rx0_cust_glitch_filter_size, wskd_data, wskd_strb);
-	assign	wskd_r_rx0_cust_min_pulse = apply_wstrb(r_rx0_cust_min_pulse, wskd_data, wskd_strb);
-	assign	wskd_r_rx0_cust_max_pulse = apply_wstrb(r_rx0_cust_max_pulse, wskd_data, wskd_strb);
-	assign	wskd_r_rx0_cust_min_bit = apply_wstrb(r_rx0_cust_min_bit, wskd_data, wskd_strb);
-	assign	wskd_r_rx0_cust_max_bit = apply_wstrb(r_rx0_cust_max_bit, wskd_data, wskd_strb);
-	assign	wskd_r_rx0_cust_max_pulse_err = apply_wstrb(r_rx0_cust_max_pulse_err, wskd_data, wskd_strb);
-	assign	wskd_r_rx0_cust_max_null_err = apply_wstrb(r_rx0_cust_max_null_err, wskd_data, wskd_strb);
-	assign	wskd_r_rx0_cust_max_gap_err = apply_wstrb(r_rx0_cust_max_gap_err, wskd_data, wskd_strb);
-	assign	wskd_r_rx0_cust_parity_mode = apply_wstrb(r_rx0_cust_parity_mode, wskd_data, wskd_strb);
+	assign	wskd_r_rx0_cfg = apply_wstrb(r_rx0_cfg, wskd_data, wskd_strb);
+	assign	wskd_r_rx0_cust_pulse = apply_wstrb(r_rx0_cust_pulse, wskd_data, wskd_strb);
+	assign	wskd_r_rx0_cust_bit = apply_wstrb(r_rx0_cust_bit, wskd_data, wskd_strb);
+	assign	wskd_r_rx0_cust_noise = apply_wstrb(r_rx0_cust_noise, wskd_data, wskd_strb);
+	assign	wskd_r_rx0_cust_filter = apply_wstrb(r_rx0_cust_filter, wskd_data, wskd_strb);
+	assign	wskd_r_rx0_cust_parity = apply_wstrb(r_rx0_cust_parity, wskd_data, wskd_strb);
 	assign	wskd_r_rx0_word_raddr = apply_wstrb(r_rx0_word_raddr, wskd_data, wskd_strb);
 	assign	wskd_r_rx0_err_raddr = apply_wstrb(r_rx0_err_raddr, wskd_data, wskd_strb);
 	assign	wskd_r_rx0_bit_raddr = apply_wstrb(r_rx0_bit_raddr, wskd_data, wskd_strb);
 
 	initial	r_global_freeze = 32'h0;
 	initial	r_ts_ctrl = 32'h1;
-	initial	r_tx_transmitter_en = 32'h0;
-	initial	r_tx_msg_sched_en = 32'h0;
-	initial	r_tx_builder_en = 32'h0;
-	initial	r_tx_label = 32'h0;
-	initial	r_tx_sdi = 32'h0;
-	initial	r_tx_data = 32'h0;
-	initial	r_tx_ssm = 32'h0;
-	initial	r_tx_parity_type = 32'h1;
-	initial	r_tx_sched_en = 32'h0;
+	initial	r_tx_ctrl = 32'h0;
+	initial	r_tx_word = 32'h80000000;
+	initial	r_tx_ext_data = 32'h0;
+	initial	r_tx_ext_line = 32'h0;
 	initial	r_tx_initial_delay = 32'h0;
 	initial	r_tx_inter_word_gap = 32'h1;
-	initial	r_tx_ext_data = 32'h0;
-	initial	r_tx_ext_high = 32'h0;
-	initial	r_tx_ext_low = 32'h0;
-	initial	r_tx_cfg_sel = 32'h0;
-	initial	r_tx_cust_pulse_dur = 32'h0;
-	initial	r_tx_cust_null_dur = 32'h0;
+	initial	r_tx_cfg = 32'h0;
+	initial	r_tx_cust_timing = 32'h0;
 	initial	r_tx_cust_gap_dur = 32'h0;
 	initial	r_tx_cust_slp = 32'h0;
 	initial	r_tb_ctrl = 32'h0;
-	initial	r_tb_cfg_sel = 32'h0;
-	initial	r_tb_cust_glitch_filter_size = 32'h0;
-	initial	r_tb_cust_min_pulse = 32'h0;
-	initial	r_tb_cust_max_pulse = 32'h0;
-	initial	r_tb_cust_min_bit = 32'h0;
-	initial	r_tb_cust_max_bit = 32'h0;
-	initial	r_tb_cust_max_pulse_err = 32'h0;
-	initial	r_tb_cust_max_null_err = 32'h0;
-	initial	r_tb_cust_max_gap_err = 32'h0;
-	initial	r_tb_cust_parity_mode = 32'h1;
+	initial	r_tb_cfg = 32'h0;
+	initial	r_tb_cust_pulse = 32'h0;
+	initial	r_tb_cust_bit = 32'h0;
+	initial	r_tb_cust_noise = 32'h0;
+	initial	r_tb_cust_filter = 32'h0;
+	initial	r_tb_cust_parity = 32'h1;
 	initial	r_tb_word_raddr = 32'h0;
 	initial	r_tb_err_raddr = 32'h0;
 	initial	r_tb_bit_raddr = 32'h0;
 	initial	r_tb_chk_ctrl = 32'h0;
 	initial	r_tb_chk_timeout = 32'h0;
 	initial	r_rx0_ctrl = 32'h0;
-	initial	r_rx0_cfg_sel = 32'h0;
-	initial	r_rx0_cust_glitch_filter_size = 32'h0;
-	initial	r_rx0_cust_min_pulse = 32'h0;
-	initial	r_rx0_cust_max_pulse = 32'h0;
-	initial	r_rx0_cust_min_bit = 32'h0;
-	initial	r_rx0_cust_max_bit = 32'h0;
-	initial	r_rx0_cust_max_pulse_err = 32'h0;
-	initial	r_rx0_cust_max_null_err = 32'h0;
-	initial	r_rx0_cust_max_gap_err = 32'h0;
-	initial	r_rx0_cust_parity_mode = 32'h1;
+	initial	r_rx0_cfg = 32'h0;
+	initial	r_rx0_cust_pulse = 32'h0;
+	initial	r_rx0_cust_bit = 32'h0;
+	initial	r_rx0_cust_noise = 32'h0;
+	initial	r_rx0_cust_filter = 32'h0;
+	initial	r_rx0_cust_parity = 32'h1;
 	initial	r_rx0_word_raddr = 32'h0;
 	initial	r_rx0_err_raddr = 32'h0;
 	initial	r_rx0_bit_raddr = 32'h0;
@@ -819,52 +762,35 @@ module	arinc429_axil #(
 	begin
 		r_global_freeze <= 32'h0;
 		r_ts_ctrl <= 32'h1;
-		r_tx_transmitter_en <= 32'h0;
-		r_tx_msg_sched_en <= 32'h0;
-		r_tx_builder_en <= 32'h0;
-		r_tx_label <= 32'h0;
-		r_tx_sdi <= 32'h0;
-		r_tx_data <= 32'h0;
-		r_tx_ssm <= 32'h0;
-		r_tx_parity_type <= 32'h1;
-		r_tx_sched_en <= 32'h0;
+		r_tx_ctrl <= 32'h0;
+		r_tx_word <= 32'h80000000;
+		r_tx_ext_data <= 32'h0;
+		r_tx_ext_line <= 32'h0;
 		r_tx_initial_delay <= 32'h0;
 		r_tx_inter_word_gap <= 32'h1;
-		r_tx_ext_data <= 32'h0;
-		r_tx_ext_high <= 32'h0;
-		r_tx_ext_low <= 32'h0;
-		r_tx_cfg_sel <= 32'h0;
-		r_tx_cust_pulse_dur <= 32'h0;
-		r_tx_cust_null_dur <= 32'h0;
+		r_tx_cfg <= 32'h0;
+		r_tx_cust_timing <= 32'h0;
 		r_tx_cust_gap_dur <= 32'h0;
 		r_tx_cust_slp <= 32'h0;
 		r_tb_ctrl <= 32'h0;
-		r_tb_cfg_sel <= 32'h0;
-		r_tb_cust_glitch_filter_size <= 32'h0;
-		r_tb_cust_min_pulse <= 32'h0;
-		r_tb_cust_max_pulse <= 32'h0;
-		r_tb_cust_min_bit <= 32'h0;
-		r_tb_cust_max_bit <= 32'h0;
-		r_tb_cust_max_pulse_err <= 32'h0;
-		r_tb_cust_max_null_err <= 32'h0;
-		r_tb_cust_max_gap_err <= 32'h0;
-		r_tb_cust_parity_mode <= 32'h1;
+		r_tb_cfg <= 32'h0;
+		r_tb_cust_pulse <= 32'h0;
+		r_tb_cust_bit <= 32'h0;
+		r_tb_cust_noise <= 32'h0;
+		r_tb_cust_filter <= 32'h0;
+		r_tb_cust_parity <= 32'h1;
 		r_tb_word_raddr <= 32'h0;
 		r_tb_err_raddr <= 32'h0;
 		r_tb_bit_raddr <= 32'h0;
 		r_tb_chk_ctrl <= 32'h0;
 		r_tb_chk_timeout <= 32'h0;
 		r_rx0_ctrl <= 32'h0;
-		r_rx0_cfg_sel <= 32'h0;
-		r_rx0_cust_glitch_filter_size <= 32'h0;
-		r_rx0_cust_min_pulse <= 32'h0;
-		r_rx0_cust_max_pulse <= 32'h0;
-		r_rx0_cust_min_bit <= 32'h0;
-		r_rx0_cust_max_bit <= 32'h0;
-		r_rx0_cust_max_pulse_err <= 32'h0;
-		r_rx0_cust_max_null_err <= 32'h0;
-		r_rx0_cust_max_gap_err <= 32'h0;
-		r_rx0_cust_parity_mode <= 32'h1;
+		r_rx0_cfg <= 32'h0;
+		r_rx0_cust_pulse <= 32'h0;
+		r_rx0_cust_bit <= 32'h0;
+		r_rx0_cust_noise <= 32'h0;
+		r_rx0_cust_filter <= 32'h0;
+		r_rx0_cust_parity <= 32'h1;
 		r_rx0_word_raddr <= 32'h0;
 		r_rx0_err_raddr <= 32'h0;
 		r_rx0_bit_raddr <= 32'h0;
@@ -873,52 +799,35 @@ module	arinc429_axil #(
 		case(awskd_addr[REG_AW-1:0])
 		13'd9:	r_global_freeze <= wskd_r_global_freeze & 32'h1;
 		13'd10:	r_ts_ctrl <= wskd_r_ts_ctrl & 32'h1;
-		13'd256:	r_tx_transmitter_en <= wskd_r_tx_transmitter_en & 32'h1;
-		13'd257:	r_tx_msg_sched_en <= wskd_r_tx_msg_sched_en & 32'h1;
-		13'd258:	r_tx_builder_en <= wskd_r_tx_builder_en & 32'h1;
-		13'd259:	r_tx_label <= wskd_r_tx_label & 32'hFF;
-		13'd260:	r_tx_sdi <= wskd_r_tx_sdi & 32'h3;
-		13'd261:	r_tx_data <= wskd_r_tx_data & 32'h7FFFF;
-		13'd262:	r_tx_ssm <= wskd_r_tx_ssm & 32'h3;
-		13'd263:	r_tx_parity_type <= wskd_r_tx_parity_type & 32'h1;
-		13'd264:	r_tx_sched_en <= wskd_r_tx_sched_en & 32'h1;
-		13'd265:	r_tx_initial_delay <= wskd_r_tx_initial_delay & 32'hFFFFFFFF;
-		13'd266:	r_tx_inter_word_gap <= wskd_r_tx_inter_word_gap & 32'hFFFFFFFF;
-		13'd268:	r_tx_ext_data <= wskd_r_tx_ext_data & 32'hFFFFFFFF;
-		13'd269:	r_tx_ext_high <= wskd_r_tx_ext_high & 32'h1;
-		13'd270:	r_tx_ext_low <= wskd_r_tx_ext_low & 32'h1;
-		13'd272:	r_tx_cfg_sel <= wskd_r_tx_cfg_sel & 32'h3;
-		13'd274:	r_tx_cust_pulse_dur <= wskd_r_tx_cust_pulse_dur & 32'hFFFF;
-		13'd275:	r_tx_cust_null_dur <= wskd_r_tx_cust_null_dur & 32'hFFFF;
-		13'd276:	r_tx_cust_gap_dur <= wskd_r_tx_cust_gap_dur & 32'hFFFFFFFF;
-		13'd277:	r_tx_cust_slp <= wskd_r_tx_cust_slp & 32'h1;
+		13'd256:	r_tx_ctrl <= wskd_r_tx_ctrl & 32'hF;
+		13'd257:	r_tx_word <= wskd_r_tx_word & 32'hFFFFFFFF;
+		13'd259:	r_tx_ext_data <= wskd_r_tx_ext_data & 32'hFFFFFFFF;
+		13'd260:	r_tx_ext_line <= wskd_r_tx_ext_line & 32'h3;
+		13'd264:	r_tx_initial_delay <= wskd_r_tx_initial_delay & 32'hFFFFFFFF;
+		13'd265:	r_tx_inter_word_gap <= wskd_r_tx_inter_word_gap & 32'hFFFFFFFF;
+		13'd272:	r_tx_cfg <= wskd_r_tx_cfg & 32'h3;
+		13'd273:	r_tx_cust_timing <= wskd_r_tx_cust_timing & 32'hFFFFFFFF;
+		13'd274:	r_tx_cust_gap_dur <= wskd_r_tx_cust_gap_dur & 32'hFFFFFFFF;
+		13'd275:	r_tx_cust_slp <= wskd_r_tx_cust_slp & 32'h1;
 		13'd512:	r_tb_ctrl <= wskd_r_tb_ctrl & 32'h3;
-		13'd514:	r_tb_cfg_sel <= wskd_r_tb_cfg_sel & 32'h3;
-		13'd528:	r_tb_cust_glitch_filter_size <= wskd_r_tb_cust_glitch_filter_size & 32'hFFFF;
-		13'd529:	r_tb_cust_min_pulse <= wskd_r_tb_cust_min_pulse & 32'hFFFF;
-		13'd530:	r_tb_cust_max_pulse <= wskd_r_tb_cust_max_pulse & 32'hFFFF;
-		13'd531:	r_tb_cust_min_bit <= wskd_r_tb_cust_min_bit & 32'hFFFF;
-		13'd532:	r_tb_cust_max_bit <= wskd_r_tb_cust_max_bit & 32'hFFFF;
-		13'd533:	r_tb_cust_max_pulse_err <= wskd_r_tb_cust_max_pulse_err & 32'hFFFF;
-		13'd534:	r_tb_cust_max_null_err <= wskd_r_tb_cust_max_null_err & 32'hFFFF;
-		13'd535:	r_tb_cust_max_gap_err <= wskd_r_tb_cust_max_gap_err & 32'hFFFF;
-		13'd536:	r_tb_cust_parity_mode <= wskd_r_tb_cust_parity_mode & 32'h3;
+		13'd514:	r_tb_cfg <= wskd_r_tb_cfg & 32'h3;
+		13'd528:	r_tb_cust_pulse <= wskd_r_tb_cust_pulse & 32'hFFFFFFFF;
+		13'd529:	r_tb_cust_bit <= wskd_r_tb_cust_bit & 32'hFFFFFFFF;
+		13'd530:	r_tb_cust_noise <= wskd_r_tb_cust_noise & 32'hFFFFFFFF;
+		13'd531:	r_tb_cust_filter <= wskd_r_tb_cust_filter & 32'hFFFFFFFF;
+		13'd532:	r_tb_cust_parity <= wskd_r_tb_cust_parity & 32'h3;
 		13'd576:	r_tb_word_raddr <= wskd_r_tb_word_raddr & 32'hFF;
 		13'd584:	r_tb_err_raddr <= wskd_r_tb_err_raddr & 32'hFF;
 		13'd592:	r_tb_bit_raddr <= wskd_r_tb_bit_raddr & 32'h71F;
 		13'd624:	r_tb_chk_ctrl <= wskd_r_tb_chk_ctrl & 32'h1;
 		13'd625:	r_tb_chk_timeout <= wskd_r_tb_chk_timeout & 32'hFFFFFFFF;
 		13'd4096:	r_rx0_ctrl <= wskd_r_rx0_ctrl & 32'h3;
-		13'd4098:	r_rx0_cfg_sel <= wskd_r_rx0_cfg_sel & 32'h3;
-		13'd4112:	r_rx0_cust_glitch_filter_size <= wskd_r_rx0_cust_glitch_filter_size & 32'hFFFF;
-		13'd4113:	r_rx0_cust_min_pulse <= wskd_r_rx0_cust_min_pulse & 32'hFFFF;
-		13'd4114:	r_rx0_cust_max_pulse <= wskd_r_rx0_cust_max_pulse & 32'hFFFF;
-		13'd4115:	r_rx0_cust_min_bit <= wskd_r_rx0_cust_min_bit & 32'hFFFF;
-		13'd4116:	r_rx0_cust_max_bit <= wskd_r_rx0_cust_max_bit & 32'hFFFF;
-		13'd4117:	r_rx0_cust_max_pulse_err <= wskd_r_rx0_cust_max_pulse_err & 32'hFFFF;
-		13'd4118:	r_rx0_cust_max_null_err <= wskd_r_rx0_cust_max_null_err & 32'hFFFF;
-		13'd4119:	r_rx0_cust_max_gap_err <= wskd_r_rx0_cust_max_gap_err & 32'hFFFF;
-		13'd4120:	r_rx0_cust_parity_mode <= wskd_r_rx0_cust_parity_mode & 32'h3;
+		13'd4098:	r_rx0_cfg <= wskd_r_rx0_cfg & 32'h3;
+		13'd4112:	r_rx0_cust_pulse <= wskd_r_rx0_cust_pulse & 32'hFFFFFFFF;
+		13'd4113:	r_rx0_cust_bit <= wskd_r_rx0_cust_bit & 32'hFFFFFFFF;
+		13'd4114:	r_rx0_cust_noise <= wskd_r_rx0_cust_noise & 32'hFFFFFFFF;
+		13'd4115:	r_rx0_cust_filter <= wskd_r_rx0_cust_filter & 32'hFFFFFFFF;
+		13'd4116:	r_rx0_cust_parity <= wskd_r_rx0_cust_parity & 32'h3;
 		13'd4160:	r_rx0_word_raddr <= wskd_r_rx0_word_raddr & 32'hFF;
 		13'd4168:	r_rx0_err_raddr <= wskd_r_rx0_err_raddr & 32'hFF;
 		13'd4176:	r_rx0_bit_raddr <= wskd_r_rx0_bit_raddr & 32'h71F;
@@ -929,45 +838,45 @@ module	arinc429_axil #(
 	initial	p_soft_reset = 0;
 	initial	p_ts_ctrl = 0;
 	initial	p_tx_send_cmd = 0;
-	initial	p_tx_cfg_apply = 0;
+	initial	p_tx_cfg = 0;
 	initial	p_tb_ctrl = 0;
-	initial	p_tb_cfg_apply = 0;
+	initial	p_tb_cfg = 0;
 	initial	p_tb_chk_ctrl = 0;
 	initial	p_rx0_ctrl = 0;
-	initial	p_rx0_cfg_apply = 0;
+	initial	p_rx0_cfg = 0;
 	always @(posedge S_AXI_ACLK)
 	if (i_reset)
 	begin
 		p_soft_reset <= 0;
 		p_ts_ctrl <= 0;
 		p_tx_send_cmd <= 0;
-		p_tx_cfg_apply <= 0;
+		p_tx_cfg <= 0;
 		p_tb_ctrl <= 0;
-		p_tb_cfg_apply <= 0;
+		p_tb_cfg <= 0;
 		p_tb_chk_ctrl <= 0;
 		p_rx0_ctrl <= 0;
-		p_rx0_cfg_apply <= 0;
+		p_rx0_cfg <= 0;
 	end else begin
 		p_soft_reset <= 0;
 		p_ts_ctrl <= 0;
 		p_tx_send_cmd <= 0;
-		p_tx_cfg_apply <= 0;
+		p_tx_cfg <= 0;
 		p_tb_ctrl <= 0;
-		p_tb_cfg_apply <= 0;
+		p_tb_cfg <= 0;
 		p_tb_chk_ctrl <= 0;
 		p_rx0_ctrl <= 0;
-		p_rx0_cfg_apply <= 0;
+		p_rx0_cfg <= 0;
 		if (axil_write_ready)
 		case(awskd_addr[REG_AW-1:0])
 		13'd8:	p_soft_reset <= apply_wstrb(0, wskd_data, wskd_strb) & 32'h10007;
 		13'd10:	p_ts_ctrl <= apply_wstrb(0, wskd_data, wskd_strb) & 32'h2;
-		13'd267:	p_tx_send_cmd <= apply_wstrb(0, wskd_data, wskd_strb) & 32'h1;
-		13'd273:	p_tx_cfg_apply <= apply_wstrb(0, wskd_data, wskd_strb) & 32'h1;
+		13'd258:	p_tx_send_cmd <= apply_wstrb(0, wskd_data, wskd_strb) & 32'h1;
+		13'd272:	p_tx_cfg <= apply_wstrb(0, wskd_data, wskd_strb) & 32'h10;
 		13'd512:	p_tb_ctrl <= apply_wstrb(0, wskd_data, wskd_strb) & 32'h4;
-		13'd515:	p_tb_cfg_apply <= apply_wstrb(0, wskd_data, wskd_strb) & 32'h1;
+		13'd514:	p_tb_cfg <= apply_wstrb(0, wskd_data, wskd_strb) & 32'h10;
 		13'd624:	p_tb_chk_ctrl <= apply_wstrb(0, wskd_data, wskd_strb) & 32'h2;
 		13'd4096:	p_rx0_ctrl <= apply_wstrb(0, wskd_data, wskd_strb) & 32'h4;
-		13'd4099:	p_rx0_cfg_apply <= apply_wstrb(0, wskd_data, wskd_strb) & 32'h1;
+		13'd4098:	p_rx0_cfg <= apply_wstrb(0, wskd_data, wskd_strb) & 32'h10;
 		endcase
 	end
 
@@ -1010,7 +919,7 @@ module	arinc429_axil #(
 	if (i_reset)
 		stb_tb_err_rd_data_rd <= 0;
 	else
-		stb_tb_err_rd_data_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd589);
+		stb_tb_err_rd_data_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd588);
 	assign	o_tb_err_rd_data_rd = stb_tb_err_rd_data_rd;
 	reg	stb_tb_bit_raddr_wr;
 	initial	stb_tb_bit_raddr_wr = 0;
@@ -1020,14 +929,14 @@ module	arinc429_axil #(
 	else
 		stb_tb_bit_raddr_wr <= axil_write_ready && (awskd_addr[REG_AW-1:0] == 13'd592);
 	assign	o_tb_bit_raddr_wr = stb_tb_bit_raddr_wr;
-	reg	stb_tb_bit_rd_null_err_rd;
-	initial	stb_tb_bit_rd_null_err_rd = 0;
+	reg	stb_tb_bit_rd_null_rd;
+	initial	stb_tb_bit_rd_null_rd = 0;
 	always @(posedge S_AXI_ACLK)
 	if (i_reset)
-		stb_tb_bit_rd_null_err_rd <= 0;
+		stb_tb_bit_rd_null_rd <= 0;
 	else
-		stb_tb_bit_rd_null_err_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd596);
-	assign	o_tb_bit_rd_null_err_rd = stb_tb_bit_rd_null_err_rd;
+		stb_tb_bit_rd_null_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd594);
+	assign	o_tb_bit_rd_null_rd = stb_tb_bit_rd_null_rd;
 	reg	stb_rx0_word_raddr_wr;
 	initial	stb_rx0_word_raddr_wr = 0;
 	always @(posedge S_AXI_ACLK)
@@ -1058,7 +967,7 @@ module	arinc429_axil #(
 	if (i_reset)
 		stb_rx0_err_rd_data_rd <= 0;
 	else
-		stb_rx0_err_rd_data_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd4173);
+		stb_rx0_err_rd_data_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd4172);
 	assign	o_rx0_err_rd_data_rd = stb_rx0_err_rd_data_rd;
 	reg	stb_rx0_bit_raddr_wr;
 	initial	stb_rx0_bit_raddr_wr = 0;
@@ -1068,14 +977,14 @@ module	arinc429_axil #(
 	else
 		stb_rx0_bit_raddr_wr <= axil_write_ready && (awskd_addr[REG_AW-1:0] == 13'd4176);
 	assign	o_rx0_bit_raddr_wr = stb_rx0_bit_raddr_wr;
-	reg	stb_rx0_bit_rd_null_err_rd;
-	initial	stb_rx0_bit_rd_null_err_rd = 0;
+	reg	stb_rx0_bit_rd_null_rd;
+	initial	stb_rx0_bit_rd_null_rd = 0;
 	always @(posedge S_AXI_ACLK)
 	if (i_reset)
-		stb_rx0_bit_rd_null_err_rd <= 0;
+		stb_rx0_bit_rd_null_rd <= 0;
 	else
-		stb_rx0_bit_rd_null_err_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd4180);
-	assign	o_rx0_bit_rd_null_err_rd = stb_rx0_bit_rd_null_err_rd;
+		stb_rx0_bit_rd_null_rd <= axil_read_ready && (arskd_addr[REG_AW-1:0] == 13'd4178);
+	assign	o_rx0_bit_rd_null_rd = stb_rx0_bit_rd_null_rd;
 
 	// IP-side outputs
 	assign	o_soft_reset_rst_all = p_soft_reset[0];
@@ -1085,41 +994,41 @@ module	arinc429_axil #(
 	assign	o_global_freeze = r_global_freeze[0];
 	assign	o_ts_ctrl_enable = r_ts_ctrl[0];
 	assign	o_ts_ctrl_clear = p_ts_ctrl[1];
-	assign	o_tx_transmitter_en = r_tx_transmitter_en[0];
-	assign	o_tx_msg_sched_en = r_tx_msg_sched_en[0];
-	assign	o_tx_builder_en = r_tx_builder_en[0];
-	assign	o_tx_label = r_tx_label[7:0];
-	assign	o_tx_sdi = r_tx_sdi[1:0];
-	assign	o_tx_data = r_tx_data[18:0];
-	assign	o_tx_ssm = r_tx_ssm[1:0];
-	assign	o_tx_parity_type = r_tx_parity_type[0];
-	assign	o_tx_sched_en = r_tx_sched_en[0];
-	assign	o_tx_initial_delay = r_tx_initial_delay[31:0];
-	assign	o_tx_inter_word_gap = r_tx_inter_word_gap[31:0];
+	assign	o_tx_ctrl_transmitter_en = r_tx_ctrl[0];
+	assign	o_tx_ctrl_msg_sched_en = r_tx_ctrl[1];
+	assign	o_tx_ctrl_builder_en = r_tx_ctrl[2];
+	assign	o_tx_ctrl_sched_en = r_tx_ctrl[3];
+	assign	o_tx_word_label_val = r_tx_word[7:0];
+	assign	o_tx_word_sdi = r_tx_word[9:8];
+	assign	o_tx_word_data = r_tx_word[28:10];
+	assign	o_tx_word_ssm = r_tx_word[30:29];
+	assign	o_tx_word_parity_type = r_tx_word[31];
 	assign	o_tx_send_cmd_send = p_tx_send_cmd[0];
 	assign	o_tx_ext_data = r_tx_ext_data[31:0];
-	assign	o_tx_ext_high = r_tx_ext_high[0];
-	assign	o_tx_ext_low = r_tx_ext_low[0];
-	assign	o_tx_cfg_sel = r_tx_cfg_sel[1:0];
-	assign	o_tx_cfg_apply_apply = p_tx_cfg_apply[0];
-	assign	o_tx_cust_pulse_dur = r_tx_cust_pulse_dur[15:0];
-	assign	o_tx_cust_null_dur = r_tx_cust_null_dur[15:0];
+	assign	o_tx_ext_line_high = r_tx_ext_line[0];
+	assign	o_tx_ext_line_low = r_tx_ext_line[1];
+	assign	o_tx_initial_delay = r_tx_initial_delay[31:0];
+	assign	o_tx_inter_word_gap = r_tx_inter_word_gap[31:0];
+	assign	o_tx_cfg_sel = r_tx_cfg[1:0];
+	assign	o_tx_cfg_apply = p_tx_cfg[4];
+	assign	o_tx_cust_timing_pulse_dur = r_tx_cust_timing[15:0];
+	assign	o_tx_cust_timing_null_dur = r_tx_cust_timing[31:16];
 	assign	o_tx_cust_gap_dur = r_tx_cust_gap_dur[31:0];
 	assign	o_tx_cust_slp = r_tx_cust_slp[0];
 	assign	o_tb_ctrl_enable = r_tb_ctrl[0];
 	assign	o_tb_ctrl_freeze = r_tb_ctrl[1];
 	assign	o_tb_ctrl_clear = p_tb_ctrl[2];
-	assign	o_tb_cfg_sel = r_tb_cfg_sel[1:0];
-	assign	o_tb_cfg_apply_apply = p_tb_cfg_apply[0];
-	assign	o_tb_cust_glitch_filter_size = r_tb_cust_glitch_filter_size[15:0];
-	assign	o_tb_cust_min_pulse = r_tb_cust_min_pulse[15:0];
-	assign	o_tb_cust_max_pulse = r_tb_cust_max_pulse[15:0];
-	assign	o_tb_cust_min_bit = r_tb_cust_min_bit[15:0];
-	assign	o_tb_cust_max_bit = r_tb_cust_max_bit[15:0];
-	assign	o_tb_cust_max_pulse_err = r_tb_cust_max_pulse_err[15:0];
-	assign	o_tb_cust_max_null_err = r_tb_cust_max_null_err[15:0];
-	assign	o_tb_cust_max_gap_err = r_tb_cust_max_gap_err[15:0];
-	assign	o_tb_cust_parity_mode = r_tb_cust_parity_mode[1:0];
+	assign	o_tb_cfg_sel = r_tb_cfg[1:0];
+	assign	o_tb_cfg_apply = p_tb_cfg[4];
+	assign	o_tb_cust_pulse_min = r_tb_cust_pulse[15:0];
+	assign	o_tb_cust_pulse_max = r_tb_cust_pulse[31:16];
+	assign	o_tb_cust_bit_min = r_tb_cust_bit[15:0];
+	assign	o_tb_cust_bit_max = r_tb_cust_bit[31:16];
+	assign	o_tb_cust_noise_pulse_err = r_tb_cust_noise[15:0];
+	assign	o_tb_cust_noise_null_err = r_tb_cust_noise[31:16];
+	assign	o_tb_cust_filter_glitch_size = r_tb_cust_filter[15:0];
+	assign	o_tb_cust_filter_gap_err = r_tb_cust_filter[31:16];
+	assign	o_tb_cust_parity = r_tb_cust_parity[1:0];
 	assign	o_tb_word_raddr = r_tb_word_raddr[7:0];
 	assign	o_tb_err_raddr = r_tb_err_raddr[7:0];
 	assign	o_tb_bit_raddr_bit_idx = r_tb_bit_raddr[4:0];
@@ -1130,17 +1039,17 @@ module	arinc429_axil #(
 	assign	o_rx0_ctrl_enable = r_rx0_ctrl[0];
 	assign	o_rx0_ctrl_freeze = r_rx0_ctrl[1];
 	assign	o_rx0_ctrl_clear = p_rx0_ctrl[2];
-	assign	o_rx0_cfg_sel = r_rx0_cfg_sel[1:0];
-	assign	o_rx0_cfg_apply_apply = p_rx0_cfg_apply[0];
-	assign	o_rx0_cust_glitch_filter_size = r_rx0_cust_glitch_filter_size[15:0];
-	assign	o_rx0_cust_min_pulse = r_rx0_cust_min_pulse[15:0];
-	assign	o_rx0_cust_max_pulse = r_rx0_cust_max_pulse[15:0];
-	assign	o_rx0_cust_min_bit = r_rx0_cust_min_bit[15:0];
-	assign	o_rx0_cust_max_bit = r_rx0_cust_max_bit[15:0];
-	assign	o_rx0_cust_max_pulse_err = r_rx0_cust_max_pulse_err[15:0];
-	assign	o_rx0_cust_max_null_err = r_rx0_cust_max_null_err[15:0];
-	assign	o_rx0_cust_max_gap_err = r_rx0_cust_max_gap_err[15:0];
-	assign	o_rx0_cust_parity_mode = r_rx0_cust_parity_mode[1:0];
+	assign	o_rx0_cfg_sel = r_rx0_cfg[1:0];
+	assign	o_rx0_cfg_apply = p_rx0_cfg[4];
+	assign	o_rx0_cust_pulse_min = r_rx0_cust_pulse[15:0];
+	assign	o_rx0_cust_pulse_max = r_rx0_cust_pulse[31:16];
+	assign	o_rx0_cust_bit_min = r_rx0_cust_bit[15:0];
+	assign	o_rx0_cust_bit_max = r_rx0_cust_bit[31:16];
+	assign	o_rx0_cust_noise_pulse_err = r_rx0_cust_noise[15:0];
+	assign	o_rx0_cust_noise_null_err = r_rx0_cust_noise[31:16];
+	assign	o_rx0_cust_filter_glitch_size = r_rx0_cust_filter[15:0];
+	assign	o_rx0_cust_filter_gap_err = r_rx0_cust_filter[31:16];
+	assign	o_rx0_cust_parity = r_rx0_cust_parity[1:0];
 	assign	o_rx0_word_raddr = r_rx0_word_raddr[7:0];
 	assign	o_rx0_err_raddr = r_rx0_err_raddr[7:0];
 	assign	o_rx0_bit_raddr_bit_idx = r_rx0_bit_raddr[4:0];
@@ -1154,7 +1063,7 @@ module	arinc429_axil #(
 	begin
 		case(arskd_addr[REG_AW-1:0])
 		13'd0:	axil_read_data	<= { 32'h41343239 };
-		13'd1:	axil_read_data	<= { 32'h10000 };
+		13'd1:	axil_read_data	<= { 32'h20000 };
 		13'd2:	axil_read_data	<= { 20'h0, 1'h1, 1'h0, 1'h1, 1'h1, 3'h0, 5'h1 };
 		13'd3:	axil_read_data	<= { 8'h0, 8'h3, 8'h8, 8'h8 };
 		13'd4:	axil_read_data	<= { 32'h2FAF080 };
@@ -1163,55 +1072,35 @@ module	arinc429_axil #(
 		13'd10:	axil_read_data	<= { 30'h0, 1'h0, r_ts_ctrl[0] };
 		13'd11:	axil_read_data	<= { i_ts_lsb };
 		13'd12:	axil_read_data	<= { i_ts_msb };
-		13'd256:	axil_read_data	<= { 31'h0, r_tx_transmitter_en[0] };
-		13'd257:	axil_read_data	<= { 31'h0, r_tx_msg_sched_en[0] };
-		13'd258:	axil_read_data	<= { 31'h0, r_tx_builder_en[0] };
-		13'd259:	axil_read_data	<= { 24'h0, r_tx_label[7:0] };
-		13'd260:	axil_read_data	<= { 30'h0, r_tx_sdi[1:0] };
-		13'd261:	axil_read_data	<= { 13'h0, r_tx_data[18:0] };
-		13'd262:	axil_read_data	<= { 30'h0, r_tx_ssm[1:0] };
-		13'd263:	axil_read_data	<= { 31'h0, r_tx_parity_type[0] };
-		13'd264:	axil_read_data	<= { 31'h0, r_tx_sched_en[0] };
-		13'd265:	axil_read_data	<= { r_tx_initial_delay[31:0] };
-		13'd266:	axil_read_data	<= { r_tx_inter_word_gap[31:0] };
-		13'd267:	axil_read_data	<= { 31'h0, 1'h0 };
-		13'd268:	axil_read_data	<= { r_tx_ext_data[31:0] };
-		13'd269:	axil_read_data	<= { 31'h0, r_tx_ext_high[0] };
-		13'd270:	axil_read_data	<= { 31'h0, r_tx_ext_low[0] };
-		13'd272:	axil_read_data	<= { 30'h0, r_tx_cfg_sel[1:0] };
-		13'd273:	axil_read_data	<= { 31'h0, 1'h0 };
-		13'd274:	axil_read_data	<= { 16'h0, r_tx_cust_pulse_dur[15:0] };
-		13'd275:	axil_read_data	<= { 16'h0, r_tx_cust_null_dur[15:0] };
-		13'd276:	axil_read_data	<= { r_tx_cust_gap_dur[31:0] };
-		13'd277:	axil_read_data	<= { 31'h0, r_tx_cust_slp[0] };
-		13'd280:	axil_read_data	<= { 16'h0, i_tx_act_pulse_dur };
-		13'd281:	axil_read_data	<= { 16'h0, i_tx_act_null_dur };
-		13'd282:	axil_read_data	<= { i_tx_act_gap_dur };
-		13'd283:	axil_read_data	<= { 31'h0, i_tx_act_slp };
+		13'd256:	axil_read_data	<= { 28'h0, r_tx_ctrl[3], r_tx_ctrl[2], r_tx_ctrl[1], r_tx_ctrl[0] };
+		13'd257:	axil_read_data	<= { r_tx_word[31], r_tx_word[30:29], r_tx_word[28:10], r_tx_word[9:8], r_tx_word[7:0] };
+		13'd258:	axil_read_data	<= { 31'h0, 1'h0 };
+		13'd259:	axil_read_data	<= { r_tx_ext_data[31:0] };
+		13'd260:	axil_read_data	<= { 30'h0, r_tx_ext_line[1], r_tx_ext_line[0] };
+		13'd264:	axil_read_data	<= { r_tx_initial_delay[31:0] };
+		13'd265:	axil_read_data	<= { r_tx_inter_word_gap[31:0] };
+		13'd272:	axil_read_data	<= { 27'h0, 1'h0, 2'h0, r_tx_cfg[1:0] };
+		13'd273:	axil_read_data	<= { r_tx_cust_timing[31:16], r_tx_cust_timing[15:0] };
+		13'd274:	axil_read_data	<= { r_tx_cust_gap_dur[31:0] };
+		13'd275:	axil_read_data	<= { 31'h0, r_tx_cust_slp[0] };
+		13'd280:	axil_read_data	<= { i_tx_act_timing_null_dur, i_tx_act_timing_pulse_dur };
+		13'd281:	axil_read_data	<= { i_tx_act_gap_dur };
+		13'd282:	axil_read_data	<= { 31'h0, i_tx_act_slp };
 		13'd288:	axil_read_data	<= { 28'h0, i_tx_status_act_cfg, i_tx_status_sched_active, i_tx_status_busy };
 		13'd289:	axil_read_data	<= { i_tx_word_cnt };
 		13'd512:	axil_read_data	<= { 29'h0, 1'h0, r_tb_ctrl[1], r_tb_ctrl[0] };
-		13'd513:	axil_read_data	<= { 22'h0, i_tb_status_act_cfg, 1'h0, i_tb_status_err_wrap, i_tb_status_word_wrap, i_tb_status_frozen, 4'h0 };
-		13'd514:	axil_read_data	<= { 30'h0, r_tb_cfg_sel[1:0] };
-		13'd515:	axil_read_data	<= { 31'h0, 1'h0 };
-		13'd528:	axil_read_data	<= { 16'h0, r_tb_cust_glitch_filter_size[15:0] };
-		13'd529:	axil_read_data	<= { 16'h0, r_tb_cust_min_pulse[15:0] };
-		13'd530:	axil_read_data	<= { 16'h0, r_tb_cust_max_pulse[15:0] };
-		13'd531:	axil_read_data	<= { 16'h0, r_tb_cust_min_bit[15:0] };
-		13'd532:	axil_read_data	<= { 16'h0, r_tb_cust_max_bit[15:0] };
-		13'd533:	axil_read_data	<= { 16'h0, r_tb_cust_max_pulse_err[15:0] };
-		13'd534:	axil_read_data	<= { 16'h0, r_tb_cust_max_null_err[15:0] };
-		13'd535:	axil_read_data	<= { 16'h0, r_tb_cust_max_gap_err[15:0] };
-		13'd536:	axil_read_data	<= { 30'h0, r_tb_cust_parity_mode[1:0] };
-		13'd552:	axil_read_data	<= { 16'h0, i_tb_act_glitch_filter_size };
-		13'd553:	axil_read_data	<= { 16'h0, i_tb_act_min_pulse };
-		13'd554:	axil_read_data	<= { 16'h0, i_tb_act_max_pulse };
-		13'd555:	axil_read_data	<= { 16'h0, i_tb_act_min_bit };
-		13'd556:	axil_read_data	<= { 16'h0, i_tb_act_max_bit };
-		13'd557:	axil_read_data	<= { 16'h0, i_tb_act_max_pulse_err };
-		13'd558:	axil_read_data	<= { 16'h0, i_tb_act_max_null_err };
-		13'd559:	axil_read_data	<= { 16'h0, i_tb_act_max_gap_err };
-		13'd560:	axil_read_data	<= { 30'h0, i_tb_act_parity_mode };
+		13'd513:	axil_read_data	<= { 17'h0, i_tb_status_sync_wait, i_tb_status_line_low, i_tb_status_line_high, 2'h0, i_tb_status_act_cfg, 1'h0, i_tb_status_err_wrap, i_tb_status_word_wrap, i_tb_status_frozen, 4'h0 };
+		13'd514:	axil_read_data	<= { 27'h0, 1'h0, 2'h0, r_tb_cfg[1:0] };
+		13'd528:	axil_read_data	<= { r_tb_cust_pulse[31:16], r_tb_cust_pulse[15:0] };
+		13'd529:	axil_read_data	<= { r_tb_cust_bit[31:16], r_tb_cust_bit[15:0] };
+		13'd530:	axil_read_data	<= { r_tb_cust_noise[31:16], r_tb_cust_noise[15:0] };
+		13'd531:	axil_read_data	<= { r_tb_cust_filter[31:16], r_tb_cust_filter[15:0] };
+		13'd532:	axil_read_data	<= { 30'h0, r_tb_cust_parity[1:0] };
+		13'd536:	axil_read_data	<= { i_tb_act_pulse_max, i_tb_act_pulse_min };
+		13'd537:	axil_read_data	<= { i_tb_act_bit_max, i_tb_act_bit_min };
+		13'd538:	axil_read_data	<= { i_tb_act_noise_null_err, i_tb_act_noise_pulse_err };
+		13'd539:	axil_read_data	<= { i_tb_act_filter_gap_err, i_tb_act_filter_glitch_size };
+		13'd540:	axil_read_data	<= { 30'h0, i_tb_act_parity };
 		13'd568:	axil_read_data	<= { i_tb_word_cnt };
 		13'd569:	axil_read_data	<= { i_tb_err_cnt };
 		13'd570:	axil_read_data	<= { i_tb_drop_cnt };
@@ -1225,41 +1114,29 @@ module	arinc429_axil #(
 		13'd584:	axil_read_data	<= { 24'h0, r_tb_err_raddr[7:0] };
 		13'd585:	axil_read_data	<= { i_tb_err_rd_ts_msb };
 		13'd586:	axil_read_data	<= { i_tb_err_rd_ts_lsb };
-		13'd587:	axil_read_data	<= { 16'h0, i_tb_err_rd_code };
-		13'd588:	axil_read_data	<= { 16'h0, i_tb_err_rd_addr };
-		13'd589:	axil_read_data	<= { i_tb_err_rd_data };
+		13'd587:	axil_read_data	<= { i_tb_err_rd_info_addr, i_tb_err_rd_info_code };
+		13'd588:	axil_read_data	<= { i_tb_err_rd_data };
 		13'd592:	axil_read_data	<= { 21'h0, r_tb_bit_raddr[10:8], 3'h0, r_tb_bit_raddr[4:0] };
-		13'd593:	axil_read_data	<= { 16'h0, i_tb_bit_rd_pulse };
-		13'd594:	axil_read_data	<= { 16'h0, i_tb_bit_rd_pulse_err };
-		13'd595:	axil_read_data	<= { 16'h0, i_tb_bit_rd_null };
-		13'd596:	axil_read_data	<= { 16'h0, i_tb_bit_rd_null_err };
+		13'd593:	axil_read_data	<= { i_tb_bit_rd_pulse_err, i_tb_bit_rd_pulse_dur };
+		13'd594:	axil_read_data	<= { i_tb_bit_rd_null_err, i_tb_bit_rd_null_dur };
 		13'd624:	axil_read_data	<= { 30'h0, 1'h0, r_tb_chk_ctrl[0] };
 		13'd625:	axil_read_data	<= { r_tb_chk_timeout[31:0] };
 		13'd626:	axil_read_data	<= { i_tb_chk_ok_cnt };
 		13'd627:	axil_read_data	<= { i_tb_chk_err_cnt };
 		13'd628:	axil_read_data	<= { 27'h0, i_tb_chk_status_fifo_ovf, i_tb_chk_status_fifo_level };
 		13'd4096:	axil_read_data	<= { 29'h0, 1'h0, r_rx0_ctrl[1], r_rx0_ctrl[0] };
-		13'd4097:	axil_read_data	<= { 22'h0, i_rx0_status_act_cfg, 1'h0, i_rx0_status_err_wrap, i_rx0_status_word_wrap, i_rx0_status_frozen, 4'h0 };
-		13'd4098:	axil_read_data	<= { 30'h0, r_rx0_cfg_sel[1:0] };
-		13'd4099:	axil_read_data	<= { 31'h0, 1'h0 };
-		13'd4112:	axil_read_data	<= { 16'h0, r_rx0_cust_glitch_filter_size[15:0] };
-		13'd4113:	axil_read_data	<= { 16'h0, r_rx0_cust_min_pulse[15:0] };
-		13'd4114:	axil_read_data	<= { 16'h0, r_rx0_cust_max_pulse[15:0] };
-		13'd4115:	axil_read_data	<= { 16'h0, r_rx0_cust_min_bit[15:0] };
-		13'd4116:	axil_read_data	<= { 16'h0, r_rx0_cust_max_bit[15:0] };
-		13'd4117:	axil_read_data	<= { 16'h0, r_rx0_cust_max_pulse_err[15:0] };
-		13'd4118:	axil_read_data	<= { 16'h0, r_rx0_cust_max_null_err[15:0] };
-		13'd4119:	axil_read_data	<= { 16'h0, r_rx0_cust_max_gap_err[15:0] };
-		13'd4120:	axil_read_data	<= { 30'h0, r_rx0_cust_parity_mode[1:0] };
-		13'd4136:	axil_read_data	<= { 16'h0, i_rx0_act_glitch_filter_size };
-		13'd4137:	axil_read_data	<= { 16'h0, i_rx0_act_min_pulse };
-		13'd4138:	axil_read_data	<= { 16'h0, i_rx0_act_max_pulse };
-		13'd4139:	axil_read_data	<= { 16'h0, i_rx0_act_min_bit };
-		13'd4140:	axil_read_data	<= { 16'h0, i_rx0_act_max_bit };
-		13'd4141:	axil_read_data	<= { 16'h0, i_rx0_act_max_pulse_err };
-		13'd4142:	axil_read_data	<= { 16'h0, i_rx0_act_max_null_err };
-		13'd4143:	axil_read_data	<= { 16'h0, i_rx0_act_max_gap_err };
-		13'd4144:	axil_read_data	<= { 30'h0, i_rx0_act_parity_mode };
+		13'd4097:	axil_read_data	<= { 17'h0, i_rx0_status_sync_wait, i_rx0_status_line_low, i_rx0_status_line_high, 2'h0, i_rx0_status_act_cfg, 1'h0, i_rx0_status_err_wrap, i_rx0_status_word_wrap, i_rx0_status_frozen, 4'h0 };
+		13'd4098:	axil_read_data	<= { 27'h0, 1'h0, 2'h0, r_rx0_cfg[1:0] };
+		13'd4112:	axil_read_data	<= { r_rx0_cust_pulse[31:16], r_rx0_cust_pulse[15:0] };
+		13'd4113:	axil_read_data	<= { r_rx0_cust_bit[31:16], r_rx0_cust_bit[15:0] };
+		13'd4114:	axil_read_data	<= { r_rx0_cust_noise[31:16], r_rx0_cust_noise[15:0] };
+		13'd4115:	axil_read_data	<= { r_rx0_cust_filter[31:16], r_rx0_cust_filter[15:0] };
+		13'd4116:	axil_read_data	<= { 30'h0, r_rx0_cust_parity[1:0] };
+		13'd4120:	axil_read_data	<= { i_rx0_act_pulse_max, i_rx0_act_pulse_min };
+		13'd4121:	axil_read_data	<= { i_rx0_act_bit_max, i_rx0_act_bit_min };
+		13'd4122:	axil_read_data	<= { i_rx0_act_noise_null_err, i_rx0_act_noise_pulse_err };
+		13'd4123:	axil_read_data	<= { i_rx0_act_filter_gap_err, i_rx0_act_filter_glitch_size };
+		13'd4124:	axil_read_data	<= { 30'h0, i_rx0_act_parity };
 		13'd4152:	axil_read_data	<= { i_rx0_word_cnt };
 		13'd4153:	axil_read_data	<= { i_rx0_err_cnt };
 		13'd4154:	axil_read_data	<= { i_rx0_drop_cnt };
@@ -1273,14 +1150,11 @@ module	arinc429_axil #(
 		13'd4168:	axil_read_data	<= { 24'h0, r_rx0_err_raddr[7:0] };
 		13'd4169:	axil_read_data	<= { i_rx0_err_rd_ts_msb };
 		13'd4170:	axil_read_data	<= { i_rx0_err_rd_ts_lsb };
-		13'd4171:	axil_read_data	<= { 16'h0, i_rx0_err_rd_code };
-		13'd4172:	axil_read_data	<= { 16'h0, i_rx0_err_rd_addr };
-		13'd4173:	axil_read_data	<= { i_rx0_err_rd_data };
+		13'd4171:	axil_read_data	<= { i_rx0_err_rd_info_addr, i_rx0_err_rd_info_code };
+		13'd4172:	axil_read_data	<= { i_rx0_err_rd_data };
 		13'd4176:	axil_read_data	<= { 21'h0, r_rx0_bit_raddr[10:8], 3'h0, r_rx0_bit_raddr[4:0] };
-		13'd4177:	axil_read_data	<= { 16'h0, i_rx0_bit_rd_pulse };
-		13'd4178:	axil_read_data	<= { 16'h0, i_rx0_bit_rd_pulse_err };
-		13'd4179:	axil_read_data	<= { 16'h0, i_rx0_bit_rd_null };
-		13'd4180:	axil_read_data	<= { 16'h0, i_rx0_bit_rd_null_err };
+		13'd4177:	axil_read_data	<= { i_rx0_bit_rd_pulse_err, i_rx0_bit_rd_pulse_dur };
+		13'd4178:	axil_read_data	<= { i_rx0_bit_rd_null_err, i_rx0_bit_rd_null_dur };
 		default:	axil_read_data	<= 0;
 		endcase
 

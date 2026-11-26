@@ -63,6 +63,14 @@ class ControlTab(QWidget):
         trow.addWidget(self.btn_reset)
         trow.addWidget(self.btn_stop)
         trow.addWidget(self.btn_tx_live)
+        trow.addSpacing(6)
+        self.btn_health = look.button(
+            "IP Durumu", None, app.do_check_ip_dialog,
+            "Logger enable/freeze, hat (LINE/SYNC_WAIT), IP sürümü, saat ve TX/RX hız uyumunu kontrol eder",
+        )
+        trow.addWidget(self.btn_health)
+        self.health_pill = look.Pill("Kontrol edilmedi", "")
+        trow.addWidget(self.health_pill)
 
         trow.addSpacing(6)
         self.lbl_map_state = look.label("", "muted")
@@ -137,6 +145,21 @@ class ControlTab(QWidget):
         )
         rcbl.addWidget(self.btn_check_rx)
         rxbl.addWidget(rx_cfg_bar)
+
+        # Kanal uyarı şeridi: logger kapalı / hat 11 / senkron bekleniyor (yalnız sorun varken görünür)
+        self.rx_warn = QFrame()
+        self.rx_warn.setObjectName("SubPanel")
+        rwl = QHBoxLayout(self.rx_warn)
+        rwl.setContentsMargins(10, 6, 8, 6)
+        rwl.setSpacing(8)
+        self.rx_warn_pill = look.Pill("", "warn")
+        rwl.addWidget(self.rx_warn_pill)
+        self.lbl_rx_warn = look.label("", None, True)
+        rwl.addWidget(self.lbl_rx_warn, 1)
+        self.btn_rx_warn_fix = look.button("Logger'ı Aç", "primary", lambda: self.app.do_toggle_rx_enable(True))
+        rwl.addWidget(self.btn_rx_warn_fix)
+        self.rx_warn.setVisible(False)
+        rxbl.addWidget(self.rx_warn)
 
         # 4 Canlı Sayaç Kutusu
         sgrid = QGridLayout()
@@ -335,6 +358,7 @@ class ControlTab(QWidget):
             for lbl in (self.lbl_stat_w, self.lbl_stat_e, self.lbl_stat_d, self.lbl_stat_last):
                 lbl.setText("—")
                 lbl.setStyleSheet("")
+            self._update_rx_warn(None)
             return
         w = info.get("word_cnt")
         e = info.get("err_cnt")
@@ -348,6 +372,42 @@ class ControlTab(QWidget):
         self._syncing_en = True
         self.chk_rx_en.setChecked(bool(info.get("enable", False)))
         self._syncing_en = False
+        self._update_rx_warn(info)
+
+    def _update_rx_warn(self, info: dict | None):
+        """Logger kapalı / hat 11 / senkron bekleme durumlarını RX kartında belirgin gösterir."""
+        msg, state, fix = "", "warn", False
+        if info:
+            hi, lo, sw = info.get("line_high"), info.get("line_low"), info.get("sync_wait")
+            if not info.get("enable", True):
+                msg, state, fix = ("Logger kapalı (CTRL.ENABLE=0): bu kanal Word ve hata KAYDETMİYOR. "
+                                   "Reset sonrası varsayılan kapalıdır."), "err", True
+            elif hi and lo:
+                msg, state = ("Hat 11 (HIGH ve LOW aynı anda 1): alıcı çıkışları ters / pull-up / alıcı beslemesi yok. "
+                              "Decoder senkron bekliyor, kayıt yok."), "err"
+            elif sw:
+                msg = "Decoder hat senkronu bekliyor (SYNC_WAIT=1): Word'ler arası 4 bit temiz NULL görülmedi."
+            elif info.get("freeze"):
+                msg = "Kanal donduruldu (CTRL.FREEZE=1): kayıtlar DROP_CNT'ye düşüyor."
+        self.rx_warn.setVisible(bool(msg))
+        if msg:
+            self.rx_warn_pill.set("Hata" if state == "err" else "Uyarı", state)
+            self.lbl_rx_warn.setText(msg)
+            self.btn_rx_warn_fix.setVisible(fix)
+
+    def update_health(self, res: dict | None):
+        if not res:
+            self.health_pill.set("Kontrol edilmedi", "")
+            self.health_pill.setToolTip("")
+            return
+        c = res.get("counts", {})
+        if c.get("error") or c.get("warn"):
+            parts = [f"{c[k]} {n}" for k, n in (("error", "hata"), ("warn", "uyarı")) if c.get(k)]
+            self.health_pill.set(" · ".join(parts), "err" if c.get("error") else "warn")
+        else:
+            self.health_pill.set("Sorun yok ✓", "ok")
+        tips = [f"• [{f['area']}] {f['title']}" for f in res.get("findings", []) if f["level"] in ("error", "warn")]
+        self.health_pill.setToolTip("\n".join(tips[:8]) or "IP ayarları ve hat durumu normal.")
 
     def set_last_read_summary(self, text: str):
         self.lbl_last_read.setText(text)

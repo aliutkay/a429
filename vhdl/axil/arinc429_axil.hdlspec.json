@@ -32,7 +32,7 @@
           "lsb": 0,
           "width": 32,
           "kind": "CONST",
-          "reset": "0x10000",
+          "reset": "0x20000",
           "irq": false,
           "sync": false
         }
@@ -265,14 +265,41 @@
       ]
     },
     {
-      "name": "TX_TRANSMITTER_EN",
+      "name": "TX_CTRL",
       "offset": "0x400",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TX_TRANSMITTER_EN",
+          "name": "TRANSMITTER_EN",
           "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "MSG_SCHED_EN",
+          "lsb": 1,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "BUILDER_EN",
+          "lsb": 2,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "SCHED_EN",
+          "lsb": 3,
           "width": 1,
           "kind": "RW",
           "reset": "0x0",
@@ -282,168 +309,51 @@
       ]
     },
     {
-      "name": "TX_MSG_SCHED_EN",
+      "name": "TX_WORD",
       "offset": "0x404",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TX_MSG_SCHED_EN",
-          "lsb": 0,
-          "width": 1,
-          "kind": "RW",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TX_BUILDER_EN",
-      "offset": "0x408",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "TX_BUILDER_EN",
-          "lsb": 0,
-          "width": 1,
-          "kind": "RW",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TX_LABEL",
-      "offset": "0x40C",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "TX_LABEL",
+          "name": "LABEL_VAL",
           "lsb": 0,
           "width": 8,
           "kind": "RW",
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TX_SDI",
-      "offset": "0x410",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
+        },
         {
-          "name": "TX_SDI",
-          "lsb": 0,
+          "name": "SDI",
+          "lsb": 8,
           "width": 2,
           "kind": "RW",
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TX_DATA",
-      "offset": "0x414",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
+        },
         {
-          "name": "TX_DATA",
-          "lsb": 0,
+          "name": "DATA",
+          "lsb": 10,
           "width": 19,
           "kind": "RW",
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TX_SSM",
-      "offset": "0x418",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
+        },
         {
-          "name": "TX_SSM",
-          "lsb": 0,
+          "name": "SSM",
+          "lsb": 29,
           "width": 2,
           "kind": "RW",
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TX_PARITY_TYPE",
-      "offset": "0x41C",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
+        },
         {
-          "name": "TX_PARITY_TYPE",
-          "lsb": 0,
+          "name": "PARITY_TYPE",
+          "lsb": 31,
           "width": 1,
-          "kind": "RW",
-          "reset": "0x1",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TX_SCHED_EN",
-      "offset": "0x420",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "TX_SCHED_EN",
-          "lsb": 0,
-          "width": 1,
-          "kind": "RW",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TX_INITIAL_DELAY",
-      "offset": "0x424",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "TX_INITIAL_DELAY",
-          "lsb": 0,
-          "width": 32,
-          "kind": "RW",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TX_INTER_WORD_GAP",
-      "offset": "0x428",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "TX_INTER_WORD_GAP",
-          "lsb": 0,
-          "width": 32,
           "kind": "RW",
           "reset": "0x1",
           "irq": false,
@@ -453,7 +363,7 @@
     },
     {
       "name": "TX_SEND_CMD",
-      "offset": "0x42C",
+      "offset": "0x408",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
@@ -470,7 +380,7 @@
     },
     {
       "name": "TX_EXT_DATA",
-      "offset": "0x430",
+      "offset": "0x40C",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
@@ -486,14 +396,23 @@
       ]
     },
     {
-      "name": "TX_EXT_HIGH",
-      "offset": "0x434",
+      "name": "TX_EXT_LINE",
+      "offset": "0x410",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TX_EXT_HIGH",
+          "name": "HIGH",
           "lsb": 0,
+          "width": 1,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "LOW",
+          "lsb": 1,
           "width": 1,
           "kind": "RW",
           "reset": "0x0",
@@ -503,15 +422,15 @@
       ]
     },
     {
-      "name": "TX_EXT_LOW",
-      "offset": "0x438",
+      "name": "TX_INITIAL_DELAY",
+      "offset": "0x420",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TX_EXT_LOW",
+          "name": "TX_INITIAL_DELAY",
           "lsb": 0,
-          "width": 1,
+          "width": 32,
           "kind": "RW",
           "reset": "0x0",
           "irq": false,
@@ -520,31 +439,40 @@
       ]
     },
     {
-      "name": "TX_CFG_SEL",
+      "name": "TX_INTER_WORD_GAP",
+      "offset": "0x424",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_INTER_WORD_GAP",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RW",
+          "reset": "0x1",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
+      "name": "TX_CFG",
       "offset": "0x440",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TX_CFG_SEL",
+          "name": "SEL",
           "lsb": 0,
           "width": 2,
           "kind": "RW",
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TX_CFG_APPLY",
-      "offset": "0x444",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
+        },
         {
           "name": "APPLY",
-          "lsb": 0,
+          "lsb": 4,
           "width": 1,
           "kind": "PULSE",
           "reset": "0x0",
@@ -554,31 +482,23 @@
       ]
     },
     {
-      "name": "TX_CUST_PULSE_DUR",
-      "offset": "0x448",
+      "name": "TX_CUST_TIMING",
+      "offset": "0x444",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TX_CUST_PULSE_DUR",
+          "name": "PULSE_DUR",
           "lsb": 0,
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TX_CUST_NULL_DUR",
-      "offset": "0x44C",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
+        },
         {
-          "name": "TX_CUST_NULL_DUR",
-          "lsb": 0,
+          "name": "NULL_DUR",
+          "lsb": 16,
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
@@ -589,7 +509,7 @@
     },
     {
       "name": "TX_CUST_GAP_DUR",
-      "offset": "0x450",
+      "offset": "0x448",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
@@ -606,7 +526,7 @@
     },
     {
       "name": "TX_CUST_SLP",
-      "offset": "0x454",
+      "offset": "0x44C",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
@@ -622,31 +542,23 @@
       ]
     },
     {
-      "name": "TX_ACT_PULSE_DUR",
+      "name": "TX_ACT_TIMING",
       "offset": "0x460",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TX_ACT_PULSE_DUR",
+          "name": "PULSE_DUR",
           "lsb": 0,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TX_ACT_NULL_DUR",
-      "offset": "0x464",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
+        },
         {
-          "name": "TX_ACT_NULL_DUR",
-          "lsb": 0,
+          "name": "NULL_DUR",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -657,7 +569,7 @@
     },
     {
       "name": "TX_ACT_GAP_DUR",
-      "offset": "0x468",
+      "offset": "0x464",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
@@ -674,7 +586,7 @@
     },
     {
       "name": "TX_ACT_SLP",
-      "offset": "0x46C",
+      "offset": "0x468",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
@@ -817,20 +729,30 @@
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TB_CFG_SEL",
-      "offset": "0x808",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
+        },
         {
-          "name": "TB_CFG_SEL",
-          "lsb": 0,
-          "width": 2,
-          "kind": "RW",
+          "name": "LINE_HIGH",
+          "lsb": 12,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "LINE_LOW",
+          "lsb": 13,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "SYNC_WAIT",
+          "lsb": 14,
+          "width": 1,
+          "kind": "RO",
           "reset": "0x0",
           "irq": false,
           "sync": false
@@ -838,14 +760,23 @@
       ]
     },
     {
-      "name": "TB_CFG_APPLY",
-      "offset": "0x80C",
+      "name": "TB_CFG",
+      "offset": "0x808",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "APPLY",
+          "name": "SEL",
           "lsb": 0,
+          "width": 2,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "APPLY",
+          "lsb": 4,
           "width": 1,
           "kind": "PULSE",
           "reset": "0x0",
@@ -855,14 +786,23 @@
       ]
     },
     {
-      "name": "TB_CUST_GLITCH_FILTER_SIZE",
+      "name": "TB_CUST_PULSE",
       "offset": "0x840",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TB_CUST_GLITCH_FILTER_SIZE",
+          "name": "MIN",
           "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "MAX",
+          "lsb": 16,
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
@@ -872,14 +812,23 @@
       ]
     },
     {
-      "name": "TB_CUST_MIN_PULSE",
+      "name": "TB_CUST_BIT",
       "offset": "0x844",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TB_CUST_MIN_PULSE",
+          "name": "MIN",
           "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "MAX",
+          "lsb": 16,
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
@@ -889,14 +838,23 @@
       ]
     },
     {
-      "name": "TB_CUST_MAX_PULSE",
+      "name": "TB_CUST_NOISE",
       "offset": "0x848",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TB_CUST_MAX_PULSE",
+          "name": "PULSE_ERR",
           "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "NULL_ERR",
+          "lsb": 16,
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
@@ -906,14 +864,23 @@
       ]
     },
     {
-      "name": "TB_CUST_MIN_BIT",
+      "name": "TB_CUST_FILTER",
       "offset": "0x84C",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TB_CUST_MIN_BIT",
+          "name": "GLITCH_SIZE",
           "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "GAP_ERR",
+          "lsb": 16,
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
@@ -923,81 +890,13 @@
       ]
     },
     {
-      "name": "TB_CUST_MAX_BIT",
+      "name": "TB_CUST_PARITY",
       "offset": "0x850",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TB_CUST_MAX_BIT",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RW",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TB_CUST_MAX_PULSE_ERR",
-      "offset": "0x854",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "TB_CUST_MAX_PULSE_ERR",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RW",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TB_CUST_MAX_NULL_ERR",
-      "offset": "0x858",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "TB_CUST_MAX_NULL_ERR",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RW",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TB_CUST_MAX_GAP_ERR",
-      "offset": "0x85C",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "TB_CUST_MAX_GAP_ERR",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RW",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TB_CUST_PARITY_MODE",
-      "offset": "0x860",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "TB_CUST_PARITY_MODE",
+          "name": "TB_CUST_PARITY",
           "lsb": 0,
           "width": 2,
           "kind": "RW",
@@ -1008,14 +907,23 @@
       ]
     },
     {
-      "name": "TB_ACT_GLITCH_FILTER_SIZE",
-      "offset": "0x8A0",
+      "name": "TB_ACT_PULSE",
+      "offset": "0x860",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TB_ACT_GLITCH_FILTER_SIZE",
+          "name": "MIN",
           "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "MAX",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -1025,14 +933,23 @@
       ]
     },
     {
-      "name": "TB_ACT_MIN_PULSE",
-      "offset": "0x8A4",
+      "name": "TB_ACT_BIT",
+      "offset": "0x864",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TB_ACT_MIN_PULSE",
+          "name": "MIN",
           "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "MAX",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -1042,14 +959,23 @@
       ]
     },
     {
-      "name": "TB_ACT_MAX_PULSE",
-      "offset": "0x8A8",
+      "name": "TB_ACT_NOISE",
+      "offset": "0x868",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TB_ACT_MAX_PULSE",
+          "name": "PULSE_ERR",
           "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "NULL_ERR",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -1059,14 +985,23 @@
       ]
     },
     {
-      "name": "TB_ACT_MIN_BIT",
-      "offset": "0x8AC",
+      "name": "TB_ACT_FILTER",
+      "offset": "0x86C",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TB_ACT_MIN_BIT",
+          "name": "GLITCH_SIZE",
           "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "GAP_ERR",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -1076,81 +1011,13 @@
       ]
     },
     {
-      "name": "TB_ACT_MAX_BIT",
-      "offset": "0x8B0",
+      "name": "TB_ACT_PARITY",
+      "offset": "0x870",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TB_ACT_MAX_BIT",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RO",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TB_ACT_MAX_PULSE_ERR",
-      "offset": "0x8B4",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "TB_ACT_MAX_PULSE_ERR",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RO",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TB_ACT_MAX_NULL_ERR",
-      "offset": "0x8B8",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "TB_ACT_MAX_NULL_ERR",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RO",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TB_ACT_MAX_GAP_ERR",
-      "offset": "0x8BC",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "TB_ACT_MAX_GAP_ERR",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RO",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TB_ACT_PARITY_MODE",
-      "offset": "0x8C0",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "TB_ACT_PARITY_MODE",
+          "name": "TB_ACT_PARITY",
           "lsb": 0,
           "width": 2,
           "kind": "RO",
@@ -1382,31 +1249,23 @@
       ]
     },
     {
-      "name": "TB_ERR_RD_CODE",
+      "name": "TB_ERR_RD_INFO",
       "offset": "0x92C",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TB_ERR_RD_CODE",
+          "name": "CODE",
           "lsb": 0,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TB_ERR_RD_ADDR",
-      "offset": "0x930",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
+        },
         {
-          "name": "TB_ERR_RD_ADDR",
-          "lsb": 0,
+          "name": "ADDR",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -1417,7 +1276,7 @@
     },
     {
       "name": "TB_ERR_RD_DATA",
-      "offset": "0x934",
+      "offset": "0x930",
       "wr_strobe": false,
       "rd_strobe": true,
       "fields": [
@@ -1465,25 +1324,17 @@
       "rd_strobe": false,
       "fields": [
         {
-          "name": "TB_BIT_RD_PULSE",
+          "name": "DUR",
           "lsb": 0,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TB_BIT_RD_PULSE_ERR",
-      "offset": "0x948",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
+        },
         {
-          "name": "TB_BIT_RD_PULSE_ERR",
-          "lsb": 0,
+          "name": "ERR",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -1494,30 +1345,22 @@
     },
     {
       "name": "TB_BIT_RD_NULL",
-      "offset": "0x94C",
+      "offset": "0x948",
       "wr_strobe": false,
-      "rd_strobe": false,
+      "rd_strobe": true,
       "fields": [
         {
-          "name": "TB_BIT_RD_NULL",
+          "name": "DUR",
           "lsb": 0,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "TB_BIT_RD_NULL_ERR",
-      "offset": "0x950",
-      "wr_strobe": false,
-      "rd_strobe": true,
-      "fields": [
+        },
         {
-          "name": "TB_BIT_RD_NULL_ERR",
-          "lsb": 0,
+          "name": "ERR",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -1705,20 +1548,30 @@
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "RX0_CFG_SEL",
-      "offset": "0x4008",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
+        },
         {
-          "name": "RX0_CFG_SEL",
-          "lsb": 0,
-          "width": 2,
-          "kind": "RW",
+          "name": "LINE_HIGH",
+          "lsb": 12,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "LINE_LOW",
+          "lsb": 13,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "SYNC_WAIT",
+          "lsb": 14,
+          "width": 1,
+          "kind": "RO",
           "reset": "0x0",
           "irq": false,
           "sync": false
@@ -1726,14 +1579,23 @@
       ]
     },
     {
-      "name": "RX0_CFG_APPLY",
-      "offset": "0x400C",
+      "name": "RX0_CFG",
+      "offset": "0x4008",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "APPLY",
+          "name": "SEL",
           "lsb": 0,
+          "width": 2,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "APPLY",
+          "lsb": 4,
           "width": 1,
           "kind": "PULSE",
           "reset": "0x0",
@@ -1743,14 +1605,23 @@
       ]
     },
     {
-      "name": "RX0_CUST_GLITCH_FILTER_SIZE",
+      "name": "RX0_CUST_PULSE",
       "offset": "0x4040",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "RX0_CUST_GLITCH_FILTER_SIZE",
+          "name": "MIN",
           "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "MAX",
+          "lsb": 16,
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
@@ -1760,14 +1631,23 @@
       ]
     },
     {
-      "name": "RX0_CUST_MIN_PULSE",
+      "name": "RX0_CUST_BIT",
       "offset": "0x4044",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "RX0_CUST_MIN_PULSE",
+          "name": "MIN",
           "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "MAX",
+          "lsb": 16,
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
@@ -1777,14 +1657,23 @@
       ]
     },
     {
-      "name": "RX0_CUST_MAX_PULSE",
+      "name": "RX0_CUST_NOISE",
       "offset": "0x4048",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "RX0_CUST_MAX_PULSE",
+          "name": "PULSE_ERR",
           "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "NULL_ERR",
+          "lsb": 16,
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
@@ -1794,14 +1683,23 @@
       ]
     },
     {
-      "name": "RX0_CUST_MIN_BIT",
+      "name": "RX0_CUST_FILTER",
       "offset": "0x404C",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "RX0_CUST_MIN_BIT",
+          "name": "GLITCH_SIZE",
           "lsb": 0,
+          "width": 16,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "GAP_ERR",
+          "lsb": 16,
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
@@ -1811,81 +1709,13 @@
       ]
     },
     {
-      "name": "RX0_CUST_MAX_BIT",
+      "name": "RX0_CUST_PARITY",
       "offset": "0x4050",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "RX0_CUST_MAX_BIT",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RW",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "RX0_CUST_MAX_PULSE_ERR",
-      "offset": "0x4054",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "RX0_CUST_MAX_PULSE_ERR",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RW",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "RX0_CUST_MAX_NULL_ERR",
-      "offset": "0x4058",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "RX0_CUST_MAX_NULL_ERR",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RW",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "RX0_CUST_MAX_GAP_ERR",
-      "offset": "0x405C",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "RX0_CUST_MAX_GAP_ERR",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RW",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "RX0_CUST_PARITY_MODE",
-      "offset": "0x4060",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "RX0_CUST_PARITY_MODE",
+          "name": "RX0_CUST_PARITY",
           "lsb": 0,
           "width": 2,
           "kind": "RW",
@@ -1896,14 +1726,23 @@
       ]
     },
     {
-      "name": "RX0_ACT_GLITCH_FILTER_SIZE",
-      "offset": "0x40A0",
+      "name": "RX0_ACT_PULSE",
+      "offset": "0x4060",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "RX0_ACT_GLITCH_FILTER_SIZE",
+          "name": "MIN",
           "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "MAX",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -1913,14 +1752,23 @@
       ]
     },
     {
-      "name": "RX0_ACT_MIN_PULSE",
-      "offset": "0x40A4",
+      "name": "RX0_ACT_BIT",
+      "offset": "0x4064",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "RX0_ACT_MIN_PULSE",
+          "name": "MIN",
           "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "MAX",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -1930,14 +1778,23 @@
       ]
     },
     {
-      "name": "RX0_ACT_MAX_PULSE",
-      "offset": "0x40A8",
+      "name": "RX0_ACT_NOISE",
+      "offset": "0x4068",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "RX0_ACT_MAX_PULSE",
+          "name": "PULSE_ERR",
           "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "NULL_ERR",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -1947,14 +1804,23 @@
       ]
     },
     {
-      "name": "RX0_ACT_MIN_BIT",
-      "offset": "0x40AC",
+      "name": "RX0_ACT_FILTER",
+      "offset": "0x406C",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "RX0_ACT_MIN_BIT",
+          "name": "GLITCH_SIZE",
           "lsb": 0,
+          "width": 16,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "GAP_ERR",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -1964,81 +1830,13 @@
       ]
     },
     {
-      "name": "RX0_ACT_MAX_BIT",
-      "offset": "0x40B0",
+      "name": "RX0_ACT_PARITY",
+      "offset": "0x4070",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "RX0_ACT_MAX_BIT",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RO",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "RX0_ACT_MAX_PULSE_ERR",
-      "offset": "0x40B4",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "RX0_ACT_MAX_PULSE_ERR",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RO",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "RX0_ACT_MAX_NULL_ERR",
-      "offset": "0x40B8",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "RX0_ACT_MAX_NULL_ERR",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RO",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "RX0_ACT_MAX_GAP_ERR",
-      "offset": "0x40BC",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "RX0_ACT_MAX_GAP_ERR",
-          "lsb": 0,
-          "width": 16,
-          "kind": "RO",
-          "reset": "0x0",
-          "irq": false,
-          "sync": false
-        }
-      ]
-    },
-    {
-      "name": "RX0_ACT_PARITY_MODE",
-      "offset": "0x40C0",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
-        {
-          "name": "RX0_ACT_PARITY_MODE",
+          "name": "RX0_ACT_PARITY",
           "lsb": 0,
           "width": 2,
           "kind": "RO",
@@ -2270,31 +2068,23 @@
       ]
     },
     {
-      "name": "RX0_ERR_RD_CODE",
+      "name": "RX0_ERR_RD_INFO",
       "offset": "0x412C",
       "wr_strobe": false,
       "rd_strobe": false,
       "fields": [
         {
-          "name": "RX0_ERR_RD_CODE",
+          "name": "CODE",
           "lsb": 0,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "RX0_ERR_RD_ADDR",
-      "offset": "0x4130",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
+        },
         {
-          "name": "RX0_ERR_RD_ADDR",
-          "lsb": 0,
+          "name": "ADDR",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -2305,7 +2095,7 @@
     },
     {
       "name": "RX0_ERR_RD_DATA",
-      "offset": "0x4134",
+      "offset": "0x4130",
       "wr_strobe": false,
       "rd_strobe": true,
       "fields": [
@@ -2353,25 +2143,17 @@
       "rd_strobe": false,
       "fields": [
         {
-          "name": "RX0_BIT_RD_PULSE",
+          "name": "DUR",
           "lsb": 0,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "RX0_BIT_RD_PULSE_ERR",
-      "offset": "0x4148",
-      "wr_strobe": false,
-      "rd_strobe": false,
-      "fields": [
+        },
         {
-          "name": "RX0_BIT_RD_PULSE_ERR",
-          "lsb": 0,
+          "name": "ERR",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
@@ -2382,30 +2164,22 @@
     },
     {
       "name": "RX0_BIT_RD_NULL",
-      "offset": "0x414C",
+      "offset": "0x4148",
       "wr_strobe": false,
-      "rd_strobe": false,
+      "rd_strobe": true,
       "fields": [
         {
-          "name": "RX0_BIT_RD_NULL",
+          "name": "DUR",
           "lsb": 0,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
           "irq": false,
           "sync": false
-        }
-      ]
-    },
-    {
-      "name": "RX0_BIT_RD_NULL_ERR",
-      "offset": "0x4150",
-      "wr_strobe": false,
-      "rd_strobe": true,
-      "fields": [
+        },
         {
-          "name": "RX0_BIT_RD_NULL_ERR",
-          "lsb": 0,
+          "name": "ERR",
+          "lsb": 16,
           "width": 16,
           "kind": "RO",
           "reset": "0x0",

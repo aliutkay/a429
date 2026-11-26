@@ -2,11 +2,17 @@
 
 Register ve alan adları DESIGN.md sözleşmesine göre sabit tanımlıdır; offset ve bit alanları
 AXIL Studio'nun gönderdiği client.ip["registers"] listesinden adla bulunur.
+
+Mantıksal adlar: uygulama TX_LABEL, RX0_CUST_MIN_PULSE gibi adlarla çalışır. IP 2.x'te bunlar
+gruplanmış register'lardaki alanlardır (TX_WORD.LABEL_VAL, RX0_CUST_PULSE.MIN; bkz. a429/ipmap.py);
+IP 1.x'te aynı adlı tek alanlı register'lardır. ``RegMap.resolve`` ikisini de çözer.
 """
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+
+from .ipmap import logical_target
 
 
 class MissingRegisterError(KeyError):
@@ -194,26 +200,97 @@ class RegMap:
     def is_loaded(self) -> bool:
         return bool(self.regs)
 
+    def resolve(self, name: str) -> tuple[RegEntry, FieldEntry | None] | None:
+        """Mantıksal ad -> (fiziksel register, alan). Alan None ise register'ın tamamı (32 bit).
+
+        Önce gruplanmış haritadaki alan aranır (IP 2.x), yoksa aynı adlı register (IP 1.x).
+        """
+        t = logical_target(name)
+        if t is not None:
+            reg = self.regs.get(t[0])
+            if reg is not None and t[1] in reg.fields:
+                return reg, reg.fields[t[1]]
+        reg = self.regs.get(name)
+        if reg is None:
+            return None
+        if len(reg.fields) == 1:
+            fe = next(iter(reg.fields.values()))
+            if fe.lsb == 0 and fe.width == 32:
+                return reg, None
+            return reg, fe
+        return reg, None
+
     def has(self, name: str) -> bool:
-        return name in self.regs
+        return self.resolve(name) is not None
 
     def get(self, name: str) -> RegEntry | None:
-        return self.regs.get(name)
+        r = self.resolve(name)
+        return r[0] if r else None
 
     def offset(self, name: str) -> int:
-        r = self.regs.get(name)
+        r = self.resolve(name)
         if r is None:
             raise MissingRegisterError(f"Register IP haritasında yok: {name}")
-        return r.offset
+        return r[0].offset
 
     def offset_hex(self, name: str) -> str:
-        r = self.regs.get(name)
-        return f"0x{r.offset:04X}" if r is not None else "—"
+        r = self.resolve(name)
+        if r is None:
+            return "—"
+        reg, fe = r
+        if fe is not None and reg.name != name:
+            hi = fe.lsb + fe.width - 1
+            bits = f"[{fe.lsb}]" if fe.width == 1 else f"[{hi}:{fe.lsb}]"
+            return f"0x{reg.offset:04X}{bits}"
+        return f"0x{reg.offset:04X}"
+
+    def field_label(self, name: str) -> str:
+        """Studio'daki fiziksel ad: gruplanmış alanda REG.ALAN, aksi halde register adı."""
+        r = self.resolve(name)
+        if r is None:
+            return name
+        reg, fe = r
+        return reg.name if fe is None or fe.name == reg.name else f"{reg.name}.{fe.name}"
+
+    def location(self, name: str) -> str:
+        """Kullanıcıya gösterilecek fiziksel konum: REG.ALAN @ 0xOFF[hi:lo]."""
+        r = self.resolve(name)
+        if r is None:
+            return "—"
+        reg, fe = r
+        where = reg.name if fe is None or fe.name == reg.name else f"{reg.name}.{fe.name}"
+        return f"{where} @ {self.offset_hex(name)}"
+
+    def is_pulse(self, name: str) -> bool:
+        """Mantıksal ad yazıldığında 1 clk darbe mi (geri okunup doğrulanmaz)."""
+        r = self.resolve(name)
+        if r is None:
+            return False
+        reg, fe = r
+        if fe is not None:
+            return fe.kind == "PULSE"
+        return reg.is_pulse_only()
+
+    def extract(self, name: str, word: int) -> int:
+        """Fiziksel register değerinden mantıksal alanın değerini çıkarır."""
+        r = self.resolve(name)
+        if r is None:
+            raise MissingRegisterError(f"Register IP haritasında yok: {name}")
+        fe = r[1]
+        return int(word) & 0xFFFFFFFF if fe is None else fe.extract(int(word))
+
+    def grouped(self) -> bool:
+        """IP 2.x gruplanmış register haritası mı (TX_WORD / *_CUST_PULSE)."""
+        return "TX_WORD" in self.regs or any(n.endswith("_CUST_PULSE") for n in self.regs)
 
     def field(self, reg_name: str, field_name: str) -> FieldEntry | None:
         r = self.regs.get(reg_name)
         if r is not None and field_name in r.fields:
             return r.fields[field_name]
+        # Gruplanmış haritada eski adlı alanlar (ör. BIT_RADDR.BIT -> BIT_IDX)
+        alias = {"BIT": "BIT_IDX", "WORD": "WORD_IDX", "ALL": "RST_ALL"}.get(field_name)
+        if r is not None and alias in r.fields:
+            return r.fields[alias]
         # DESIGN.md varsayılan bit konumları (alanlar Studio'da ayrı girilmemişse)
         if reg_name == "SOFT_RESET":
             m = re.fullmatch(r"RX(\d+)", field_name)
@@ -243,10 +320,10 @@ class RegMap:
         return out or ["RX0"]
 
     def has_tx(self) -> bool:
-        return "TX_TRANSMITTER_EN" in self.regs or "TX_CFG_SEL" in self.regs
+        return self.has("TX_TRANSMITTER_EN") or self.has("TX_CFG_SEL")
 
     def missing(self, names) -> list[str]:
-        return [n for n in names if n not in self.regs]
+        return [n for n in names if not self.has(n)]
 
     def missing_for_rx_config(self, ch: str) -> list[str]:
         p = channel_prefix(ch)

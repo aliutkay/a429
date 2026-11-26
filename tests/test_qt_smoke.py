@@ -9,6 +9,18 @@ from a429.qt.main_window import MainWindow
 from a429.sim import SimClient
 
 
+def _wait(app, win, timeout_s: float = 5.0):
+    """Arka plan işi (Worker) bitene kadar olayları işler."""
+    import time
+    end = time.monotonic() + timeout_s
+    while time.monotonic() < end:
+        app.processEvents()
+        if not win.busy and win.bus.pending == 0:
+            break
+        time.sleep(0.002)
+    app.processEvents()
+
+
 def _app():
     app = QApplication.instance()
     if app is None:
@@ -83,29 +95,17 @@ def test_sim_window_read_and_dialogs(tmp_path):
 
     # TX Canlı Kontrol'den Word Yaz + Tek Gönder -> TX Gönderilen Veriler tablosuna eklenmeli
     win.control_tab.tx_panel.write_word()
-    for _ in range(100):
-        app.processEvents()
-        if not win.busy:
-            break
+    _wait(app, win)
     win.control_tab.tx_panel.manual_send()
-    for _ in range(100):
-        app.processEvents()
-        if not win.busy:
-            break
+    _wait(app, win)
     assert len(win.tx_history) == 2
     assert win.tx_sent_tab.tv_hist._model.rowCount() == 2
 
     # Scheduler başlat/durdur -> Δ TX_WORD_CNT kaydedilmeli
     win.control_tab.tx_panel.toggle_scheduler()
-    for _ in range(100):
-        app.processEvents()
-        if not win.busy:
-            break
+    _wait(app, win)
     win.control_tab.tx_panel.toggle_scheduler()
-    for _ in range(100):
-        app.processEvents()
-        if not win.busy:
-            break
+    _wait(app, win)
     assert win.tx_history[-1]["kind"] == "Scheduler ⏸"
     assert "Δ TX_WORD_CNT" in win.tx_history[-1]["detail"]
 
@@ -141,3 +141,40 @@ def test_sim_window_read_and_dialogs(tmp_path):
     win.close()
     win.bus.shutdown()
     app.processEvents()
+
+
+def test_ip_health_check_ui_and_fix():
+    app = _app()
+    sim = SimClient()
+    win = MainWindow(sim)
+    win.show()
+    _wait(app, win)
+    win.do_check_ip()
+    _wait(app, win)
+    res = win._last_health
+    assert res is not None and res["worst"] == "error"          # RX0 / TB logger reset sonrası kapalı
+    assert "hata" in win.control_tab.health_pill.text()
+    win.do_refresh_status()
+    _wait(app, win)
+    assert win.control_tab.rx_warn.isVisibleTo(win.control_tab)
+    assert "Logger kapalı" in win.control_tab.lbl_rx_warn.text()
+
+    win.do_check_ip_dialog()
+    _wait(app, win)
+    dlg = win._dialogs["ip_health"]
+    assert dlg.isVisible() and dlg.btn_fix_all.isVisible()
+    dlg._fix_all()
+    _wait(app, win)
+    _wait(app, win)
+    assert sim.read(win.rm.offset("RX0_CTRL")) & 1
+    assert win._last_health["counts"]["error"] == 0
+    assert not win.control_tab.rx_warn.isVisibleTo(win.control_tab)
+
+    sim.sim_line["RX0"] = (1, 1)
+    win.do_refresh_status()
+    _wait(app, win)
+    assert "Hat 11" in win.control_tab.lbl_rx_warn.text()
+    dlg.close()
+    win._closing = True
+    win.close()
+

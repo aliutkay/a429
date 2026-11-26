@@ -403,7 +403,7 @@ class ConfigTab(QWidget):
         if res is not None:
             _fill_table(
                 self.tv_rx_regs,
-                [[r[0], r[1], r[2], "" if r[3] is None else f"{r[3]:,}", r[4]] for r in res.regs],
+                [[r[0], self.app.rm.field_label(r[1]), r[2], "" if r[3] is None else f"{r[3]:,}", r[4]] for r in res.regs],
                 ["fail" if r[5] else "" for r in res.regs],
                 [r[5] for r in res.regs],
             )
@@ -431,7 +431,7 @@ class ConfigTab(QWidget):
         if tx_res is not None:
             _fill_table(
                 self.tv_tx_regs,
-                [[r[0], r[1], r[2], "" if r[3] is None else f"{r[3]:,}", r[4]] for r in tx_res["regs"]],
+                [[r[0], self.app.rm.field_label(r[1]), r[2], "" if r[3] is None else f"{r[3]:,}", r[4]] for r in tx_res["regs"]],
                 ["fail" if r[5] else "" for r in tx_res["regs"]],
                 [r[5] for r in tx_res["regs"]],
             )

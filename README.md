@@ -15,7 +15,7 @@ okumaları inceleme) çalışır.
    pip install -r requirements.txt
    ```
 2. **IP kütüphanesi (önerilen):** AXIL Studio → **IP Library** → *Kütüphaneler* → bu reponun kökündeki
-   `arinc429.axlib.json` dosyasını açın. Kütüphanede `ARINC429` IP'si (sürüm `1.0.0`, 128 register,
+   `arinc429.axlib.json` dosyasını açın. Kütüphanede `ARINC429` IP'si (sürüm `2.0.0`, 93 register,
    *IP arayüzü* `arinc429`, Wrapper için tam `regspec`) bulunur; *Projeye al* / *Adres haritasına ekle* ile
    projeye yerleştirin. Kütüphane `axil-interface.json` ile aynı klasörde olduğundan Debug Bridge arayüzü
    ek ayar olmadan bulur.
@@ -47,17 +47,48 @@ okumaları inceleme) çalışır.
 
 Üst başlık çubuğundan hedef kanal (`RX0`…`RXn`, `TX BIT`) seçilir.
 
-## Register Adlandırma Sözleşmesi (`arinc429_ip`)
+## Register Haritası (`arinc429_ip`, IP 2.0.0)
 
-Uygulama, register offset'lerini AXIL Studio'daki IP register haritasından **adla** bulur (bkz. `vhdl/doc/DESIGN.md`).
-Eksik register varsa ilgili düğme devre dışı kalır ve tooltip'te eksik adlar listelenir.
+Register haritasının **tek kaynağı** `a429/ipmap.py`'dir: `vhdl/scripts/gen_axil_spec.py` buradan AXIL Studio
+spec'ini (`.regspec.json` / `.axproj.json` / `arinc429.axlib.json`), AXIL Studio `axilgen` ile `arinc429_axil*.v`
+dosyalarını ve top VHDL port bağlantılarını üretir; uygulama ve `--sim` simülatörü aynı haritayı kullanır.
 
-| Sayfa | Önek | Örnek register adları |
-|---|---|---|
-| Global | *(yok)* | `IP_ID`, `CAPS`, `CAPS_MEM`, `CLK_HZ`, `SOFT_RESET`, `GLOBAL_FREEZE`, `TS_LSB`, `TS_MSB` |
-| TX | `TX_` | `TX_TRANSMITTER_EN`, `TX_MSG_SCHED_EN`, `TX_BUILDER_EN`, `TX_LABEL`, `TX_SDI`, `TX_DATA`, `TX_SSM`, `TX_PARITY_TYPE`, `TX_SCHED_EN`, `TX_INITIAL_DELAY`, `TX_INTER_WORD_GAP`, `TX_SEND_CMD`, `TX_EXT_DATA`, `TX_EXT_HIGH`, `TX_EXT_LOW`, `TX_CFG_SEL`, `TX_CFG_APPLY`, `TX_CUST_PULSE_DUR`, `TX_CUST_NULL_DUR`, `TX_CUST_GAP_DUR`, `TX_CUST_SLP`, `TX_ACT_*`, `TX_STATUS`, `TX_WORD_CNT` |
-| TX BIT | `TB_` | `TB_CTRL`, `TB_CFG_SEL`, `TB_CFG_APPLY`, `TB_CUST_*`, `TB_ACT_*`, `TB_WORD_CNT`, `TB_ERR_CNT`, `TB_WORD_RADDR`, `TB_WORD_RD_*`, `TB_ERR_RADDR`, `TB_ERR_RD_*`, `TB_BIT_RADDR`, `TB_BIT_RD_*` |
-| RX *n* | `RX{n}_` | `TB_` ile aynı kanal register seti (`RX0_CTRL`, `RX0_CUST_MIN_PULSE`, `RX0_WORD_RADDR`, …) |
+İlgili küçük alanlar tek 32-bit register'da gruplanmıştır (IP 1.x'teki 128 register → 93):
+
+| Register | Alanlar |
+|---|---|
+| `TX_CTRL` | `TRANSMITTER_EN[0]`, `MSG_SCHED_EN[1]`, `BUILDER_EN[2]`, `SCHED_EN[3]` |
+| `TX_WORD` | ARINC Word düzeninde: `LABEL_VAL[7:0]`, `SDI[9:8]`, `DATA[28:10]`, `SSM[30:29]`, `PARITY_TYPE[31]` |
+| `TX_EXT_LINE` | `HIGH[0]`, `LOW[1]` (hat override) |
+| `TX_CFG` / `{p}CFG` | `SEL[1:0]`, `APPLY[4]` (darbe) |
+| `TX_CUST_TIMING` / `TX_ACT_TIMING` | `PULSE_DUR[15:0]`, `NULL_DUR[31:16]` |
+| `{p}CUST_PULSE` / `{p}ACT_PULSE` | `MIN[15:0]`, `MAX[31:16]` |
+| `{p}CUST_BIT` / `{p}ACT_BIT` | `MIN[15:0]`, `MAX[31:16]` |
+| `{p}CUST_NOISE` / `{p}ACT_NOISE` | `PULSE_ERR[15:0]`, `NULL_ERR[31:16]` |
+| `{p}CUST_FILTER` / `{p}ACT_FILTER` | `GLITCH_SIZE[15:0]`, `GAP_ERR[31:16]` |
+| `{p}STATUS` | `FROZEN[4]`, `WORD_WRAP[5]`, `ERR_WRAP[6]`, `ACT_CFG[9:8]`, **`LINE_HIGH[12]`, `LINE_LOW[13]`, `SYNC_WAIT[14]`** (hat teşhisi) |
+| `{p}ERR_RD_INFO` | `CODE[15:0]`, `ADDR[31:16]` |
+| `{p}BIT_RD_PULSE` / `{p}BIT_RD_NULL` | `DUR[15:0]`, `ERR[31:16]` (`BIT_RD_NULL` okununca pointer +1) |
+
+`{p}` = `TB_` (TX BIT) veya `RX{n}_`. Tam liste: `vhdl/axil/arinc429_axil_regs.md`.
+
+Uygulama içte eski **mantıksal adları** (`TX_LABEL`, `RX0_CUST_MIN_PULSE`, `TB_ERR_RD_CODE` …) kullanır;
+`RegMap.resolve` bunları gruplanmış register'daki alana (IP 2.x) ya da aynı adlı register'a (IP 1.x) çözer.
+Yazmalar register bazında birleştirilir ve register'ın diğer alanları korunur. Config tablolarında Studio'daki
+fiziksel ad (`RX0_CUST_PULSE.MIN @ 0x4040[15:0]`) gösterilir. Eksik register varsa ilgili düğme devre dışı kalır.
+
+## IP Durumu
+
+**Kontrol** sekmesindeki **IP Durumu** (bağlanınca otomatik çalışır), RX/TB'nin *hiç kayıt tutmamasına ve hata da
+vermemesine* yol açan durumları karttan okuyarak listeler ve tek tıkla düzeltir:
+
+- `CTRL.ENABLE=0` (reset sonrası varsayılan: logger kapalı, Word ve hata kaydedilmez), `CTRL.FREEZE=1`, `GLOBAL_FREEZE=1`
+- Hat teşhisi (`STATUS.LINE_HIGH/LINE_LOW/SYNC_WAIT` örneklenir): hat sürekli `11` (alıcı çıkışı ters / pull-up /
+  besleme yok), decoder senkron bekliyor, hatta aktivite yok (bağlanmamış `rx_high/rx_low`)
+- IP kimliği / sürümü (bitstream ile harita uyumu), `CLK_HZ` ile Config sekmesi saati, TX bit süresinin RX/TB
+  kabul aralığında olması (HS/LS uyuşmazlığı), TX hat override modu
+
+RX kartında da logger kapalıyken veya hat sorunu varken belirgin bir uyarı şeridi ve **Logger'ı Aç** düğmesi görünür.
 
 ## Dosyalar
 

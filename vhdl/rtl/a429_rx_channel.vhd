@@ -175,7 +175,10 @@ begin
             err_addr            => err_addr,
             err_data            => err_data,
             glitch_tick         => open,
-            glitch_total_cnt    => open
+            glitch_total_cnt    => open,
+            line_high           => reg_out.status_line_high,
+            line_low            => reg_out.status_line_low,
+            sync_wait           => reg_out.status_sync_wait
         );
 
     gen_checker : if G_HAS_CHECKER generate

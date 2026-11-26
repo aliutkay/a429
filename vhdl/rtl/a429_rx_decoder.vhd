@@ -27,6 +27,7 @@
 --           NOISE_VIOLATION, GAP_VIOLATION, BIT_EARLY, PULSE_GLITCH,
 --           PULSE_STUCK, BIT_TIMEOUT, PARITY.
 --   REQ-8 : soft_rst = '1' durumunda FSM ST_ERR_RECOVERY'ye döner.
+--   REQ-9 : sync_wait = '1' iff FSM ST_ERR_RECOVERY'de (STATUS.SYNC_WAIT teşhis biti).
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
@@ -83,7 +84,11 @@ entity a429_rx_decoder is
         err_bit_timeout     : out std_logic;
         err_parity          : out std_logic;
         err_addr            : out std_logic_vector(15 downto 0);  -- bit no, 32 = gap
-        err_data            : out std_logic_vector(31 downto 0)   -- süre, glitch sayısı veya Word
+        err_data            : out std_logic_vector(31 downto 0);  -- süre, glitch sayısı veya Word
+
+        -- Teşhis: '1' iken decoder ST_ERR_RECOVERY'de en az 4*min_bit temiz NULL bekliyor
+        -- (hat sürekli 11 / sürekli pulse ise bu bit 1'de kalır, hata raporlanmaz)
+        sync_wait           : out std_logic
     );
 end entity a429_rx_decoder;
 
@@ -150,6 +155,8 @@ architecture rtl of a429_rx_decoder is
     end function;
 
 begin
+
+    sync_wait <= '1' when state = ST_ERR_RECOVERY else '0';
 
     bus_state <= rx_high & rx_low;
     bus_null  <= '1' when bus_state = "00" else '0';

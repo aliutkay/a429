@@ -64,29 +64,29 @@ architecture rtl of arinc429_ip is
             i_ts_lsb                       : in  std_logic_vector(31 downto 0);
             o_ts_lsb_rd                    : out std_logic;
             i_ts_msb                       : in  std_logic_vector(31 downto 0);
-            o_tx_transmitter_en            : out std_logic;
-            o_tx_msg_sched_en              : out std_logic;
-            o_tx_builder_en                : out std_logic;
-            o_tx_label                     : out std_logic_vector(7 downto 0);
-            o_tx_sdi                       : out std_logic_vector(1 downto 0);
-            o_tx_data                      : out std_logic_vector(18 downto 0);
-            o_tx_ssm                       : out std_logic_vector(1 downto 0);
-            o_tx_parity_type               : out std_logic;
-            o_tx_sched_en                  : out std_logic;
-            o_tx_initial_delay             : out std_logic_vector(31 downto 0);
-            o_tx_inter_word_gap            : out std_logic_vector(31 downto 0);
+            o_tx_ctrl_transmitter_en       : out std_logic;
+            o_tx_ctrl_msg_sched_en         : out std_logic;
+            o_tx_ctrl_builder_en           : out std_logic;
+            o_tx_ctrl_sched_en             : out std_logic;
+            o_tx_word_label_val            : out std_logic_vector(7 downto 0);
+            o_tx_word_sdi                  : out std_logic_vector(1 downto 0);
+            o_tx_word_data                 : out std_logic_vector(18 downto 0);
+            o_tx_word_ssm                  : out std_logic_vector(1 downto 0);
+            o_tx_word_parity_type          : out std_logic;
             o_tx_send_cmd_send             : out std_logic;
             o_tx_ext_data                  : out std_logic_vector(31 downto 0);
-            o_tx_ext_high                  : out std_logic;
-            o_tx_ext_low                   : out std_logic;
+            o_tx_ext_line_high             : out std_logic;
+            o_tx_ext_line_low              : out std_logic;
+            o_tx_initial_delay             : out std_logic_vector(31 downto 0);
+            o_tx_inter_word_gap            : out std_logic_vector(31 downto 0);
             o_tx_cfg_sel                   : out std_logic_vector(1 downto 0);
-            o_tx_cfg_apply_apply           : out std_logic;
-            o_tx_cust_pulse_dur            : out std_logic_vector(15 downto 0);
-            o_tx_cust_null_dur             : out std_logic_vector(15 downto 0);
+            o_tx_cfg_apply                 : out std_logic;
+            o_tx_cust_timing_pulse_dur     : out std_logic_vector(15 downto 0);
+            o_tx_cust_timing_null_dur      : out std_logic_vector(15 downto 0);
             o_tx_cust_gap_dur              : out std_logic_vector(31 downto 0);
             o_tx_cust_slp                  : out std_logic;
-            i_tx_act_pulse_dur             : in  std_logic_vector(15 downto 0);
-            i_tx_act_null_dur              : in  std_logic_vector(15 downto 0);
+            i_tx_act_timing_pulse_dur      : in  std_logic_vector(15 downto 0);
+            i_tx_act_timing_null_dur       : in  std_logic_vector(15 downto 0);
             i_tx_act_gap_dur               : in  std_logic_vector(31 downto 0);
             i_tx_act_slp                   : in  std_logic;
             i_tx_status_busy               : in  std_logic;
@@ -100,26 +100,29 @@ architecture rtl of arinc429_ip is
             i_tb_status_word_wrap          : in  std_logic;
             i_tb_status_err_wrap           : in  std_logic;
             i_tb_status_act_cfg            : in  std_logic_vector(1 downto 0);
+            i_tb_status_line_high          : in  std_logic;
+            i_tb_status_line_low           : in  std_logic;
+            i_tb_status_sync_wait          : in  std_logic;
             o_tb_cfg_sel                   : out std_logic_vector(1 downto 0);
-            o_tb_cfg_apply_apply           : out std_logic;
-            o_tb_cust_glitch_filter_size   : out std_logic_vector(15 downto 0);
-            o_tb_cust_min_pulse            : out std_logic_vector(15 downto 0);
-            o_tb_cust_max_pulse            : out std_logic_vector(15 downto 0);
-            o_tb_cust_min_bit              : out std_logic_vector(15 downto 0);
-            o_tb_cust_max_bit              : out std_logic_vector(15 downto 0);
-            o_tb_cust_max_pulse_err        : out std_logic_vector(15 downto 0);
-            o_tb_cust_max_null_err         : out std_logic_vector(15 downto 0);
-            o_tb_cust_max_gap_err          : out std_logic_vector(15 downto 0);
-            o_tb_cust_parity_mode          : out std_logic_vector(1 downto 0);
-            i_tb_act_glitch_filter_size    : in  std_logic_vector(15 downto 0);
-            i_tb_act_min_pulse             : in  std_logic_vector(15 downto 0);
-            i_tb_act_max_pulse             : in  std_logic_vector(15 downto 0);
-            i_tb_act_min_bit               : in  std_logic_vector(15 downto 0);
-            i_tb_act_max_bit               : in  std_logic_vector(15 downto 0);
-            i_tb_act_max_pulse_err         : in  std_logic_vector(15 downto 0);
-            i_tb_act_max_null_err          : in  std_logic_vector(15 downto 0);
-            i_tb_act_max_gap_err           : in  std_logic_vector(15 downto 0);
-            i_tb_act_parity_mode           : in  std_logic_vector(1 downto 0);
+            o_tb_cfg_apply                 : out std_logic;
+            o_tb_cust_pulse_min            : out std_logic_vector(15 downto 0);
+            o_tb_cust_pulse_max            : out std_logic_vector(15 downto 0);
+            o_tb_cust_bit_min              : out std_logic_vector(15 downto 0);
+            o_tb_cust_bit_max              : out std_logic_vector(15 downto 0);
+            o_tb_cust_noise_pulse_err      : out std_logic_vector(15 downto 0);
+            o_tb_cust_noise_null_err       : out std_logic_vector(15 downto 0);
+            o_tb_cust_filter_glitch_size   : out std_logic_vector(15 downto 0);
+            o_tb_cust_filter_gap_err       : out std_logic_vector(15 downto 0);
+            o_tb_cust_parity               : out std_logic_vector(1 downto 0);
+            i_tb_act_pulse_min             : in  std_logic_vector(15 downto 0);
+            i_tb_act_pulse_max             : in  std_logic_vector(15 downto 0);
+            i_tb_act_bit_min               : in  std_logic_vector(15 downto 0);
+            i_tb_act_bit_max               : in  std_logic_vector(15 downto 0);
+            i_tb_act_noise_pulse_err       : in  std_logic_vector(15 downto 0);
+            i_tb_act_noise_null_err        : in  std_logic_vector(15 downto 0);
+            i_tb_act_filter_glitch_size    : in  std_logic_vector(15 downto 0);
+            i_tb_act_filter_gap_err        : in  std_logic_vector(15 downto 0);
+            i_tb_act_parity                : in  std_logic_vector(1 downto 0);
             i_tb_word_cnt                  : in  std_logic_vector(31 downto 0);
             i_tb_err_cnt                   : in  std_logic_vector(31 downto 0);
             i_tb_drop_cnt                  : in  std_logic_vector(31 downto 0);
@@ -136,18 +139,18 @@ architecture rtl of arinc429_ip is
             o_tb_err_raddr_wr              : out std_logic;
             i_tb_err_rd_ts_msb             : in  std_logic_vector(31 downto 0);
             i_tb_err_rd_ts_lsb             : in  std_logic_vector(31 downto 0);
-            i_tb_err_rd_code               : in  std_logic_vector(15 downto 0);
-            i_tb_err_rd_addr               : in  std_logic_vector(15 downto 0);
+            i_tb_err_rd_info_code          : in  std_logic_vector(15 downto 0);
+            i_tb_err_rd_info_addr          : in  std_logic_vector(15 downto 0);
             i_tb_err_rd_data               : in  std_logic_vector(31 downto 0);
             o_tb_err_rd_data_rd            : out std_logic;
             o_tb_bit_raddr_bit_idx         : out std_logic_vector(4 downto 0);
             o_tb_bit_raddr_word_idx        : out std_logic_vector(2 downto 0);
             o_tb_bit_raddr_wr              : out std_logic;
-            i_tb_bit_rd_pulse              : in  std_logic_vector(15 downto 0);
+            i_tb_bit_rd_pulse_dur          : in  std_logic_vector(15 downto 0);
             i_tb_bit_rd_pulse_err          : in  std_logic_vector(15 downto 0);
-            i_tb_bit_rd_null               : in  std_logic_vector(15 downto 0);
+            i_tb_bit_rd_null_dur           : in  std_logic_vector(15 downto 0);
             i_tb_bit_rd_null_err           : in  std_logic_vector(15 downto 0);
-            o_tb_bit_rd_null_err_rd        : out std_logic;
+            o_tb_bit_rd_null_rd            : out std_logic;
             o_tb_chk_ctrl_enable           : out std_logic;
             o_tb_chk_ctrl_clear            : out std_logic;
             o_tb_chk_timeout               : out std_logic_vector(31 downto 0);
@@ -162,26 +165,29 @@ architecture rtl of arinc429_ip is
             i_rx0_status_word_wrap         : in  std_logic;
             i_rx0_status_err_wrap          : in  std_logic;
             i_rx0_status_act_cfg           : in  std_logic_vector(1 downto 0);
+            i_rx0_status_line_high         : in  std_logic;
+            i_rx0_status_line_low          : in  std_logic;
+            i_rx0_status_sync_wait         : in  std_logic;
             o_rx0_cfg_sel                  : out std_logic_vector(1 downto 0);
-            o_rx0_cfg_apply_apply          : out std_logic;
-            o_rx0_cust_glitch_filter_size  : out std_logic_vector(15 downto 0);
-            o_rx0_cust_min_pulse           : out std_logic_vector(15 downto 0);
-            o_rx0_cust_max_pulse           : out std_logic_vector(15 downto 0);
-            o_rx0_cust_min_bit             : out std_logic_vector(15 downto 0);
-            o_rx0_cust_max_bit             : out std_logic_vector(15 downto 0);
-            o_rx0_cust_max_pulse_err       : out std_logic_vector(15 downto 0);
-            o_rx0_cust_max_null_err        : out std_logic_vector(15 downto 0);
-            o_rx0_cust_max_gap_err         : out std_logic_vector(15 downto 0);
-            o_rx0_cust_parity_mode         : out std_logic_vector(1 downto 0);
-            i_rx0_act_glitch_filter_size   : in  std_logic_vector(15 downto 0);
-            i_rx0_act_min_pulse            : in  std_logic_vector(15 downto 0);
-            i_rx0_act_max_pulse            : in  std_logic_vector(15 downto 0);
-            i_rx0_act_min_bit              : in  std_logic_vector(15 downto 0);
-            i_rx0_act_max_bit              : in  std_logic_vector(15 downto 0);
-            i_rx0_act_max_pulse_err        : in  std_logic_vector(15 downto 0);
-            i_rx0_act_max_null_err         : in  std_logic_vector(15 downto 0);
-            i_rx0_act_max_gap_err          : in  std_logic_vector(15 downto 0);
-            i_rx0_act_parity_mode          : in  std_logic_vector(1 downto 0);
+            o_rx0_cfg_apply                : out std_logic;
+            o_rx0_cust_pulse_min           : out std_logic_vector(15 downto 0);
+            o_rx0_cust_pulse_max           : out std_logic_vector(15 downto 0);
+            o_rx0_cust_bit_min             : out std_logic_vector(15 downto 0);
+            o_rx0_cust_bit_max             : out std_logic_vector(15 downto 0);
+            o_rx0_cust_noise_pulse_err     : out std_logic_vector(15 downto 0);
+            o_rx0_cust_noise_null_err      : out std_logic_vector(15 downto 0);
+            o_rx0_cust_filter_glitch_size  : out std_logic_vector(15 downto 0);
+            o_rx0_cust_filter_gap_err      : out std_logic_vector(15 downto 0);
+            o_rx0_cust_parity              : out std_logic_vector(1 downto 0);
+            i_rx0_act_pulse_min            : in  std_logic_vector(15 downto 0);
+            i_rx0_act_pulse_max            : in  std_logic_vector(15 downto 0);
+            i_rx0_act_bit_min              : in  std_logic_vector(15 downto 0);
+            i_rx0_act_bit_max              : in  std_logic_vector(15 downto 0);
+            i_rx0_act_noise_pulse_err      : in  std_logic_vector(15 downto 0);
+            i_rx0_act_noise_null_err       : in  std_logic_vector(15 downto 0);
+            i_rx0_act_filter_glitch_size   : in  std_logic_vector(15 downto 0);
+            i_rx0_act_filter_gap_err       : in  std_logic_vector(15 downto 0);
+            i_rx0_act_parity               : in  std_logic_vector(1 downto 0);
             i_rx0_word_cnt                 : in  std_logic_vector(31 downto 0);
             i_rx0_err_cnt                  : in  std_logic_vector(31 downto 0);
             i_rx0_drop_cnt                 : in  std_logic_vector(31 downto 0);
@@ -198,18 +204,18 @@ architecture rtl of arinc429_ip is
             o_rx0_err_raddr_wr             : out std_logic;
             i_rx0_err_rd_ts_msb            : in  std_logic_vector(31 downto 0);
             i_rx0_err_rd_ts_lsb            : in  std_logic_vector(31 downto 0);
-            i_rx0_err_rd_code              : in  std_logic_vector(15 downto 0);
-            i_rx0_err_rd_addr              : in  std_logic_vector(15 downto 0);
+            i_rx0_err_rd_info_code         : in  std_logic_vector(15 downto 0);
+            i_rx0_err_rd_info_addr         : in  std_logic_vector(15 downto 0);
             i_rx0_err_rd_data              : in  std_logic_vector(31 downto 0);
             o_rx0_err_rd_data_rd           : out std_logic;
             o_rx0_bit_raddr_bit_idx        : out std_logic_vector(4 downto 0);
             o_rx0_bit_raddr_word_idx       : out std_logic_vector(2 downto 0);
             o_rx0_bit_raddr_wr             : out std_logic;
-            i_rx0_bit_rd_pulse             : in  std_logic_vector(15 downto 0);
+            i_rx0_bit_rd_pulse_dur         : in  std_logic_vector(15 downto 0);
             i_rx0_bit_rd_pulse_err         : in  std_logic_vector(15 downto 0);
-            i_rx0_bit_rd_null              : in  std_logic_vector(15 downto 0);
+            i_rx0_bit_rd_null_dur          : in  std_logic_vector(15 downto 0);
             i_rx0_bit_rd_null_err          : in  std_logic_vector(15 downto 0);
-            o_rx0_bit_rd_null_err_rd       : out std_logic;
+            o_rx0_bit_rd_null_rd           : out std_logic;
             SLAVE_AXI_REQ                  : in  std_logic_vector(110 downto 0);
             SLAVE_AXI_RSP                  : out std_logic_vector(40 downto 0)
         );
@@ -262,29 +268,29 @@ begin
             i_ts_lsb                       => ts_lsb,
             o_ts_lsb_rd                    => ts_lsb_rd,
             i_ts_msb                       => ts_msb,
-            o_tx_transmitter_en            => tx_reg_in.transmitter_en,
-            o_tx_msg_sched_en              => tx_reg_in.msg_sched_en,
-            o_tx_builder_en                => tx_reg_in.builder_en,
-            o_tx_label                     => tx_reg_in.label_val,
-            o_tx_sdi                       => tx_reg_in.sdi,
-            o_tx_data                      => tx_reg_in.data,
-            o_tx_ssm                       => tx_reg_in.ssm,
-            o_tx_parity_type               => tx_reg_in.parity_type,
-            o_tx_sched_en                  => tx_reg_in.sched_en,
-            o_tx_initial_delay             => tx_reg_in.initial_delay,
-            o_tx_inter_word_gap            => tx_reg_in.inter_word_gap,
+            o_tx_ctrl_transmitter_en       => tx_reg_in.transmitter_en,
+            o_tx_ctrl_msg_sched_en         => tx_reg_in.msg_sched_en,
+            o_tx_ctrl_builder_en           => tx_reg_in.builder_en,
+            o_tx_ctrl_sched_en             => tx_reg_in.sched_en,
+            o_tx_word_label_val            => tx_reg_in.label_val,
+            o_tx_word_sdi                  => tx_reg_in.sdi,
+            o_tx_word_data                 => tx_reg_in.data,
+            o_tx_word_ssm                  => tx_reg_in.ssm,
+            o_tx_word_parity_type          => tx_reg_in.parity_type,
             o_tx_send_cmd_send             => tx_reg_in.send_cmd,
             o_tx_ext_data                  => tx_reg_in.ext_data,
-            o_tx_ext_high                  => tx_reg_in.ext_high,
-            o_tx_ext_low                   => tx_reg_in.ext_low,
+            o_tx_ext_line_high             => tx_reg_in.ext_high,
+            o_tx_ext_line_low              => tx_reg_in.ext_low,
+            o_tx_initial_delay             => tx_reg_in.initial_delay,
+            o_tx_inter_word_gap            => tx_reg_in.inter_word_gap,
             o_tx_cfg_sel                   => tx_reg_in.cfg_sel,
-            o_tx_cfg_apply_apply           => tx_reg_in.cfg_apply,
-            o_tx_cust_pulse_dur            => tx_reg_in.cust.pulse_dur,
-            o_tx_cust_null_dur             => tx_reg_in.cust.null_dur,
+            o_tx_cfg_apply                 => tx_reg_in.cfg_apply,
+            o_tx_cust_timing_pulse_dur     => tx_reg_in.cust.pulse_dur,
+            o_tx_cust_timing_null_dur      => tx_reg_in.cust.null_dur,
             o_tx_cust_gap_dur              => tx_reg_in.cust.gap_dur,
             o_tx_cust_slp                  => tx_reg_in.cust.slp,
-            i_tx_act_pulse_dur             => tx_reg_out.act.pulse_dur,
-            i_tx_act_null_dur              => tx_reg_out.act.null_dur,
+            i_tx_act_timing_pulse_dur      => tx_reg_out.act.pulse_dur,
+            i_tx_act_timing_null_dur       => tx_reg_out.act.null_dur,
             i_tx_act_gap_dur               => tx_reg_out.act.gap_dur,
             i_tx_act_slp                   => tx_reg_out.act.slp,
             i_tx_status_busy               => tx_reg_out.busy,
@@ -298,26 +304,29 @@ begin
             i_tb_status_word_wrap          => tb_reg_out.status_word_wrap,
             i_tb_status_err_wrap           => tb_reg_out.status_err_wrap,
             i_tb_status_act_cfg            => tb_reg_out.status_act_cfg,
+            i_tb_status_line_high          => tb_reg_out.status_line_high,
+            i_tb_status_line_low           => tb_reg_out.status_line_low,
+            i_tb_status_sync_wait          => tb_reg_out.status_sync_wait,
             o_tb_cfg_sel                   => tb_reg_in.cfg_sel,
-            o_tb_cfg_apply_apply           => tb_reg_in.cfg_apply,
-            o_tb_cust_glitch_filter_size   => tb_reg_in.cust.glitch_filter_size,
-            o_tb_cust_min_pulse            => tb_reg_in.cust.min_pulse,
-            o_tb_cust_max_pulse            => tb_reg_in.cust.max_pulse,
-            o_tb_cust_min_bit              => tb_reg_in.cust.min_bit,
-            o_tb_cust_max_bit              => tb_reg_in.cust.max_bit,
-            o_tb_cust_max_pulse_err        => tb_reg_in.cust.max_pulse_err,
-            o_tb_cust_max_null_err         => tb_reg_in.cust.max_null_err,
-            o_tb_cust_max_gap_err          => tb_reg_in.cust.max_gap_err,
-            o_tb_cust_parity_mode          => tb_reg_in.cust.parity_mode,
-            i_tb_act_glitch_filter_size    => tb_reg_out.act.glitch_filter_size,
-            i_tb_act_min_pulse             => tb_reg_out.act.min_pulse,
-            i_tb_act_max_pulse             => tb_reg_out.act.max_pulse,
-            i_tb_act_min_bit               => tb_reg_out.act.min_bit,
-            i_tb_act_max_bit               => tb_reg_out.act.max_bit,
-            i_tb_act_max_pulse_err         => tb_reg_out.act.max_pulse_err,
-            i_tb_act_max_null_err          => tb_reg_out.act.max_null_err,
-            i_tb_act_max_gap_err           => tb_reg_out.act.max_gap_err,
-            i_tb_act_parity_mode           => tb_reg_out.act.parity_mode,
+            o_tb_cfg_apply                 => tb_reg_in.cfg_apply,
+            o_tb_cust_pulse_min            => tb_reg_in.cust.min_pulse,
+            o_tb_cust_pulse_max            => tb_reg_in.cust.max_pulse,
+            o_tb_cust_bit_min              => tb_reg_in.cust.min_bit,
+            o_tb_cust_bit_max              => tb_reg_in.cust.max_bit,
+            o_tb_cust_noise_pulse_err      => tb_reg_in.cust.max_pulse_err,
+            o_tb_cust_noise_null_err       => tb_reg_in.cust.max_null_err,
+            o_tb_cust_filter_glitch_size   => tb_reg_in.cust.glitch_filter_size,
+            o_tb_cust_filter_gap_err       => tb_reg_in.cust.max_gap_err,
+            o_tb_cust_parity               => tb_reg_in.cust.parity_mode,
+            i_tb_act_pulse_min             => tb_reg_out.act.min_pulse,
+            i_tb_act_pulse_max             => tb_reg_out.act.max_pulse,
+            i_tb_act_bit_min               => tb_reg_out.act.min_bit,
+            i_tb_act_bit_max               => tb_reg_out.act.max_bit,
+            i_tb_act_noise_pulse_err       => tb_reg_out.act.max_pulse_err,
+            i_tb_act_noise_null_err        => tb_reg_out.act.max_null_err,
+            i_tb_act_filter_glitch_size    => tb_reg_out.act.glitch_filter_size,
+            i_tb_act_filter_gap_err        => tb_reg_out.act.max_gap_err,
+            i_tb_act_parity                => tb_reg_out.act.parity_mode,
             i_tb_word_cnt                  => tb_reg_out.word_cnt,
             i_tb_err_cnt                   => tb_reg_out.err_cnt,
             i_tb_drop_cnt                  => tb_reg_out.drop_cnt,
@@ -334,18 +343,18 @@ begin
             o_tb_err_raddr_wr              => tb_reg_in.err_raddr_wr,
             i_tb_err_rd_ts_msb             => tb_reg_out.err_rd_ts_msb,
             i_tb_err_rd_ts_lsb             => tb_reg_out.err_rd_ts_lsb,
-            i_tb_err_rd_code               => tb_reg_out.err_rd_code,
-            i_tb_err_rd_addr               => tb_reg_out.err_rd_addr,
+            i_tb_err_rd_info_code          => tb_reg_out.err_rd_code,
+            i_tb_err_rd_info_addr          => tb_reg_out.err_rd_addr,
             i_tb_err_rd_data               => tb_reg_out.err_rd_data,
             o_tb_err_rd_data_rd            => tb_reg_in.err_rd_last,
             o_tb_bit_raddr_bit_idx         => tb_reg_in.bit_raddr_bit,
             o_tb_bit_raddr_word_idx        => s_tb_bit_widx,
             o_tb_bit_raddr_wr              => tb_reg_in.bit_raddr_wr,
-            i_tb_bit_rd_pulse              => tb_reg_out.bit_rd_pulse,
+            i_tb_bit_rd_pulse_dur          => tb_reg_out.bit_rd_pulse,
             i_tb_bit_rd_pulse_err          => tb_reg_out.bit_rd_pulse_err,
-            i_tb_bit_rd_null               => tb_reg_out.bit_rd_null,
+            i_tb_bit_rd_null_dur           => tb_reg_out.bit_rd_null,
             i_tb_bit_rd_null_err           => tb_reg_out.bit_rd_null_err,
-            o_tb_bit_rd_null_err_rd        => tb_reg_in.bit_rd_last,
+            o_tb_bit_rd_null_rd            => tb_reg_in.bit_rd_last,
             o_tb_chk_ctrl_enable           => tb_reg_in.chk_enable,
             o_tb_chk_ctrl_clear            => tb_reg_in.chk_clear,
             o_tb_chk_timeout               => tb_reg_in.chk_timeout,
@@ -360,26 +369,29 @@ begin
             i_rx0_status_word_wrap         => rx_reg_out(0).status_word_wrap,
             i_rx0_status_err_wrap          => rx_reg_out(0).status_err_wrap,
             i_rx0_status_act_cfg           => rx_reg_out(0).status_act_cfg,
+            i_rx0_status_line_high         => rx_reg_out(0).status_line_high,
+            i_rx0_status_line_low          => rx_reg_out(0).status_line_low,
+            i_rx0_status_sync_wait         => rx_reg_out(0).status_sync_wait,
             o_rx0_cfg_sel                  => rx_reg_in(0).cfg_sel,
-            o_rx0_cfg_apply_apply          => rx_reg_in(0).cfg_apply,
-            o_rx0_cust_glitch_filter_size  => rx_reg_in(0).cust.glitch_filter_size,
-            o_rx0_cust_min_pulse           => rx_reg_in(0).cust.min_pulse,
-            o_rx0_cust_max_pulse           => rx_reg_in(0).cust.max_pulse,
-            o_rx0_cust_min_bit             => rx_reg_in(0).cust.min_bit,
-            o_rx0_cust_max_bit             => rx_reg_in(0).cust.max_bit,
-            o_rx0_cust_max_pulse_err       => rx_reg_in(0).cust.max_pulse_err,
-            o_rx0_cust_max_null_err        => rx_reg_in(0).cust.max_null_err,
-            o_rx0_cust_max_gap_err         => rx_reg_in(0).cust.max_gap_err,
-            o_rx0_cust_parity_mode         => rx_reg_in(0).cust.parity_mode,
-            i_rx0_act_glitch_filter_size   => rx_reg_out(0).act.glitch_filter_size,
-            i_rx0_act_min_pulse            => rx_reg_out(0).act.min_pulse,
-            i_rx0_act_max_pulse            => rx_reg_out(0).act.max_pulse,
-            i_rx0_act_min_bit              => rx_reg_out(0).act.min_bit,
-            i_rx0_act_max_bit              => rx_reg_out(0).act.max_bit,
-            i_rx0_act_max_pulse_err        => rx_reg_out(0).act.max_pulse_err,
-            i_rx0_act_max_null_err         => rx_reg_out(0).act.max_null_err,
-            i_rx0_act_max_gap_err          => rx_reg_out(0).act.max_gap_err,
-            i_rx0_act_parity_mode          => rx_reg_out(0).act.parity_mode,
+            o_rx0_cfg_apply                => rx_reg_in(0).cfg_apply,
+            o_rx0_cust_pulse_min           => rx_reg_in(0).cust.min_pulse,
+            o_rx0_cust_pulse_max           => rx_reg_in(0).cust.max_pulse,
+            o_rx0_cust_bit_min             => rx_reg_in(0).cust.min_bit,
+            o_rx0_cust_bit_max             => rx_reg_in(0).cust.max_bit,
+            o_rx0_cust_noise_pulse_err     => rx_reg_in(0).cust.max_pulse_err,
+            o_rx0_cust_noise_null_err      => rx_reg_in(0).cust.max_null_err,
+            o_rx0_cust_filter_glitch_size  => rx_reg_in(0).cust.glitch_filter_size,
+            o_rx0_cust_filter_gap_err      => rx_reg_in(0).cust.max_gap_err,
+            o_rx0_cust_parity              => rx_reg_in(0).cust.parity_mode,
+            i_rx0_act_pulse_min            => rx_reg_out(0).act.min_pulse,
+            i_rx0_act_pulse_max            => rx_reg_out(0).act.max_pulse,
+            i_rx0_act_bit_min              => rx_reg_out(0).act.min_bit,
+            i_rx0_act_bit_max              => rx_reg_out(0).act.max_bit,
+            i_rx0_act_noise_pulse_err      => rx_reg_out(0).act.max_pulse_err,
+            i_rx0_act_noise_null_err       => rx_reg_out(0).act.max_null_err,
+            i_rx0_act_filter_glitch_size   => rx_reg_out(0).act.glitch_filter_size,
+            i_rx0_act_filter_gap_err       => rx_reg_out(0).act.max_gap_err,
+            i_rx0_act_parity               => rx_reg_out(0).act.parity_mode,
             i_rx0_word_cnt                 => rx_reg_out(0).word_cnt,
             i_rx0_err_cnt                  => rx_reg_out(0).err_cnt,
             i_rx0_drop_cnt                 => rx_reg_out(0).drop_cnt,
@@ -396,18 +408,18 @@ begin
             o_rx0_err_raddr_wr             => rx_reg_in(0).err_raddr_wr,
             i_rx0_err_rd_ts_msb            => rx_reg_out(0).err_rd_ts_msb,
             i_rx0_err_rd_ts_lsb            => rx_reg_out(0).err_rd_ts_lsb,
-            i_rx0_err_rd_code              => rx_reg_out(0).err_rd_code,
-            i_rx0_err_rd_addr              => rx_reg_out(0).err_rd_addr,
+            i_rx0_err_rd_info_code         => rx_reg_out(0).err_rd_code,
+            i_rx0_err_rd_info_addr         => rx_reg_out(0).err_rd_addr,
             i_rx0_err_rd_data              => rx_reg_out(0).err_rd_data,
             o_rx0_err_rd_data_rd           => rx_reg_in(0).err_rd_last,
             o_rx0_bit_raddr_bit_idx        => rx_reg_in(0).bit_raddr_bit,
             o_rx0_bit_raddr_word_idx       => s_rx0_bit_widx,
             o_rx0_bit_raddr_wr             => rx_reg_in(0).bit_raddr_wr,
-            i_rx0_bit_rd_pulse             => rx_reg_out(0).bit_rd_pulse,
+            i_rx0_bit_rd_pulse_dur         => rx_reg_out(0).bit_rd_pulse,
             i_rx0_bit_rd_pulse_err         => rx_reg_out(0).bit_rd_pulse_err,
-            i_rx0_bit_rd_null              => rx_reg_out(0).bit_rd_null,
+            i_rx0_bit_rd_null_dur          => rx_reg_out(0).bit_rd_null,
             i_rx0_bit_rd_null_err          => rx_reg_out(0).bit_rd_null_err,
-            o_rx0_bit_rd_null_err_rd       => rx_reg_in(0).bit_rd_last,
+            o_rx0_bit_rd_null_rd           => rx_reg_in(0).bit_rd_last,
             SLAVE_AXI_REQ                  => SLAVE_AXI_REQ,
             SLAVE_AXI_RSP                  => SLAVE_AXI_RSP
         );

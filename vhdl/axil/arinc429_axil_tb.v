@@ -20,29 +20,29 @@ module tb;
     reg  [31:0] i_ts_lsb = 0;
     wire        o_ts_lsb_rd;
     reg  [31:0] i_ts_msb = 0;
-    wire        o_tx_transmitter_en;
-    wire        o_tx_msg_sched_en;
-    wire        o_tx_builder_en;
-    wire [7:0]  o_tx_label;
-    wire [1:0]  o_tx_sdi;
-    wire [18:0] o_tx_data;
-    wire [1:0]  o_tx_ssm;
-    wire        o_tx_parity_type;
-    wire        o_tx_sched_en;
-    wire [31:0] o_tx_initial_delay;
-    wire [31:0] o_tx_inter_word_gap;
+    wire        o_tx_ctrl_transmitter_en;
+    wire        o_tx_ctrl_msg_sched_en;
+    wire        o_tx_ctrl_builder_en;
+    wire        o_tx_ctrl_sched_en;
+    wire [7:0]  o_tx_word_label_val;
+    wire [1:0]  o_tx_word_sdi;
+    wire [18:0] o_tx_word_data;
+    wire [1:0]  o_tx_word_ssm;
+    wire        o_tx_word_parity_type;
     wire        o_tx_send_cmd_send;
     wire [31:0] o_tx_ext_data;
-    wire        o_tx_ext_high;
-    wire        o_tx_ext_low;
+    wire        o_tx_ext_line_high;
+    wire        o_tx_ext_line_low;
+    wire [31:0] o_tx_initial_delay;
+    wire [31:0] o_tx_inter_word_gap;
     wire [1:0]  o_tx_cfg_sel;
-    wire        o_tx_cfg_apply_apply;
-    wire [15:0] o_tx_cust_pulse_dur;
-    wire [15:0] o_tx_cust_null_dur;
+    wire        o_tx_cfg_apply;
+    wire [15:0] o_tx_cust_timing_pulse_dur;
+    wire [15:0] o_tx_cust_timing_null_dur;
     wire [31:0] o_tx_cust_gap_dur;
     wire        o_tx_cust_slp;
-    reg  [15:0] i_tx_act_pulse_dur = 0;
-    reg  [15:0] i_tx_act_null_dur = 0;
+    reg  [15:0] i_tx_act_timing_pulse_dur = 0;
+    reg  [15:0] i_tx_act_timing_null_dur = 0;
     reg  [31:0] i_tx_act_gap_dur = 0;
     reg         i_tx_act_slp = 0;
     reg         i_tx_status_busy = 0;
@@ -56,26 +56,29 @@ module tb;
     reg         i_tb_status_word_wrap = 0;
     reg         i_tb_status_err_wrap = 0;
     reg  [1:0]  i_tb_status_act_cfg = 0;
+    reg         i_tb_status_line_high = 0;
+    reg         i_tb_status_line_low = 0;
+    reg         i_tb_status_sync_wait = 0;
     wire [1:0]  o_tb_cfg_sel;
-    wire        o_tb_cfg_apply_apply;
-    wire [15:0] o_tb_cust_glitch_filter_size;
-    wire [15:0] o_tb_cust_min_pulse;
-    wire [15:0] o_tb_cust_max_pulse;
-    wire [15:0] o_tb_cust_min_bit;
-    wire [15:0] o_tb_cust_max_bit;
-    wire [15:0] o_tb_cust_max_pulse_err;
-    wire [15:0] o_tb_cust_max_null_err;
-    wire [15:0] o_tb_cust_max_gap_err;
-    wire [1:0]  o_tb_cust_parity_mode;
-    reg  [15:0] i_tb_act_glitch_filter_size = 0;
-    reg  [15:0] i_tb_act_min_pulse = 0;
-    reg  [15:0] i_tb_act_max_pulse = 0;
-    reg  [15:0] i_tb_act_min_bit = 0;
-    reg  [15:0] i_tb_act_max_bit = 0;
-    reg  [15:0] i_tb_act_max_pulse_err = 0;
-    reg  [15:0] i_tb_act_max_null_err = 0;
-    reg  [15:0] i_tb_act_max_gap_err = 0;
-    reg  [1:0]  i_tb_act_parity_mode = 0;
+    wire        o_tb_cfg_apply;
+    wire [15:0] o_tb_cust_pulse_min;
+    wire [15:0] o_tb_cust_pulse_max;
+    wire [15:0] o_tb_cust_bit_min;
+    wire [15:0] o_tb_cust_bit_max;
+    wire [15:0] o_tb_cust_noise_pulse_err;
+    wire [15:0] o_tb_cust_noise_null_err;
+    wire [15:0] o_tb_cust_filter_glitch_size;
+    wire [15:0] o_tb_cust_filter_gap_err;
+    wire [1:0]  o_tb_cust_parity;
+    reg  [15:0] i_tb_act_pulse_min = 0;
+    reg  [15:0] i_tb_act_pulse_max = 0;
+    reg  [15:0] i_tb_act_bit_min = 0;
+    reg  [15:0] i_tb_act_bit_max = 0;
+    reg  [15:0] i_tb_act_noise_pulse_err = 0;
+    reg  [15:0] i_tb_act_noise_null_err = 0;
+    reg  [15:0] i_tb_act_filter_glitch_size = 0;
+    reg  [15:0] i_tb_act_filter_gap_err = 0;
+    reg  [1:0]  i_tb_act_parity = 0;
     reg  [31:0] i_tb_word_cnt = 0;
     reg  [31:0] i_tb_err_cnt = 0;
     reg  [31:0] i_tb_drop_cnt = 0;
@@ -92,18 +95,18 @@ module tb;
     wire        o_tb_err_raddr_wr;
     reg  [31:0] i_tb_err_rd_ts_msb = 0;
     reg  [31:0] i_tb_err_rd_ts_lsb = 0;
-    reg  [15:0] i_tb_err_rd_code = 0;
-    reg  [15:0] i_tb_err_rd_addr = 0;
+    reg  [15:0] i_tb_err_rd_info_code = 0;
+    reg  [15:0] i_tb_err_rd_info_addr = 0;
     reg  [31:0] i_tb_err_rd_data = 0;
     wire        o_tb_err_rd_data_rd;
     wire [4:0]  o_tb_bit_raddr_bit_idx;
     wire [2:0]  o_tb_bit_raddr_word_idx;
     wire        o_tb_bit_raddr_wr;
-    reg  [15:0] i_tb_bit_rd_pulse = 0;
+    reg  [15:0] i_tb_bit_rd_pulse_dur = 0;
     reg  [15:0] i_tb_bit_rd_pulse_err = 0;
-    reg  [15:0] i_tb_bit_rd_null = 0;
+    reg  [15:0] i_tb_bit_rd_null_dur = 0;
     reg  [15:0] i_tb_bit_rd_null_err = 0;
-    wire        o_tb_bit_rd_null_err_rd;
+    wire        o_tb_bit_rd_null_rd;
     wire        o_tb_chk_ctrl_enable;
     wire        o_tb_chk_ctrl_clear;
     wire [31:0] o_tb_chk_timeout;
@@ -118,26 +121,29 @@ module tb;
     reg         i_rx0_status_word_wrap = 0;
     reg         i_rx0_status_err_wrap = 0;
     reg  [1:0]  i_rx0_status_act_cfg = 0;
+    reg         i_rx0_status_line_high = 0;
+    reg         i_rx0_status_line_low = 0;
+    reg         i_rx0_status_sync_wait = 0;
     wire [1:0]  o_rx0_cfg_sel;
-    wire        o_rx0_cfg_apply_apply;
-    wire [15:0] o_rx0_cust_glitch_filter_size;
-    wire [15:0] o_rx0_cust_min_pulse;
-    wire [15:0] o_rx0_cust_max_pulse;
-    wire [15:0] o_rx0_cust_min_bit;
-    wire [15:0] o_rx0_cust_max_bit;
-    wire [15:0] o_rx0_cust_max_pulse_err;
-    wire [15:0] o_rx0_cust_max_null_err;
-    wire [15:0] o_rx0_cust_max_gap_err;
-    wire [1:0]  o_rx0_cust_parity_mode;
-    reg  [15:0] i_rx0_act_glitch_filter_size = 0;
-    reg  [15:0] i_rx0_act_min_pulse = 0;
-    reg  [15:0] i_rx0_act_max_pulse = 0;
-    reg  [15:0] i_rx0_act_min_bit = 0;
-    reg  [15:0] i_rx0_act_max_bit = 0;
-    reg  [15:0] i_rx0_act_max_pulse_err = 0;
-    reg  [15:0] i_rx0_act_max_null_err = 0;
-    reg  [15:0] i_rx0_act_max_gap_err = 0;
-    reg  [1:0]  i_rx0_act_parity_mode = 0;
+    wire        o_rx0_cfg_apply;
+    wire [15:0] o_rx0_cust_pulse_min;
+    wire [15:0] o_rx0_cust_pulse_max;
+    wire [15:0] o_rx0_cust_bit_min;
+    wire [15:0] o_rx0_cust_bit_max;
+    wire [15:0] o_rx0_cust_noise_pulse_err;
+    wire [15:0] o_rx0_cust_noise_null_err;
+    wire [15:0] o_rx0_cust_filter_glitch_size;
+    wire [15:0] o_rx0_cust_filter_gap_err;
+    wire [1:0]  o_rx0_cust_parity;
+    reg  [15:0] i_rx0_act_pulse_min = 0;
+    reg  [15:0] i_rx0_act_pulse_max = 0;
+    reg  [15:0] i_rx0_act_bit_min = 0;
+    reg  [15:0] i_rx0_act_bit_max = 0;
+    reg  [15:0] i_rx0_act_noise_pulse_err = 0;
+    reg  [15:0] i_rx0_act_noise_null_err = 0;
+    reg  [15:0] i_rx0_act_filter_glitch_size = 0;
+    reg  [15:0] i_rx0_act_filter_gap_err = 0;
+    reg  [1:0]  i_rx0_act_parity = 0;
     reg  [31:0] i_rx0_word_cnt = 0;
     reg  [31:0] i_rx0_err_cnt = 0;
     reg  [31:0] i_rx0_drop_cnt = 0;
@@ -154,18 +160,18 @@ module tb;
     wire        o_rx0_err_raddr_wr;
     reg  [31:0] i_rx0_err_rd_ts_msb = 0;
     reg  [31:0] i_rx0_err_rd_ts_lsb = 0;
-    reg  [15:0] i_rx0_err_rd_code = 0;
-    reg  [15:0] i_rx0_err_rd_addr = 0;
+    reg  [15:0] i_rx0_err_rd_info_code = 0;
+    reg  [15:0] i_rx0_err_rd_info_addr = 0;
     reg  [31:0] i_rx0_err_rd_data = 0;
     wire        o_rx0_err_rd_data_rd;
     wire [4:0]  o_rx0_bit_raddr_bit_idx;
     wire [2:0]  o_rx0_bit_raddr_word_idx;
     wire        o_rx0_bit_raddr_wr;
-    reg  [15:0] i_rx0_bit_rd_pulse = 0;
+    reg  [15:0] i_rx0_bit_rd_pulse_dur = 0;
     reg  [15:0] i_rx0_bit_rd_pulse_err = 0;
-    reg  [15:0] i_rx0_bit_rd_null = 0;
+    reg  [15:0] i_rx0_bit_rd_null_dur = 0;
     reg  [15:0] i_rx0_bit_rd_null_err = 0;
-    wire        o_rx0_bit_rd_null_err_rd;
+    wire        o_rx0_bit_rd_null_rd;
 
     arinc429_axil #(.C_AXI_ADDR_WIDTH(32)) dut (
         .S_AXI_ACLK(clk), .S_AXI_ARESETN(rstn),
@@ -184,29 +190,29 @@ module tb;
         .i_ts_lsb(i_ts_lsb),
         .o_ts_lsb_rd(o_ts_lsb_rd),
         .i_ts_msb(i_ts_msb),
-        .o_tx_transmitter_en(o_tx_transmitter_en),
-        .o_tx_msg_sched_en(o_tx_msg_sched_en),
-        .o_tx_builder_en(o_tx_builder_en),
-        .o_tx_label(o_tx_label),
-        .o_tx_sdi(o_tx_sdi),
-        .o_tx_data(o_tx_data),
-        .o_tx_ssm(o_tx_ssm),
-        .o_tx_parity_type(o_tx_parity_type),
-        .o_tx_sched_en(o_tx_sched_en),
-        .o_tx_initial_delay(o_tx_initial_delay),
-        .o_tx_inter_word_gap(o_tx_inter_word_gap),
+        .o_tx_ctrl_transmitter_en(o_tx_ctrl_transmitter_en),
+        .o_tx_ctrl_msg_sched_en(o_tx_ctrl_msg_sched_en),
+        .o_tx_ctrl_builder_en(o_tx_ctrl_builder_en),
+        .o_tx_ctrl_sched_en(o_tx_ctrl_sched_en),
+        .o_tx_word_label_val(o_tx_word_label_val),
+        .o_tx_word_sdi(o_tx_word_sdi),
+        .o_tx_word_data(o_tx_word_data),
+        .o_tx_word_ssm(o_tx_word_ssm),
+        .o_tx_word_parity_type(o_tx_word_parity_type),
         .o_tx_send_cmd_send(o_tx_send_cmd_send),
         .o_tx_ext_data(o_tx_ext_data),
-        .o_tx_ext_high(o_tx_ext_high),
-        .o_tx_ext_low(o_tx_ext_low),
+        .o_tx_ext_line_high(o_tx_ext_line_high),
+        .o_tx_ext_line_low(o_tx_ext_line_low),
+        .o_tx_initial_delay(o_tx_initial_delay),
+        .o_tx_inter_word_gap(o_tx_inter_word_gap),
         .o_tx_cfg_sel(o_tx_cfg_sel),
-        .o_tx_cfg_apply_apply(o_tx_cfg_apply_apply),
-        .o_tx_cust_pulse_dur(o_tx_cust_pulse_dur),
-        .o_tx_cust_null_dur(o_tx_cust_null_dur),
+        .o_tx_cfg_apply(o_tx_cfg_apply),
+        .o_tx_cust_timing_pulse_dur(o_tx_cust_timing_pulse_dur),
+        .o_tx_cust_timing_null_dur(o_tx_cust_timing_null_dur),
         .o_tx_cust_gap_dur(o_tx_cust_gap_dur),
         .o_tx_cust_slp(o_tx_cust_slp),
-        .i_tx_act_pulse_dur(i_tx_act_pulse_dur),
-        .i_tx_act_null_dur(i_tx_act_null_dur),
+        .i_tx_act_timing_pulse_dur(i_tx_act_timing_pulse_dur),
+        .i_tx_act_timing_null_dur(i_tx_act_timing_null_dur),
         .i_tx_act_gap_dur(i_tx_act_gap_dur),
         .i_tx_act_slp(i_tx_act_slp),
         .i_tx_status_busy(i_tx_status_busy),
@@ -220,26 +226,29 @@ module tb;
         .i_tb_status_word_wrap(i_tb_status_word_wrap),
         .i_tb_status_err_wrap(i_tb_status_err_wrap),
         .i_tb_status_act_cfg(i_tb_status_act_cfg),
+        .i_tb_status_line_high(i_tb_status_line_high),
+        .i_tb_status_line_low(i_tb_status_line_low),
+        .i_tb_status_sync_wait(i_tb_status_sync_wait),
         .o_tb_cfg_sel(o_tb_cfg_sel),
-        .o_tb_cfg_apply_apply(o_tb_cfg_apply_apply),
-        .o_tb_cust_glitch_filter_size(o_tb_cust_glitch_filter_size),
-        .o_tb_cust_min_pulse(o_tb_cust_min_pulse),
-        .o_tb_cust_max_pulse(o_tb_cust_max_pulse),
-        .o_tb_cust_min_bit(o_tb_cust_min_bit),
-        .o_tb_cust_max_bit(o_tb_cust_max_bit),
-        .o_tb_cust_max_pulse_err(o_tb_cust_max_pulse_err),
-        .o_tb_cust_max_null_err(o_tb_cust_max_null_err),
-        .o_tb_cust_max_gap_err(o_tb_cust_max_gap_err),
-        .o_tb_cust_parity_mode(o_tb_cust_parity_mode),
-        .i_tb_act_glitch_filter_size(i_tb_act_glitch_filter_size),
-        .i_tb_act_min_pulse(i_tb_act_min_pulse),
-        .i_tb_act_max_pulse(i_tb_act_max_pulse),
-        .i_tb_act_min_bit(i_tb_act_min_bit),
-        .i_tb_act_max_bit(i_tb_act_max_bit),
-        .i_tb_act_max_pulse_err(i_tb_act_max_pulse_err),
-        .i_tb_act_max_null_err(i_tb_act_max_null_err),
-        .i_tb_act_max_gap_err(i_tb_act_max_gap_err),
-        .i_tb_act_parity_mode(i_tb_act_parity_mode),
+        .o_tb_cfg_apply(o_tb_cfg_apply),
+        .o_tb_cust_pulse_min(o_tb_cust_pulse_min),
+        .o_tb_cust_pulse_max(o_tb_cust_pulse_max),
+        .o_tb_cust_bit_min(o_tb_cust_bit_min),
+        .o_tb_cust_bit_max(o_tb_cust_bit_max),
+        .o_tb_cust_noise_pulse_err(o_tb_cust_noise_pulse_err),
+        .o_tb_cust_noise_null_err(o_tb_cust_noise_null_err),
+        .o_tb_cust_filter_glitch_size(o_tb_cust_filter_glitch_size),
+        .o_tb_cust_filter_gap_err(o_tb_cust_filter_gap_err),
+        .o_tb_cust_parity(o_tb_cust_parity),
+        .i_tb_act_pulse_min(i_tb_act_pulse_min),
+        .i_tb_act_pulse_max(i_tb_act_pulse_max),
+        .i_tb_act_bit_min(i_tb_act_bit_min),
+        .i_tb_act_bit_max(i_tb_act_bit_max),
+        .i_tb_act_noise_pulse_err(i_tb_act_noise_pulse_err),
+        .i_tb_act_noise_null_err(i_tb_act_noise_null_err),
+        .i_tb_act_filter_glitch_size(i_tb_act_filter_glitch_size),
+        .i_tb_act_filter_gap_err(i_tb_act_filter_gap_err),
+        .i_tb_act_parity(i_tb_act_parity),
         .i_tb_word_cnt(i_tb_word_cnt),
         .i_tb_err_cnt(i_tb_err_cnt),
         .i_tb_drop_cnt(i_tb_drop_cnt),
@@ -256,18 +265,18 @@ module tb;
         .o_tb_err_raddr_wr(o_tb_err_raddr_wr),
         .i_tb_err_rd_ts_msb(i_tb_err_rd_ts_msb),
         .i_tb_err_rd_ts_lsb(i_tb_err_rd_ts_lsb),
-        .i_tb_err_rd_code(i_tb_err_rd_code),
-        .i_tb_err_rd_addr(i_tb_err_rd_addr),
+        .i_tb_err_rd_info_code(i_tb_err_rd_info_code),
+        .i_tb_err_rd_info_addr(i_tb_err_rd_info_addr),
         .i_tb_err_rd_data(i_tb_err_rd_data),
         .o_tb_err_rd_data_rd(o_tb_err_rd_data_rd),
         .o_tb_bit_raddr_bit_idx(o_tb_bit_raddr_bit_idx),
         .o_tb_bit_raddr_word_idx(o_tb_bit_raddr_word_idx),
         .o_tb_bit_raddr_wr(o_tb_bit_raddr_wr),
-        .i_tb_bit_rd_pulse(i_tb_bit_rd_pulse),
+        .i_tb_bit_rd_pulse_dur(i_tb_bit_rd_pulse_dur),
         .i_tb_bit_rd_pulse_err(i_tb_bit_rd_pulse_err),
-        .i_tb_bit_rd_null(i_tb_bit_rd_null),
+        .i_tb_bit_rd_null_dur(i_tb_bit_rd_null_dur),
         .i_tb_bit_rd_null_err(i_tb_bit_rd_null_err),
-        .o_tb_bit_rd_null_err_rd(o_tb_bit_rd_null_err_rd),
+        .o_tb_bit_rd_null_rd(o_tb_bit_rd_null_rd),
         .o_tb_chk_ctrl_enable(o_tb_chk_ctrl_enable),
         .o_tb_chk_ctrl_clear(o_tb_chk_ctrl_clear),
         .o_tb_chk_timeout(o_tb_chk_timeout),
@@ -282,26 +291,29 @@ module tb;
         .i_rx0_status_word_wrap(i_rx0_status_word_wrap),
         .i_rx0_status_err_wrap(i_rx0_status_err_wrap),
         .i_rx0_status_act_cfg(i_rx0_status_act_cfg),
+        .i_rx0_status_line_high(i_rx0_status_line_high),
+        .i_rx0_status_line_low(i_rx0_status_line_low),
+        .i_rx0_status_sync_wait(i_rx0_status_sync_wait),
         .o_rx0_cfg_sel(o_rx0_cfg_sel),
-        .o_rx0_cfg_apply_apply(o_rx0_cfg_apply_apply),
-        .o_rx0_cust_glitch_filter_size(o_rx0_cust_glitch_filter_size),
-        .o_rx0_cust_min_pulse(o_rx0_cust_min_pulse),
-        .o_rx0_cust_max_pulse(o_rx0_cust_max_pulse),
-        .o_rx0_cust_min_bit(o_rx0_cust_min_bit),
-        .o_rx0_cust_max_bit(o_rx0_cust_max_bit),
-        .o_rx0_cust_max_pulse_err(o_rx0_cust_max_pulse_err),
-        .o_rx0_cust_max_null_err(o_rx0_cust_max_null_err),
-        .o_rx0_cust_max_gap_err(o_rx0_cust_max_gap_err),
-        .o_rx0_cust_parity_mode(o_rx0_cust_parity_mode),
-        .i_rx0_act_glitch_filter_size(i_rx0_act_glitch_filter_size),
-        .i_rx0_act_min_pulse(i_rx0_act_min_pulse),
-        .i_rx0_act_max_pulse(i_rx0_act_max_pulse),
-        .i_rx0_act_min_bit(i_rx0_act_min_bit),
-        .i_rx0_act_max_bit(i_rx0_act_max_bit),
-        .i_rx0_act_max_pulse_err(i_rx0_act_max_pulse_err),
-        .i_rx0_act_max_null_err(i_rx0_act_max_null_err),
-        .i_rx0_act_max_gap_err(i_rx0_act_max_gap_err),
-        .i_rx0_act_parity_mode(i_rx0_act_parity_mode),
+        .o_rx0_cfg_apply(o_rx0_cfg_apply),
+        .o_rx0_cust_pulse_min(o_rx0_cust_pulse_min),
+        .o_rx0_cust_pulse_max(o_rx0_cust_pulse_max),
+        .o_rx0_cust_bit_min(o_rx0_cust_bit_min),
+        .o_rx0_cust_bit_max(o_rx0_cust_bit_max),
+        .o_rx0_cust_noise_pulse_err(o_rx0_cust_noise_pulse_err),
+        .o_rx0_cust_noise_null_err(o_rx0_cust_noise_null_err),
+        .o_rx0_cust_filter_glitch_size(o_rx0_cust_filter_glitch_size),
+        .o_rx0_cust_filter_gap_err(o_rx0_cust_filter_gap_err),
+        .o_rx0_cust_parity(o_rx0_cust_parity),
+        .i_rx0_act_pulse_min(i_rx0_act_pulse_min),
+        .i_rx0_act_pulse_max(i_rx0_act_pulse_max),
+        .i_rx0_act_bit_min(i_rx0_act_bit_min),
+        .i_rx0_act_bit_max(i_rx0_act_bit_max),
+        .i_rx0_act_noise_pulse_err(i_rx0_act_noise_pulse_err),
+        .i_rx0_act_noise_null_err(i_rx0_act_noise_null_err),
+        .i_rx0_act_filter_glitch_size(i_rx0_act_filter_glitch_size),
+        .i_rx0_act_filter_gap_err(i_rx0_act_filter_gap_err),
+        .i_rx0_act_parity(i_rx0_act_parity),
         .i_rx0_word_cnt(i_rx0_word_cnt),
         .i_rx0_err_cnt(i_rx0_err_cnt),
         .i_rx0_drop_cnt(i_rx0_drop_cnt),
@@ -318,18 +330,18 @@ module tb;
         .o_rx0_err_raddr_wr(o_rx0_err_raddr_wr),
         .i_rx0_err_rd_ts_msb(i_rx0_err_rd_ts_msb),
         .i_rx0_err_rd_ts_lsb(i_rx0_err_rd_ts_lsb),
-        .i_rx0_err_rd_code(i_rx0_err_rd_code),
-        .i_rx0_err_rd_addr(i_rx0_err_rd_addr),
+        .i_rx0_err_rd_info_code(i_rx0_err_rd_info_code),
+        .i_rx0_err_rd_info_addr(i_rx0_err_rd_info_addr),
         .i_rx0_err_rd_data(i_rx0_err_rd_data),
         .o_rx0_err_rd_data_rd(o_rx0_err_rd_data_rd),
         .o_rx0_bit_raddr_bit_idx(o_rx0_bit_raddr_bit_idx),
         .o_rx0_bit_raddr_word_idx(o_rx0_bit_raddr_word_idx),
         .o_rx0_bit_raddr_wr(o_rx0_bit_raddr_wr),
-        .i_rx0_bit_rd_pulse(i_rx0_bit_rd_pulse),
+        .i_rx0_bit_rd_pulse_dur(i_rx0_bit_rd_pulse_dur),
         .i_rx0_bit_rd_pulse_err(i_rx0_bit_rd_pulse_err),
-        .i_rx0_bit_rd_null(i_rx0_bit_rd_null),
+        .i_rx0_bit_rd_null_dur(i_rx0_bit_rd_null_dur),
         .i_rx0_bit_rd_null_err(i_rx0_bit_rd_null_err),
-        .o_rx0_bit_rd_null_err_rd(o_rx0_bit_rd_null_err_rd)
+        .o_rx0_bit_rd_null_rd(o_rx0_bit_rd_null_rd)
     );
 
     integer cnt_o_soft_reset_rst_all = 0;
@@ -353,15 +365,15 @@ module tb;
     integer cnt_o_tx_send_cmd_send = 0;
     reg  [31:0] last_o_tx_send_cmd_send = 0;
     always @(posedge clk) if (|o_tx_send_cmd_send) begin cnt_o_tx_send_cmd_send = cnt_o_tx_send_cmd_send + 1; last_o_tx_send_cmd_send = o_tx_send_cmd_send; end
-    integer cnt_o_tx_cfg_apply_apply = 0;
-    reg  [31:0] last_o_tx_cfg_apply_apply = 0;
-    always @(posedge clk) if (|o_tx_cfg_apply_apply) begin cnt_o_tx_cfg_apply_apply = cnt_o_tx_cfg_apply_apply + 1; last_o_tx_cfg_apply_apply = o_tx_cfg_apply_apply; end
+    integer cnt_o_tx_cfg_apply = 0;
+    reg  [31:0] last_o_tx_cfg_apply = 0;
+    always @(posedge clk) if (|o_tx_cfg_apply) begin cnt_o_tx_cfg_apply = cnt_o_tx_cfg_apply + 1; last_o_tx_cfg_apply = o_tx_cfg_apply; end
     integer cnt_o_tb_ctrl_clear = 0;
     reg  [31:0] last_o_tb_ctrl_clear = 0;
     always @(posedge clk) if (|o_tb_ctrl_clear) begin cnt_o_tb_ctrl_clear = cnt_o_tb_ctrl_clear + 1; last_o_tb_ctrl_clear = o_tb_ctrl_clear; end
-    integer cnt_o_tb_cfg_apply_apply = 0;
-    reg  [31:0] last_o_tb_cfg_apply_apply = 0;
-    always @(posedge clk) if (|o_tb_cfg_apply_apply) begin cnt_o_tb_cfg_apply_apply = cnt_o_tb_cfg_apply_apply + 1; last_o_tb_cfg_apply_apply = o_tb_cfg_apply_apply; end
+    integer cnt_o_tb_cfg_apply = 0;
+    reg  [31:0] last_o_tb_cfg_apply = 0;
+    always @(posedge clk) if (|o_tb_cfg_apply) begin cnt_o_tb_cfg_apply = cnt_o_tb_cfg_apply + 1; last_o_tb_cfg_apply = o_tb_cfg_apply; end
     integer cnt_o_tb_word_raddr_wr = 0;
     reg  [31:0] last_o_tb_word_raddr_wr = 0;
     always @(posedge clk) if (|o_tb_word_raddr_wr) begin cnt_o_tb_word_raddr_wr = cnt_o_tb_word_raddr_wr + 1; last_o_tb_word_raddr_wr = o_tb_word_raddr_wr; end
@@ -377,18 +389,18 @@ module tb;
     integer cnt_o_tb_bit_raddr_wr = 0;
     reg  [31:0] last_o_tb_bit_raddr_wr = 0;
     always @(posedge clk) if (|o_tb_bit_raddr_wr) begin cnt_o_tb_bit_raddr_wr = cnt_o_tb_bit_raddr_wr + 1; last_o_tb_bit_raddr_wr = o_tb_bit_raddr_wr; end
-    integer cnt_o_tb_bit_rd_null_err_rd = 0;
-    reg  [31:0] last_o_tb_bit_rd_null_err_rd = 0;
-    always @(posedge clk) if (|o_tb_bit_rd_null_err_rd) begin cnt_o_tb_bit_rd_null_err_rd = cnt_o_tb_bit_rd_null_err_rd + 1; last_o_tb_bit_rd_null_err_rd = o_tb_bit_rd_null_err_rd; end
+    integer cnt_o_tb_bit_rd_null_rd = 0;
+    reg  [31:0] last_o_tb_bit_rd_null_rd = 0;
+    always @(posedge clk) if (|o_tb_bit_rd_null_rd) begin cnt_o_tb_bit_rd_null_rd = cnt_o_tb_bit_rd_null_rd + 1; last_o_tb_bit_rd_null_rd = o_tb_bit_rd_null_rd; end
     integer cnt_o_tb_chk_ctrl_clear = 0;
     reg  [31:0] last_o_tb_chk_ctrl_clear = 0;
     always @(posedge clk) if (|o_tb_chk_ctrl_clear) begin cnt_o_tb_chk_ctrl_clear = cnt_o_tb_chk_ctrl_clear + 1; last_o_tb_chk_ctrl_clear = o_tb_chk_ctrl_clear; end
     integer cnt_o_rx0_ctrl_clear = 0;
     reg  [31:0] last_o_rx0_ctrl_clear = 0;
     always @(posedge clk) if (|o_rx0_ctrl_clear) begin cnt_o_rx0_ctrl_clear = cnt_o_rx0_ctrl_clear + 1; last_o_rx0_ctrl_clear = o_rx0_ctrl_clear; end
-    integer cnt_o_rx0_cfg_apply_apply = 0;
-    reg  [31:0] last_o_rx0_cfg_apply_apply = 0;
-    always @(posedge clk) if (|o_rx0_cfg_apply_apply) begin cnt_o_rx0_cfg_apply_apply = cnt_o_rx0_cfg_apply_apply + 1; last_o_rx0_cfg_apply_apply = o_rx0_cfg_apply_apply; end
+    integer cnt_o_rx0_cfg_apply = 0;
+    reg  [31:0] last_o_rx0_cfg_apply = 0;
+    always @(posedge clk) if (|o_rx0_cfg_apply) begin cnt_o_rx0_cfg_apply = cnt_o_rx0_cfg_apply + 1; last_o_rx0_cfg_apply = o_rx0_cfg_apply; end
     integer cnt_o_rx0_word_raddr_wr = 0;
     reg  [31:0] last_o_rx0_word_raddr_wr = 0;
     always @(posedge clk) if (|o_rx0_word_raddr_wr) begin cnt_o_rx0_word_raddr_wr = cnt_o_rx0_word_raddr_wr + 1; last_o_rx0_word_raddr_wr = o_rx0_word_raddr_wr; end
@@ -404,9 +416,9 @@ module tb;
     integer cnt_o_rx0_bit_raddr_wr = 0;
     reg  [31:0] last_o_rx0_bit_raddr_wr = 0;
     always @(posedge clk) if (|o_rx0_bit_raddr_wr) begin cnt_o_rx0_bit_raddr_wr = cnt_o_rx0_bit_raddr_wr + 1; last_o_rx0_bit_raddr_wr = o_rx0_bit_raddr_wr; end
-    integer cnt_o_rx0_bit_rd_null_err_rd = 0;
-    reg  [31:0] last_o_rx0_bit_rd_null_err_rd = 0;
-    always @(posedge clk) if (|o_rx0_bit_rd_null_err_rd) begin cnt_o_rx0_bit_rd_null_err_rd = cnt_o_rx0_bit_rd_null_err_rd + 1; last_o_rx0_bit_rd_null_err_rd = o_rx0_bit_rd_null_err_rd; end
+    integer cnt_o_rx0_bit_rd_null_rd = 0;
+    reg  [31:0] last_o_rx0_bit_rd_null_rd = 0;
+    always @(posedge clk) if (|o_rx0_bit_rd_null_rd) begin cnt_o_rx0_bit_rd_null_rd = cnt_o_rx0_bit_rd_null_rd + 1; last_o_rx0_bit_rd_null_rd = o_rx0_bit_rd_null_rd; end
 
     integer errors = 0, checks = 0;
     task check(input [8*48-1:0] name, input [31:0] got, input [31:0] exp);
@@ -444,7 +456,7 @@ module tb;
 
         // 1) Reset values
         axi_read(32'hA5A58000, v); check("IP_ID reset", v, 32'h41343239);
-        axi_read(32'hA5A58004, v); check("IP_VERSION reset", v, 32'h00010000);
+        axi_read(32'hA5A58004, v); check("IP_VERSION reset", v, 32'h00020000);
         axi_read(32'hA5A58008, v); check("CAPS reset", v, 32'h00000B01);
         axi_read(32'hA5A5800C, v); check("CAPS_MEM reset", v, 32'h00030808);
         axi_read(32'hA5A58010, v); check("CLK_HZ reset", v, 32'h02FAF080);
@@ -453,55 +465,35 @@ module tb;
         axi_read(32'hA5A58028, v); check("TS_CTRL reset", v, 32'h00000001);
         axi_read(32'hA5A5802C, v); check("TS_LSB reset", v, 32'h00000000);
         axi_read(32'hA5A58030, v); check("TS_MSB reset", v, 32'h00000000);
-        axi_read(32'hA5A58400, v); check("TX_TRANSMITTER_EN reset", v, 32'h00000000);
-        axi_read(32'hA5A58404, v); check("TX_MSG_SCHED_EN reset", v, 32'h00000000);
-        axi_read(32'hA5A58408, v); check("TX_BUILDER_EN reset", v, 32'h00000000);
-        axi_read(32'hA5A5840C, v); check("TX_LABEL reset", v, 32'h00000000);
-        axi_read(32'hA5A58410, v); check("TX_SDI reset", v, 32'h00000000);
-        axi_read(32'hA5A58414, v); check("TX_DATA reset", v, 32'h00000000);
-        axi_read(32'hA5A58418, v); check("TX_SSM reset", v, 32'h00000000);
-        axi_read(32'hA5A5841C, v); check("TX_PARITY_TYPE reset", v, 32'h00000001);
-        axi_read(32'hA5A58420, v); check("TX_SCHED_EN reset", v, 32'h00000000);
-        axi_read(32'hA5A58424, v); check("TX_INITIAL_DELAY reset", v, 32'h00000000);
-        axi_read(32'hA5A58428, v); check("TX_INTER_WORD_GAP reset", v, 32'h00000001);
-        axi_read(32'hA5A5842C, v); check("TX_SEND_CMD reset", v, 32'h00000000);
-        axi_read(32'hA5A58430, v); check("TX_EXT_DATA reset", v, 32'h00000000);
-        axi_read(32'hA5A58434, v); check("TX_EXT_HIGH reset", v, 32'h00000000);
-        axi_read(32'hA5A58438, v); check("TX_EXT_LOW reset", v, 32'h00000000);
-        axi_read(32'hA5A58440, v); check("TX_CFG_SEL reset", v, 32'h00000000);
-        axi_read(32'hA5A58444, v); check("TX_CFG_APPLY reset", v, 32'h00000000);
-        axi_read(32'hA5A58448, v); check("TX_CUST_PULSE_DUR reset", v, 32'h00000000);
-        axi_read(32'hA5A5844C, v); check("TX_CUST_NULL_DUR reset", v, 32'h00000000);
-        axi_read(32'hA5A58450, v); check("TX_CUST_GAP_DUR reset", v, 32'h00000000);
-        axi_read(32'hA5A58454, v); check("TX_CUST_SLP reset", v, 32'h00000000);
-        axi_read(32'hA5A58460, v); check("TX_ACT_PULSE_DUR reset", v, 32'h00000000);
-        axi_read(32'hA5A58464, v); check("TX_ACT_NULL_DUR reset", v, 32'h00000000);
-        axi_read(32'hA5A58468, v); check("TX_ACT_GAP_DUR reset", v, 32'h00000000);
-        axi_read(32'hA5A5846C, v); check("TX_ACT_SLP reset", v, 32'h00000000);
+        axi_read(32'hA5A58400, v); check("TX_CTRL reset", v, 32'h00000000);
+        axi_read(32'hA5A58404, v); check("TX_WORD reset", v, 32'h80000000);
+        axi_read(32'hA5A58408, v); check("TX_SEND_CMD reset", v, 32'h00000000);
+        axi_read(32'hA5A5840C, v); check("TX_EXT_DATA reset", v, 32'h00000000);
+        axi_read(32'hA5A58410, v); check("TX_EXT_LINE reset", v, 32'h00000000);
+        axi_read(32'hA5A58420, v); check("TX_INITIAL_DELAY reset", v, 32'h00000000);
+        axi_read(32'hA5A58424, v); check("TX_INTER_WORD_GAP reset", v, 32'h00000001);
+        axi_read(32'hA5A58440, v); check("TX_CFG reset", v, 32'h00000000);
+        axi_read(32'hA5A58444, v); check("TX_CUST_TIMING reset", v, 32'h00000000);
+        axi_read(32'hA5A58448, v); check("TX_CUST_GAP_DUR reset", v, 32'h00000000);
+        axi_read(32'hA5A5844C, v); check("TX_CUST_SLP reset", v, 32'h00000000);
+        axi_read(32'hA5A58460, v); check("TX_ACT_TIMING reset", v, 32'h00000000);
+        axi_read(32'hA5A58464, v); check("TX_ACT_GAP_DUR reset", v, 32'h00000000);
+        axi_read(32'hA5A58468, v); check("TX_ACT_SLP reset", v, 32'h00000000);
         axi_read(32'hA5A58480, v); check("TX_STATUS reset", v, 32'h00000000);
         axi_read(32'hA5A58484, v); check("TX_WORD_CNT reset", v, 32'h00000000);
         axi_read(32'hA5A58800, v); check("TB_CTRL reset", v, 32'h00000000);
         axi_read(32'hA5A58804, v); check("TB_STATUS reset", v, 32'h00000000);
-        axi_read(32'hA5A58808, v); check("TB_CFG_SEL reset", v, 32'h00000000);
-        axi_read(32'hA5A5880C, v); check("TB_CFG_APPLY reset", v, 32'h00000000);
-        axi_read(32'hA5A58840, v); check("TB_CUST_GLITCH_FILTER_SIZE reset", v, 32'h00000000);
-        axi_read(32'hA5A58844, v); check("TB_CUST_MIN_PULSE reset", v, 32'h00000000);
-        axi_read(32'hA5A58848, v); check("TB_CUST_MAX_PULSE reset", v, 32'h00000000);
-        axi_read(32'hA5A5884C, v); check("TB_CUST_MIN_BIT reset", v, 32'h00000000);
-        axi_read(32'hA5A58850, v); check("TB_CUST_MAX_BIT reset", v, 32'h00000000);
-        axi_read(32'hA5A58854, v); check("TB_CUST_MAX_PULSE_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A58858, v); check("TB_CUST_MAX_NULL_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A5885C, v); check("TB_CUST_MAX_GAP_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A58860, v); check("TB_CUST_PARITY_MODE reset", v, 32'h00000001);
-        axi_read(32'hA5A588A0, v); check("TB_ACT_GLITCH_FILTER_SIZE reset", v, 32'h00000000);
-        axi_read(32'hA5A588A4, v); check("TB_ACT_MIN_PULSE reset", v, 32'h00000000);
-        axi_read(32'hA5A588A8, v); check("TB_ACT_MAX_PULSE reset", v, 32'h00000000);
-        axi_read(32'hA5A588AC, v); check("TB_ACT_MIN_BIT reset", v, 32'h00000000);
-        axi_read(32'hA5A588B0, v); check("TB_ACT_MAX_BIT reset", v, 32'h00000000);
-        axi_read(32'hA5A588B4, v); check("TB_ACT_MAX_PULSE_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A588B8, v); check("TB_ACT_MAX_NULL_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A588BC, v); check("TB_ACT_MAX_GAP_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A588C0, v); check("TB_ACT_PARITY_MODE reset", v, 32'h00000000);
+        axi_read(32'hA5A58808, v); check("TB_CFG reset", v, 32'h00000000);
+        axi_read(32'hA5A58840, v); check("TB_CUST_PULSE reset", v, 32'h00000000);
+        axi_read(32'hA5A58844, v); check("TB_CUST_BIT reset", v, 32'h00000000);
+        axi_read(32'hA5A58848, v); check("TB_CUST_NOISE reset", v, 32'h00000000);
+        axi_read(32'hA5A5884C, v); check("TB_CUST_FILTER reset", v, 32'h00000000);
+        axi_read(32'hA5A58850, v); check("TB_CUST_PARITY reset", v, 32'h00000001);
+        axi_read(32'hA5A58860, v); check("TB_ACT_PULSE reset", v, 32'h00000000);
+        axi_read(32'hA5A58864, v); check("TB_ACT_BIT reset", v, 32'h00000000);
+        axi_read(32'hA5A58868, v); check("TB_ACT_NOISE reset", v, 32'h00000000);
+        axi_read(32'hA5A5886C, v); check("TB_ACT_FILTER reset", v, 32'h00000000);
+        axi_read(32'hA5A58870, v); check("TB_ACT_PARITY reset", v, 32'h00000000);
         axi_read(32'hA5A588E0, v); check("TB_WORD_CNT reset", v, 32'h00000000);
         axi_read(32'hA5A588E4, v); check("TB_ERR_CNT reset", v, 32'h00000000);
         axi_read(32'hA5A588E8, v); check("TB_DROP_CNT reset", v, 32'h00000000);
@@ -515,14 +507,11 @@ module tb;
         axi_read(32'hA5A58920, v); check("TB_ERR_RADDR reset", v, 32'h00000000);
         axi_read(32'hA5A58924, v); check("TB_ERR_RD_TS_MSB reset", v, 32'h00000000);
         axi_read(32'hA5A58928, v); check("TB_ERR_RD_TS_LSB reset", v, 32'h00000000);
-        axi_read(32'hA5A5892C, v); check("TB_ERR_RD_CODE reset", v, 32'h00000000);
-        axi_read(32'hA5A58930, v); check("TB_ERR_RD_ADDR reset", v, 32'h00000000);
-        axi_read(32'hA5A58934, v); check("TB_ERR_RD_DATA reset", v, 32'h00000000);
+        axi_read(32'hA5A5892C, v); check("TB_ERR_RD_INFO reset", v, 32'h00000000);
+        axi_read(32'hA5A58930, v); check("TB_ERR_RD_DATA reset", v, 32'h00000000);
         axi_read(32'hA5A58940, v); check("TB_BIT_RADDR reset", v, 32'h00000000);
         axi_read(32'hA5A58944, v); check("TB_BIT_RD_PULSE reset", v, 32'h00000000);
-        axi_read(32'hA5A58948, v); check("TB_BIT_RD_PULSE_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A5894C, v); check("TB_BIT_RD_NULL reset", v, 32'h00000000);
-        axi_read(32'hA5A58950, v); check("TB_BIT_RD_NULL_ERR reset", v, 32'h00000000);
+        axi_read(32'hA5A58948, v); check("TB_BIT_RD_NULL reset", v, 32'h00000000);
         axi_read(32'hA5A589C0, v); check("TB_CHK_CTRL reset", v, 32'h00000000);
         axi_read(32'hA5A589C4, v); check("TB_CHK_TIMEOUT reset", v, 32'h00000000);
         axi_read(32'hA5A589C8, v); check("TB_CHK_OK_CNT reset", v, 32'h00000000);
@@ -530,26 +519,17 @@ module tb;
         axi_read(32'hA5A589D0, v); check("TB_CHK_STATUS reset", v, 32'h00000000);
         axi_read(32'hA5A5C000, v); check("RX0_CTRL reset", v, 32'h00000000);
         axi_read(32'hA5A5C004, v); check("RX0_STATUS reset", v, 32'h00000000);
-        axi_read(32'hA5A5C008, v); check("RX0_CFG_SEL reset", v, 32'h00000000);
-        axi_read(32'hA5A5C00C, v); check("RX0_CFG_APPLY reset", v, 32'h00000000);
-        axi_read(32'hA5A5C040, v); check("RX0_CUST_GLITCH_FILTER_SIZE reset", v, 32'h00000000);
-        axi_read(32'hA5A5C044, v); check("RX0_CUST_MIN_PULSE reset", v, 32'h00000000);
-        axi_read(32'hA5A5C048, v); check("RX0_CUST_MAX_PULSE reset", v, 32'h00000000);
-        axi_read(32'hA5A5C04C, v); check("RX0_CUST_MIN_BIT reset", v, 32'h00000000);
-        axi_read(32'hA5A5C050, v); check("RX0_CUST_MAX_BIT reset", v, 32'h00000000);
-        axi_read(32'hA5A5C054, v); check("RX0_CUST_MAX_PULSE_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A5C058, v); check("RX0_CUST_MAX_NULL_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A5C05C, v); check("RX0_CUST_MAX_GAP_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A5C060, v); check("RX0_CUST_PARITY_MODE reset", v, 32'h00000001);
-        axi_read(32'hA5A5C0A0, v); check("RX0_ACT_GLITCH_FILTER_SIZE reset", v, 32'h00000000);
-        axi_read(32'hA5A5C0A4, v); check("RX0_ACT_MIN_PULSE reset", v, 32'h00000000);
-        axi_read(32'hA5A5C0A8, v); check("RX0_ACT_MAX_PULSE reset", v, 32'h00000000);
-        axi_read(32'hA5A5C0AC, v); check("RX0_ACT_MIN_BIT reset", v, 32'h00000000);
-        axi_read(32'hA5A5C0B0, v); check("RX0_ACT_MAX_BIT reset", v, 32'h00000000);
-        axi_read(32'hA5A5C0B4, v); check("RX0_ACT_MAX_PULSE_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A5C0B8, v); check("RX0_ACT_MAX_NULL_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A5C0BC, v); check("RX0_ACT_MAX_GAP_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A5C0C0, v); check("RX0_ACT_PARITY_MODE reset", v, 32'h00000000);
+        axi_read(32'hA5A5C008, v); check("RX0_CFG reset", v, 32'h00000000);
+        axi_read(32'hA5A5C040, v); check("RX0_CUST_PULSE reset", v, 32'h00000000);
+        axi_read(32'hA5A5C044, v); check("RX0_CUST_BIT reset", v, 32'h00000000);
+        axi_read(32'hA5A5C048, v); check("RX0_CUST_NOISE reset", v, 32'h00000000);
+        axi_read(32'hA5A5C04C, v); check("RX0_CUST_FILTER reset", v, 32'h00000000);
+        axi_read(32'hA5A5C050, v); check("RX0_CUST_PARITY reset", v, 32'h00000001);
+        axi_read(32'hA5A5C060, v); check("RX0_ACT_PULSE reset", v, 32'h00000000);
+        axi_read(32'hA5A5C064, v); check("RX0_ACT_BIT reset", v, 32'h00000000);
+        axi_read(32'hA5A5C068, v); check("RX0_ACT_NOISE reset", v, 32'h00000000);
+        axi_read(32'hA5A5C06C, v); check("RX0_ACT_FILTER reset", v, 32'h00000000);
+        axi_read(32'hA5A5C070, v); check("RX0_ACT_PARITY reset", v, 32'h00000000);
         axi_read(32'hA5A5C0E0, v); check("RX0_WORD_CNT reset", v, 32'h00000000);
         axi_read(32'hA5A5C0E4, v); check("RX0_ERR_CNT reset", v, 32'h00000000);
         axi_read(32'hA5A5C0E8, v); check("RX0_DROP_CNT reset", v, 32'h00000000);
@@ -563,14 +543,11 @@ module tb;
         axi_read(32'hA5A5C120, v); check("RX0_ERR_RADDR reset", v, 32'h00000000);
         axi_read(32'hA5A5C124, v); check("RX0_ERR_RD_TS_MSB reset", v, 32'h00000000);
         axi_read(32'hA5A5C128, v); check("RX0_ERR_RD_TS_LSB reset", v, 32'h00000000);
-        axi_read(32'hA5A5C12C, v); check("RX0_ERR_RD_CODE reset", v, 32'h00000000);
-        axi_read(32'hA5A5C130, v); check("RX0_ERR_RD_ADDR reset", v, 32'h00000000);
-        axi_read(32'hA5A5C134, v); check("RX0_ERR_RD_DATA reset", v, 32'h00000000);
+        axi_read(32'hA5A5C12C, v); check("RX0_ERR_RD_INFO reset", v, 32'h00000000);
+        axi_read(32'hA5A5C130, v); check("RX0_ERR_RD_DATA reset", v, 32'h00000000);
         axi_read(32'hA5A5C140, v); check("RX0_BIT_RADDR reset", v, 32'h00000000);
         axi_read(32'hA5A5C144, v); check("RX0_BIT_RD_PULSE reset", v, 32'h00000000);
-        axi_read(32'hA5A5C148, v); check("RX0_BIT_RD_PULSE_ERR reset", v, 32'h00000000);
-        axi_read(32'hA5A5C14C, v); check("RX0_BIT_RD_NULL reset", v, 32'h00000000);
-        axi_read(32'hA5A5C150, v); check("RX0_BIT_RD_NULL_ERR reset", v, 32'h00000000);
+        axi_read(32'hA5A5C148, v); check("RX0_BIT_RD_NULL reset", v, 32'h00000000);
 
         // ---- IP_ID
 
@@ -640,170 +617,111 @@ module tb;
         i_ts_msb = 32'h1027C4D1;
         axi_read(32'hA5A58030, v); check("TS_MSB RO inputs", v, 32'h1027C4D1);
 
-        // ---- TX_TRANSMITTER_EN
-        axi_write(32'hA5A58400, 32'h00000001, 4'hF);
-        axi_read(32'hA5A58400, v); check("TX_TRANSMITTER_EN RW write", v, 32'h00000001);
-        check("o_tx_transmitter_en", o_tx_transmitter_en, 32'h1);
-        axi_write(32'hA5A58400, 32'h00000000, 4'h1);
-        axi_read(32'hA5A58400, v); check("TX_TRANSMITTER_EN WSTRB lane 0", v, 32'h00000000);
+        // ---- TX_CTRL
+        axi_write(32'hA5A58400, 32'h0000000F, 4'hF);
+        axi_read(32'hA5A58400, v); check("TX_CTRL RW write", v, 32'h0000000F);
+        check("o_tx_ctrl_transmitter_en", o_tx_ctrl_transmitter_en, 32'h1);
+        check("o_tx_ctrl_msg_sched_en", o_tx_ctrl_msg_sched_en, 32'h1);
+        check("o_tx_ctrl_builder_en", o_tx_ctrl_builder_en, 32'h1);
+        check("o_tx_ctrl_sched_en", o_tx_ctrl_sched_en, 32'h1);
+        axi_write(32'hA5A58400, 32'h00000004, 4'h1);
+        axi_read(32'hA5A58400, v); check("TX_CTRL WSTRB lane 0", v, 32'h00000004);
 
-        // ---- TX_MSG_SCHED_EN
-        axi_write(32'hA5A58404, 32'h00000001, 4'hF);
-        axi_read(32'hA5A58404, v); check("TX_MSG_SCHED_EN RW write", v, 32'h00000001);
-        check("o_tx_msg_sched_en", o_tx_msg_sched_en, 32'h1);
-        axi_write(32'hA5A58404, 32'h00000001, 4'h1);
-        axi_read(32'hA5A58404, v); check("TX_MSG_SCHED_EN WSTRB lane 0", v, 32'h00000001);
-
-        // ---- TX_BUILDER_EN
-        axi_write(32'hA5A58408, 32'h00000001, 4'hF);
-        axi_read(32'hA5A58408, v); check("TX_BUILDER_EN RW write", v, 32'h00000001);
-        check("o_tx_builder_en", o_tx_builder_en, 32'h1);
-        axi_write(32'hA5A58408, 32'h00000000, 4'h1);
-        axi_read(32'hA5A58408, v); check("TX_BUILDER_EN WSTRB lane 0", v, 32'h00000000);
-
-        // ---- TX_LABEL
-        axi_write(32'hA5A5840C, 32'h000000A6, 4'hF);
-        axi_read(32'hA5A5840C, v); check("TX_LABEL RW write", v, 32'h000000A6);
-        check("o_tx_label", o_tx_label, 32'hA6);
-        axi_write(32'hA5A5840C, 32'h00000061, 4'h1);
-        axi_read(32'hA5A5840C, v); check("TX_LABEL WSTRB lane 0", v, 32'h00000061);
-
-        // ---- TX_SDI
-        axi_write(32'hA5A58410, 32'h00000003, 4'hF);
-        axi_read(32'hA5A58410, v); check("TX_SDI RW write", v, 32'h00000003);
-        check("o_tx_sdi", o_tx_sdi, 32'h3);
-        axi_write(32'hA5A58410, 32'h00000000, 4'h1);
-        axi_read(32'hA5A58410, v); check("TX_SDI WSTRB lane 0", v, 32'h00000000);
-
-        // ---- TX_DATA
-        axi_write(32'hA5A58414, 32'h0000C039, 4'hF);
-        axi_read(32'hA5A58414, v); check("TX_DATA RW write", v, 32'h0000C039);
-        check("o_tx_data", o_tx_data, 32'hC039);
-        axi_write(32'hA5A58414, 32'h0003E721, 4'h1);
-        axi_read(32'hA5A58414, v); check("TX_DATA WSTRB lane 0", v, 32'h0000C021);
-
-        // ---- TX_SSM
-        axi_write(32'hA5A58418, 32'h00000001, 4'hF);
-        axi_read(32'hA5A58418, v); check("TX_SSM RW write", v, 32'h00000001);
-        check("o_tx_ssm", o_tx_ssm, 32'h1);
-        axi_write(32'hA5A58418, 32'h00000003, 4'h1);
-        axi_read(32'hA5A58418, v); check("TX_SSM WSTRB lane 0", v, 32'h00000003);
-
-        // ---- TX_PARITY_TYPE
-        axi_write(32'hA5A5841C, 32'h00000001, 4'hF);
-        axi_read(32'hA5A5841C, v); check("TX_PARITY_TYPE RW write", v, 32'h00000001);
-        check("o_tx_parity_type", o_tx_parity_type, 32'h1);
-        axi_write(32'hA5A5841C, 32'h00000000, 4'h1);
-        axi_read(32'hA5A5841C, v); check("TX_PARITY_TYPE WSTRB lane 0", v, 32'h00000000);
-
-        // ---- TX_SCHED_EN
-        axi_write(32'hA5A58420, 32'h00000001, 4'hF);
-        axi_read(32'hA5A58420, v); check("TX_SCHED_EN RW write", v, 32'h00000001);
-        check("o_tx_sched_en", o_tx_sched_en, 32'h1);
-        axi_write(32'hA5A58420, 32'h00000001, 4'h1);
-        axi_read(32'hA5A58420, v); check("TX_SCHED_EN WSTRB lane 0", v, 32'h00000001);
-
-        // ---- TX_INITIAL_DELAY
-        axi_write(32'hA5A58424, 32'hC324C985, 4'hF);
-        axi_read(32'hA5A58424, v); check("TX_INITIAL_DELAY RW write", v, 32'hC324C985);
-        check("o_tx_initial_delay", o_tx_initial_delay, 32'hC324C985);
-        axi_write(32'hA5A58424, 32'hC4647159, 4'h1);
-        axi_read(32'hA5A58424, v); check("TX_INITIAL_DELAY WSTRB lane 0", v, 32'hC324C959);
-
-        // ---- TX_INTER_WORD_GAP
-        axi_write(32'hA5A58428, 32'h008A05A6, 4'hF);
-        axi_read(32'hA5A58428, v); check("TX_INTER_WORD_GAP RW write", v, 32'h008A05A6);
-        check("o_tx_inter_word_gap", o_tx_inter_word_gap, 32'h8A05A6);
-        axi_write(32'hA5A58428, 32'hB2221A58, 4'h1);
-        axi_read(32'hA5A58428, v); check("TX_INTER_WORD_GAP WSTRB lane 0", v, 32'h008A0558);
+        // ---- TX_WORD
+        axi_write(32'hA5A58404, 32'hA300E5C9, 4'hF);
+        axi_read(32'hA5A58404, v); check("TX_WORD RW write", v, 32'hA300E5C9);
+        check("o_tx_word_label_val", o_tx_word_label_val, 32'hC9);
+        check("o_tx_word_sdi", o_tx_word_sdi, 32'h1);
+        check("o_tx_word_data", o_tx_word_data, 32'hC039);
+        check("o_tx_word_ssm", o_tx_word_ssm, 32'h1);
+        check("o_tx_word_parity_type", o_tx_word_parity_type, 32'h1);
+        axi_write(32'hA5A58404, 32'hAC7953E4, 4'h1);
+        axi_read(32'hA5A58404, v); check("TX_WORD WSTRB lane 0", v, 32'hA300E5E4);
 
         // ---- TX_SEND_CMD
         cnt_o_tx_send_cmd_send = 0;
-        axi_write(32'hA5A5842C, 32'h00000001, 4'hF);
+        axi_write(32'hA5A58408, 32'h00000001, 4'hF);
         repeat (3) @(posedge clk);
         check("o_tx_send_cmd_send one pulse", cnt_o_tx_send_cmd_send, 1);
         check("o_tx_send_cmd_send value", last_o_tx_send_cmd_send, 32'h1);
         check("o_tx_send_cmd_send idle", o_tx_send_cmd_send, 0);
 
         // ---- TX_EXT_DATA
-        axi_write(32'hA5A58430, 32'h7204E52D, 4'hF);
-        axi_read(32'hA5A58430, v); check("TX_EXT_DATA RW write", v, 32'h7204E52D);
-        check("o_tx_ext_data", o_tx_ext_data, 32'h7204E52D);
-        axi_write(32'hA5A58430, 32'h442E3D43, 4'h1);
-        axi_read(32'hA5A58430, v); check("TX_EXT_DATA WSTRB lane 0", v, 32'h7204E543);
+        axi_write(32'hA5A5840C, 32'hC324C985, 4'hF);
+        axi_read(32'hA5A5840C, v); check("TX_EXT_DATA RW write", v, 32'hC324C985);
+        check("o_tx_ext_data", o_tx_ext_data, 32'hC324C985);
+        axi_write(32'hA5A5840C, 32'hC4647159, 4'h1);
+        axi_read(32'hA5A5840C, v); check("TX_EXT_DATA WSTRB lane 0", v, 32'hC324C959);
 
-        // ---- TX_EXT_HIGH
-        axi_write(32'hA5A58434, 32'h00000001, 4'hF);
-        axi_read(32'hA5A58434, v); check("TX_EXT_HIGH RW write", v, 32'h00000001);
-        check("o_tx_ext_high", o_tx_ext_high, 32'h1);
-        axi_write(32'hA5A58434, 32'h00000001, 4'h1);
-        axi_read(32'hA5A58434, v); check("TX_EXT_HIGH WSTRB lane 0", v, 32'h00000001);
+        // ---- TX_EXT_LINE
+        axi_write(32'hA5A58410, 32'h00000003, 4'hF);
+        axi_read(32'hA5A58410, v); check("TX_EXT_LINE RW write", v, 32'h00000003);
+        check("o_tx_ext_line_high", o_tx_ext_line_high, 32'h1);
+        check("o_tx_ext_line_low", o_tx_ext_line_low, 32'h1);
+        axi_write(32'hA5A58410, 32'h00000000, 4'h1);
+        axi_read(32'hA5A58410, v); check("TX_EXT_LINE WSTRB lane 0", v, 32'h00000000);
 
-        // ---- TX_EXT_LOW
-        axi_write(32'hA5A58438, 32'h00000001, 4'hF);
-        axi_read(32'hA5A58438, v); check("TX_EXT_LOW RW write", v, 32'h00000001);
-        check("o_tx_ext_low", o_tx_ext_low, 32'h1);
-        axi_write(32'hA5A58438, 32'h00000001, 4'h1);
-        axi_read(32'hA5A58438, v); check("TX_EXT_LOW WSTRB lane 0", v, 32'h00000001);
+        // ---- TX_INITIAL_DELAY
+        axi_write(32'hA5A58420, 32'hB8B6D8FE, 4'hF);
+        axi_read(32'hA5A58420, v); check("TX_INITIAL_DELAY RW write", v, 32'hB8B6D8FE);
+        check("o_tx_initial_delay", o_tx_initial_delay, 32'hB8B6D8FE);
+        axi_write(32'hA5A58420, 32'hCD447E35, 4'h1);
+        axi_read(32'hA5A58420, v); check("TX_INITIAL_DELAY WSTRB lane 0", v, 32'hB8B6D835);
 
-        // ---- TX_CFG_SEL
+        // ---- TX_INTER_WORD_GAP
+        axi_write(32'hA5A58424, 32'h3A902931, 4'hF);
+        axi_read(32'hA5A58424, v); check("TX_INTER_WORD_GAP RW write", v, 32'h3A902931);
+        check("o_tx_inter_word_gap", o_tx_inter_word_gap, 32'h3A902931);
+        axi_write(32'hA5A58424, 32'h9755D4C1, 4'h1);
+        axi_read(32'hA5A58424, v); check("TX_INTER_WORD_GAP WSTRB lane 0", v, 32'h3A9029C1);
+
+        // ---- TX_CFG
         axi_write(32'hA5A58440, 32'h00000003, 4'hF);
-        axi_read(32'hA5A58440, v); check("TX_CFG_SEL RW write", v, 32'h00000003);
+        axi_read(32'hA5A58440, v); check("TX_CFG RW write", v, 32'h00000003);
         check("o_tx_cfg_sel", o_tx_cfg_sel, 32'h3);
         axi_write(32'hA5A58440, 32'h00000000, 4'h1);
-        axi_read(32'hA5A58440, v); check("TX_CFG_SEL WSTRB lane 0", v, 32'h00000000);
-
-        // ---- TX_CFG_APPLY
-        cnt_o_tx_cfg_apply_apply = 0;
-        axi_write(32'hA5A58444, 32'h00000001, 4'hF);
+        axi_read(32'hA5A58440, v); check("TX_CFG WSTRB lane 0", v, 32'h00000000);
+        cnt_o_tx_cfg_apply = 0;
+        axi_write(32'hA5A58440, 32'h00000010, 4'hF);
         repeat (3) @(posedge clk);
-        check("o_tx_cfg_apply_apply one pulse", cnt_o_tx_cfg_apply_apply, 1);
-        check("o_tx_cfg_apply_apply value", last_o_tx_cfg_apply_apply, 32'h1);
-        check("o_tx_cfg_apply_apply idle", o_tx_cfg_apply_apply, 0);
+        check("o_tx_cfg_apply one pulse", cnt_o_tx_cfg_apply, 1);
+        check("o_tx_cfg_apply value", last_o_tx_cfg_apply, 32'h1);
+        check("o_tx_cfg_apply idle", o_tx_cfg_apply, 0);
 
-        // ---- TX_CUST_PULSE_DUR
-        axi_write(32'hA5A58448, 32'h0000E6C3, 4'hF);
-        axi_read(32'hA5A58448, v); check("TX_CUST_PULSE_DUR RW write", v, 32'h0000E6C3);
-        check("o_tx_cust_pulse_dur", o_tx_cust_pulse_dur, 32'hE6C3);
-        axi_write(32'hA5A58448, 32'h00005143, 4'h1);
-        axi_read(32'hA5A58448, v); check("TX_CUST_PULSE_DUR WSTRB lane 0", v, 32'h0000E643);
-
-        // ---- TX_CUST_NULL_DUR
-        axi_write(32'hA5A5844C, 32'h000007D4, 4'hF);
-        axi_read(32'hA5A5844C, v); check("TX_CUST_NULL_DUR RW write", v, 32'h000007D4);
-        check("o_tx_cust_null_dur", o_tx_cust_null_dur, 32'h7D4);
-        axi_write(32'hA5A5844C, 32'h000005B6, 4'h1);
-        axi_read(32'hA5A5844C, v); check("TX_CUST_NULL_DUR WSTRB lane 0", v, 32'h000007B6);
+        // ---- TX_CUST_TIMING
+        axi_write(32'hA5A58444, 32'h5143E6C3, 4'hF);
+        axi_read(32'hA5A58444, v); check("TX_CUST_TIMING RW write", v, 32'h5143E6C3);
+        check("o_tx_cust_timing_pulse_dur", o_tx_cust_timing_pulse_dur, 32'hE6C3);
+        check("o_tx_cust_timing_null_dur", o_tx_cust_timing_null_dur, 32'h5143);
+        axi_write(32'hA5A58444, 32'h05B607D4, 4'h1);
+        axi_read(32'hA5A58444, v); check("TX_CUST_TIMING WSTRB lane 0", v, 32'h5143E6D4);
 
         // ---- TX_CUST_GAP_DUR
-        axi_write(32'hA5A58450, 32'h06839EB9, 4'hF);
-        axi_read(32'hA5A58450, v); check("TX_CUST_GAP_DUR RW write", v, 32'h06839EB9);
+        axi_write(32'hA5A58448, 32'h06839EB9, 4'hF);
+        axi_read(32'hA5A58448, v); check("TX_CUST_GAP_DUR RW write", v, 32'h06839EB9);
         check("o_tx_cust_gap_dur", o_tx_cust_gap_dur, 32'h6839EB9);
-        axi_write(32'hA5A58450, 32'hA648A7DD, 4'h1);
-        axi_read(32'hA5A58450, v); check("TX_CUST_GAP_DUR WSTRB lane 0", v, 32'h06839EDD);
+        axi_write(32'hA5A58448, 32'hA648A7DD, 4'h1);
+        axi_read(32'hA5A58448, v); check("TX_CUST_GAP_DUR WSTRB lane 0", v, 32'h06839EDD);
 
         // ---- TX_CUST_SLP
-        axi_write(32'hA5A58454, 32'h00000001, 4'hF);
-        axi_read(32'hA5A58454, v); check("TX_CUST_SLP RW write", v, 32'h00000001);
+        axi_write(32'hA5A5844C, 32'h00000001, 4'hF);
+        axi_read(32'hA5A5844C, v); check("TX_CUST_SLP RW write", v, 32'h00000001);
         check("o_tx_cust_slp", o_tx_cust_slp, 32'h1);
-        axi_write(32'hA5A58454, 32'h00000000, 4'h1);
-        axi_read(32'hA5A58454, v); check("TX_CUST_SLP WSTRB lane 0", v, 32'h00000000);
+        axi_write(32'hA5A5844C, 32'h00000000, 4'h1);
+        axi_read(32'hA5A5844C, v); check("TX_CUST_SLP WSTRB lane 0", v, 32'h00000000);
 
-        // ---- TX_ACT_PULSE_DUR
-        i_tx_act_pulse_dur = 16'hF06C;
-        axi_read(32'hA5A58460, v); check("TX_ACT_PULSE_DUR RO inputs", v, 32'h0000F06C);
-
-        // ---- TX_ACT_NULL_DUR
-        i_tx_act_null_dur = 16'hE198;
-        axi_read(32'hA5A58464, v); check("TX_ACT_NULL_DUR RO inputs", v, 32'h0000E198);
+        // ---- TX_ACT_TIMING
+        i_tx_act_timing_pulse_dur = 16'hF06C;
+        i_tx_act_timing_null_dur = 16'hE198;
+        axi_read(32'hA5A58460, v); check("TX_ACT_TIMING RO inputs", v, 32'hE198F06C);
 
         // ---- TX_ACT_GAP_DUR
         i_tx_act_gap_dur = 32'h619699CF;
-        axi_read(32'hA5A58468, v); check("TX_ACT_GAP_DUR RO inputs", v, 32'h619699CF);
+        axi_read(32'hA5A58464, v); check("TX_ACT_GAP_DUR RO inputs", v, 32'h619699CF);
 
         // ---- TX_ACT_SLP
         i_tx_act_slp = 1'h1;
-        axi_read(32'hA5A5846C, v); check("TX_ACT_SLP RO inputs", v, 32'h00000001);
+        axi_read(32'hA5A58468, v); check("TX_ACT_SLP RO inputs", v, 32'h00000001);
 
         // ---- TX_STATUS
         i_tx_status_busy = 1'h1;
@@ -834,239 +752,195 @@ module tb;
         i_tb_status_word_wrap = 1'h1;
         i_tb_status_err_wrap = 1'h1;
         i_tb_status_act_cfg = 2'h2;
-        axi_read(32'hA5A58804, v); check("TB_STATUS RO inputs", v, 32'h00000270);
+        i_tb_status_line_high = 1'h1;
+        i_tb_status_line_low = 1'h1;
+        i_tb_status_sync_wait = 1'h1;
+        axi_read(32'hA5A58804, v); check("TB_STATUS RO inputs", v, 32'h00007270);
 
-        // ---- TB_CFG_SEL
-        axi_write(32'hA5A58808, 32'h00000001, 4'hF);
-        axi_read(32'hA5A58808, v); check("TB_CFG_SEL RW write", v, 32'h00000001);
-        check("o_tb_cfg_sel", o_tb_cfg_sel, 32'h1);
-        axi_write(32'hA5A58808, 32'h00000001, 4'h1);
-        axi_read(32'hA5A58808, v); check("TB_CFG_SEL WSTRB lane 0", v, 32'h00000001);
-
-        // ---- TB_CFG_APPLY
-        cnt_o_tb_cfg_apply_apply = 0;
-        axi_write(32'hA5A5880C, 32'h00000001, 4'hF);
+        // ---- TB_CFG
+        axi_write(32'hA5A58808, 32'h00000002, 4'hF);
+        axi_read(32'hA5A58808, v); check("TB_CFG RW write", v, 32'h00000002);
+        check("o_tb_cfg_sel", o_tb_cfg_sel, 32'h2);
+        axi_write(32'hA5A58808, 32'h00000000, 4'h1);
+        axi_read(32'hA5A58808, v); check("TB_CFG WSTRB lane 0", v, 32'h00000000);
+        cnt_o_tb_cfg_apply = 0;
+        axi_write(32'hA5A58808, 32'h00000010, 4'hF);
         repeat (3) @(posedge clk);
-        check("o_tb_cfg_apply_apply one pulse", cnt_o_tb_cfg_apply_apply, 1);
-        check("o_tb_cfg_apply_apply value", last_o_tb_cfg_apply_apply, 32'h1);
-        check("o_tb_cfg_apply_apply idle", o_tb_cfg_apply_apply, 0);
+        check("o_tb_cfg_apply one pulse", cnt_o_tb_cfg_apply, 1);
+        check("o_tb_cfg_apply value", last_o_tb_cfg_apply, 32'h1);
+        check("o_tb_cfg_apply idle", o_tb_cfg_apply, 0);
 
-        // ---- TB_CUST_GLITCH_FILTER_SIZE
-        axi_write(32'hA5A58840, 32'h00003B1A, 4'hF);
-        axi_read(32'hA5A58840, v); check("TB_CUST_GLITCH_FILTER_SIZE RW write", v, 32'h00003B1A);
-        check("o_tb_cust_glitch_filter_size", o_tb_cust_glitch_filter_size, 32'h3B1A);
-        axi_write(32'hA5A58840, 32'h0000AD45, 4'h1);
-        axi_read(32'hA5A58840, v); check("TB_CUST_GLITCH_FILTER_SIZE WSTRB lane 0", v, 32'h00003B45);
+        // ---- TB_CUST_PULSE
+        axi_write(32'hA5A58840, 32'h75A8C2CD, 4'hF);
+        axi_read(32'hA5A58840, v); check("TB_CUST_PULSE RW write", v, 32'h75A8C2CD);
+        check("o_tb_cust_pulse_min", o_tb_cust_pulse_min, 32'hC2CD);
+        check("o_tb_cust_pulse_max", o_tb_cust_pulse_max, 32'h75A8);
+        axi_write(32'hA5A58840, 32'h4A2FF3C6, 4'h1);
+        axi_read(32'hA5A58840, v); check("TB_CUST_PULSE WSTRB lane 0", v, 32'h75A8C2C6);
 
-        // ---- TB_CUST_MIN_PULSE
-        axi_write(32'hA5A58844, 32'h00003802, 4'hF);
-        axi_read(32'hA5A58844, v); check("TB_CUST_MIN_PULSE RW write", v, 32'h00003802);
-        check("o_tb_cust_min_pulse", o_tb_cust_min_pulse, 32'h3802);
-        axi_write(32'hA5A58844, 32'h0000C2CD, 4'h1);
-        axi_read(32'hA5A58844, v); check("TB_CUST_MIN_PULSE WSTRB lane 0", v, 32'h000038CD);
+        // ---- TB_CUST_BIT
+        axi_write(32'hA5A58844, 32'h0580ED2F, 4'hF);
+        axi_read(32'hA5A58844, v); check("TB_CUST_BIT RW write", v, 32'h0580ED2F);
+        check("o_tb_cust_bit_min", o_tb_cust_bit_min, 32'hED2F);
+        check("o_tb_cust_bit_max", o_tb_cust_bit_max, 32'h580);
+        axi_write(32'hA5A58844, 32'hD66B6A8A, 4'h1);
+        axi_read(32'hA5A58844, v); check("TB_CUST_BIT WSTRB lane 0", v, 32'h0580ED8A);
 
-        // ---- TB_CUST_MAX_PULSE
-        axi_write(32'hA5A58848, 32'h000075A8, 4'hF);
-        axi_read(32'hA5A58848, v); check("TB_CUST_MAX_PULSE RW write", v, 32'h000075A8);
-        check("o_tb_cust_max_pulse", o_tb_cust_max_pulse, 32'h75A8);
-        axi_write(32'hA5A58848, 32'h0000F3C6, 4'h1);
-        axi_read(32'hA5A58848, v); check("TB_CUST_MAX_PULSE WSTRB lane 0", v, 32'h000075C6);
+        // ---- TB_CUST_NOISE
+        axi_write(32'hA5A58848, 32'h8E73EA90, 4'hF);
+        axi_read(32'hA5A58848, v); check("TB_CUST_NOISE RW write", v, 32'h8E73EA90);
+        check("o_tb_cust_noise_pulse_err", o_tb_cust_noise_pulse_err, 32'hEA90);
+        check("o_tb_cust_noise_null_err", o_tb_cust_noise_null_err, 32'h8E73);
+        axi_write(32'hA5A58848, 32'hA46DEC14, 4'h1);
+        axi_read(32'hA5A58848, v); check("TB_CUST_NOISE WSTRB lane 0", v, 32'h8E73EA14);
 
-        // ---- TB_CUST_MIN_BIT
-        axi_write(32'hA5A5884C, 32'h00004A2F, 4'hF);
-        axi_read(32'hA5A5884C, v); check("TB_CUST_MIN_BIT RW write", v, 32'h00004A2F);
-        check("o_tb_cust_min_bit", o_tb_cust_min_bit, 32'h4A2F);
-        axi_write(32'hA5A5884C, 32'h0000ED2F, 4'h1);
-        axi_read(32'hA5A5884C, v); check("TB_CUST_MIN_BIT WSTRB lane 0", v, 32'h00004A2F);
+        // ---- TB_CUST_FILTER
+        axi_write(32'hA5A5884C, 32'h2F971999, 4'hF);
+        axi_read(32'hA5A5884C, v); check("TB_CUST_FILTER RW write", v, 32'h2F971999);
+        check("o_tb_cust_filter_glitch_size", o_tb_cust_filter_glitch_size, 32'h1999);
+        check("o_tb_cust_filter_gap_err", o_tb_cust_filter_gap_err, 32'h2F97);
+        axi_write(32'hA5A5884C, 32'hFE17A11D, 4'h1);
+        axi_read(32'hA5A5884C, v); check("TB_CUST_FILTER WSTRB lane 0", v, 32'h2F97191D);
 
-        // ---- TB_CUST_MAX_BIT
-        axi_write(32'hA5A58850, 32'h00000580, 4'hF);
-        axi_read(32'hA5A58850, v); check("TB_CUST_MAX_BIT RW write", v, 32'h00000580);
-        check("o_tb_cust_max_bit", o_tb_cust_max_bit, 32'h580);
-        axi_write(32'hA5A58850, 32'h00006A8A, 4'h1);
-        axi_read(32'hA5A58850, v); check("TB_CUST_MAX_BIT WSTRB lane 0", v, 32'h0000058A);
+        // ---- TB_CUST_PARITY
+        axi_write(32'hA5A58850, 32'h00000002, 4'hF);
+        axi_read(32'hA5A58850, v); check("TB_CUST_PARITY RW write", v, 32'h00000002);
+        check("o_tb_cust_parity", o_tb_cust_parity, 32'h2);
+        axi_write(32'hA5A58850, 32'h00000003, 4'h1);
+        axi_read(32'hA5A58850, v); check("TB_CUST_PARITY WSTRB lane 0", v, 32'h00000003);
 
-        // ---- TB_CUST_MAX_PULSE_ERR
-        axi_write(32'hA5A58854, 32'h0000D66B, 4'hF);
-        axi_read(32'hA5A58854, v); check("TB_CUST_MAX_PULSE_ERR RW write", v, 32'h0000D66B);
-        check("o_tb_cust_max_pulse_err", o_tb_cust_max_pulse_err, 32'hD66B);
-        axi_write(32'hA5A58854, 32'h0000EA90, 4'h1);
-        axi_read(32'hA5A58854, v); check("TB_CUST_MAX_PULSE_ERR WSTRB lane 0", v, 32'h0000D690);
+        // ---- TB_ACT_PULSE
+        i_tb_act_pulse_min = 16'h4BE0;
+        i_tb_act_pulse_max = 16'h1EF2;
+        axi_read(32'hA5A58860, v); check("TB_ACT_PULSE RO inputs", v, 32'h1EF24BE0);
 
-        // ---- TB_CUST_MAX_NULL_ERR
-        axi_write(32'hA5A58858, 32'h00008E73, 4'hF);
-        axi_read(32'hA5A58858, v); check("TB_CUST_MAX_NULL_ERR RW write", v, 32'h00008E73);
-        check("o_tb_cust_max_null_err", o_tb_cust_max_null_err, 32'h8E73);
-        axi_write(32'hA5A58858, 32'h0000EC14, 4'h1);
-        axi_read(32'hA5A58858, v); check("TB_CUST_MAX_NULL_ERR WSTRB lane 0", v, 32'h00008E14);
+        // ---- TB_ACT_BIT
+        i_tb_act_bit_min = 16'hBE3E;
+        i_tb_act_bit_max = 16'h552B;
+        axi_read(32'hA5A58864, v); check("TB_ACT_BIT RO inputs", v, 32'h552BBE3E);
 
-        // ---- TB_CUST_MAX_GAP_ERR
-        axi_write(32'hA5A5885C, 32'h0000A46D, 4'hF);
-        axi_read(32'hA5A5885C, v); check("TB_CUST_MAX_GAP_ERR RW write", v, 32'h0000A46D);
-        check("o_tb_cust_max_gap_err", o_tb_cust_max_gap_err, 32'hA46D);
-        axi_write(32'hA5A5885C, 32'h00001999, 4'h1);
-        axi_read(32'hA5A5885C, v); check("TB_CUST_MAX_GAP_ERR WSTRB lane 0", v, 32'h0000A499);
+        // ---- TB_ACT_NOISE
+        i_tb_act_noise_pulse_err = 16'hE544;
+        i_tb_act_noise_null_err = 16'hB8B3;
+        axi_read(32'hA5A58868, v); check("TB_ACT_NOISE RO inputs", v, 32'hB8B3E544);
 
-        // ---- TB_CUST_PARITY_MODE
-        axi_write(32'hA5A58860, 32'h00000001, 4'hF);
-        axi_read(32'hA5A58860, v); check("TB_CUST_PARITY_MODE RW write", v, 32'h00000001);
-        check("o_tb_cust_parity_mode", o_tb_cust_parity_mode, 32'h1);
-        axi_write(32'hA5A58860, 32'h00000002, 4'h1);
-        axi_read(32'hA5A58860, v); check("TB_CUST_PARITY_MODE WSTRB lane 0", v, 32'h00000002);
+        // ---- TB_ACT_FILTER
+        i_tb_act_filter_glitch_size = 16'hF927;
+        i_tb_act_filter_gap_err = 16'hB610;
+        axi_read(32'hA5A5886C, v); check("TB_ACT_FILTER RO inputs", v, 32'hB610F927);
 
-        // ---- TB_ACT_GLITCH_FILTER_SIZE
-        i_tb_act_glitch_filter_size = 16'hFE17;
-        axi_read(32'hA5A588A0, v); check("TB_ACT_GLITCH_FILTER_SIZE RO inputs", v, 32'h0000FE17);
-
-        // ---- TB_ACT_MIN_PULSE
-        i_tb_act_min_pulse = 16'hB940;
-        axi_read(32'hA5A588A4, v); check("TB_ACT_MIN_PULSE RO inputs", v, 32'h0000B940);
-
-        // ---- TB_ACT_MAX_PULSE
-        i_tb_act_max_pulse = 16'hDC25;
-        axi_read(32'hA5A588A8, v); check("TB_ACT_MAX_PULSE RO inputs", v, 32'h0000DC25);
-
-        // ---- TB_ACT_MIN_BIT
-        i_tb_act_min_bit = 16'h4BE0;
-        axi_read(32'hA5A588AC, v); check("TB_ACT_MIN_BIT RO inputs", v, 32'h00004BE0);
-
-        // ---- TB_ACT_MAX_BIT
-        i_tb_act_max_bit = 16'h1EF2;
-        axi_read(32'hA5A588B0, v); check("TB_ACT_MAX_BIT RO inputs", v, 32'h00001EF2);
-
-        // ---- TB_ACT_MAX_PULSE_ERR
-        i_tb_act_max_pulse_err = 16'hBE3E;
-        axi_read(32'hA5A588B4, v); check("TB_ACT_MAX_PULSE_ERR RO inputs", v, 32'h0000BE3E);
-
-        // ---- TB_ACT_MAX_NULL_ERR
-        i_tb_act_max_null_err = 16'h552B;
-        axi_read(32'hA5A588B8, v); check("TB_ACT_MAX_NULL_ERR RO inputs", v, 32'h0000552B);
-
-        // ---- TB_ACT_MAX_GAP_ERR
-        i_tb_act_max_gap_err = 16'hE544;
-        axi_read(32'hA5A588BC, v); check("TB_ACT_MAX_GAP_ERR RO inputs", v, 32'h0000E544);
-
-        // ---- TB_ACT_PARITY_MODE
-        i_tb_act_parity_mode = 2'h2;
-        axi_read(32'hA5A588C0, v); check("TB_ACT_PARITY_MODE RO inputs", v, 32'h00000002);
+        // ---- TB_ACT_PARITY
+        i_tb_act_parity = 2'h2;
+        axi_read(32'hA5A58870, v); check("TB_ACT_PARITY RO inputs", v, 32'h00000002);
 
         // ---- TB_WORD_CNT
-        i_tb_word_cnt = 32'hF9270F4E;
-        axi_read(32'hA5A588E0, v); check("TB_WORD_CNT RO inputs", v, 32'hF9270F4E);
+        i_tb_word_cnt = 32'hEFBA91FC;
+        axi_read(32'hA5A588E0, v); check("TB_WORD_CNT RO inputs", v, 32'hEFBA91FC);
 
         // ---- TB_ERR_CNT
-        i_tb_err_cnt = 32'hB610A9F7;
-        axi_read(32'hA5A588E4, v); check("TB_ERR_CNT RO inputs", v, 32'hB610A9F7);
+        i_tb_err_cnt = 32'hF79B17AE;
+        axi_read(32'hA5A588E4, v); check("TB_ERR_CNT RO inputs", v, 32'hF79B17AE);
 
         // ---- TB_DROP_CNT
-        i_tb_drop_cnt = 32'h803468B6;
-        axi_read(32'hA5A588E8, v); check("TB_DROP_CNT RO inputs", v, 32'h803468B6);
+        i_tb_drop_cnt = 32'h6C0F3459;
+        axi_read(32'hA5A588E8, v); check("TB_DROP_CNT RO inputs", v, 32'h6C0F3459);
 
         // ---- TB_LAST_WORD
-        i_tb_last_word = 32'hEFBA91FC;
-        axi_read(32'hA5A588EC, v); check("TB_LAST_WORD RO inputs", v, 32'hEFBA91FC);
+        i_tb_last_word = 32'h81F9C1F6;
+        axi_read(32'hA5A588EC, v); check("TB_LAST_WORD RO inputs", v, 32'h81F9C1F6);
 
         // ---- TB_WORD_RADDR
-        axi_write(32'hA5A58900, 32'h000000F7, 4'hF);
-        axi_read(32'hA5A58900, v); check("TB_WORD_RADDR RW write", v, 32'h000000F7);
-        check("o_tb_word_raddr", o_tb_word_raddr, 32'hF7);
-        axi_write(32'hA5A58900, 32'h0000006C, 4'h1);
-        axi_read(32'hA5A58900, v); check("TB_WORD_RADDR WSTRB lane 0", v, 32'h0000006C);
+        axi_write(32'hA5A58900, 32'h000000D4, 4'hF);
+        axi_read(32'hA5A58900, v); check("TB_WORD_RADDR RW write", v, 32'h000000D4);
+        check("o_tb_word_raddr", o_tb_word_raddr, 32'hD4);
+        axi_write(32'hA5A58900, 32'h000000E9, 4'h1);
+        axi_read(32'hA5A58900, v); check("TB_WORD_RADDR WSTRB lane 0", v, 32'h000000E9);
         cnt_o_tb_word_raddr_wr = 0;
-        axi_write(32'hA5A58900, 32'h0000006C, 4'hF);
+        axi_write(32'hA5A58900, 32'h000000E9, 4'hF);
         repeat (2) @(posedge clk);
         check("o_tb_word_raddr_wr strobe", cnt_o_tb_word_raddr_wr, 1);
 
         // ---- TB_WORD_RD_TS_MSB
-        i_tb_word_rd_ts_msb = 32'h81F9C1F6;
-        axi_read(32'hA5A58904, v); check("TB_WORD_RD_TS_MSB RO inputs", v, 32'h81F9C1F6);
+        i_tb_word_rd_ts_msb = 32'hAB99254A;
+        axi_read(32'hA5A58904, v); check("TB_WORD_RD_TS_MSB RO inputs", v, 32'hAB99254A);
 
         // ---- TB_WORD_RD_TS_LSB
-        i_tb_word_rd_ts_lsb = 32'hD47D380D;
-        axi_read(32'hA5A58908, v); check("TB_WORD_RD_TS_LSB RO inputs", v, 32'hD47D380D);
+        i_tb_word_rd_ts_lsb = 32'h3099FDF5;
+        axi_read(32'hA5A58908, v); check("TB_WORD_RD_TS_LSB RO inputs", v, 32'h3099FDF5);
 
         // ---- TB_WORD_RD_DATA
-        i_tb_word_rd_data = 32'hE901E35C;
-        axi_read(32'hA5A5890C, v); check("TB_WORD_RD_DATA RO inputs", v, 32'hE901E35C);
+        i_tb_word_rd_data = 32'h4DA98F1D;
+        axi_read(32'hA5A5890C, v); check("TB_WORD_RD_DATA RO inputs", v, 32'h4DA98F1D);
 
         // ---- TB_WORD_RD_GAP
-        i_tb_word_rd_gap = 32'hAB99254A;
-        axi_read(32'hA5A58910, v); check("TB_WORD_RD_GAP RO inputs", v, 32'hAB99254A);
+        i_tb_word_rd_gap = 32'h48BEAB13;
+        axi_read(32'hA5A58910, v); check("TB_WORD_RD_GAP RO inputs", v, 32'h48BEAB13);
 
         // ---- TB_WORD_RD_GAP_ERR
-        i_tb_word_rd_gap_err = 16'h3099;
-        axi_read(32'hA5A58914, v); check("TB_WORD_RD_GAP_ERR RO inputs", v, 32'h00003099);
+        i_tb_word_rd_gap_err = 16'h966B;
+        axi_read(32'hA5A58914, v); check("TB_WORD_RD_GAP_ERR RO inputs", v, 32'h0000966B);
         cnt_o_tb_word_rd_gap_err_rd = 0;
         axi_read(32'hA5A58914, v);
         repeat (2) @(posedge clk);
         check("o_tb_word_rd_gap_err_rd strobe", cnt_o_tb_word_rd_gap_err_rd, 1);
 
         // ---- TB_ERR_RADDR
-        axi_write(32'hA5A58920, 32'h0000004D, 4'hF);
-        axi_read(32'hA5A58920, v); check("TB_ERR_RADDR RW write", v, 32'h0000004D);
-        check("o_tb_err_raddr", o_tb_err_raddr, 32'h4D);
-        axi_write(32'hA5A58920, 32'h00000048, 4'h1);
-        axi_read(32'hA5A58920, v); check("TB_ERR_RADDR WSTRB lane 0", v, 32'h00000048);
+        axi_write(32'hA5A58920, 32'h000000F9, 4'hF);
+        axi_read(32'hA5A58920, v); check("TB_ERR_RADDR RW write", v, 32'h000000F9);
+        check("o_tb_err_raddr", o_tb_err_raddr, 32'hF9);
+        axi_write(32'hA5A58920, 32'h000000E1, 4'h1);
+        axi_read(32'hA5A58920, v); check("TB_ERR_RADDR WSTRB lane 0", v, 32'h000000E1);
         cnt_o_tb_err_raddr_wr = 0;
-        axi_write(32'hA5A58920, 32'h00000048, 4'hF);
+        axi_write(32'hA5A58920, 32'h000000E1, 4'hF);
         repeat (2) @(posedge clk);
         check("o_tb_err_raddr_wr strobe", cnt_o_tb_err_raddr_wr, 1);
 
         // ---- TB_ERR_RD_TS_MSB
-        i_tb_err_rd_ts_msb = 32'h966BAEA1;
-        axi_read(32'hA5A58924, v); check("TB_ERR_RD_TS_MSB RO inputs", v, 32'h966BAEA1);
+        i_tb_err_rd_ts_msb = 32'h7FD63116;
+        axi_read(32'hA5A58924, v); check("TB_ERR_RD_TS_MSB RO inputs", v, 32'h7FD63116);
 
         // ---- TB_ERR_RD_TS_LSB
-        i_tb_err_rd_ts_lsb = 32'hF9341C68;
-        axi_read(32'hA5A58928, v); check("TB_ERR_RD_TS_LSB RO inputs", v, 32'hF9341C68);
+        i_tb_err_rd_ts_lsb = 32'hD8A064DF;
+        axi_read(32'hA5A58928, v); check("TB_ERR_RD_TS_LSB RO inputs", v, 32'hD8A064DF);
 
-        // ---- TB_ERR_RD_CODE
-        i_tb_err_rd_code = 16'hE1EA;
-        axi_read(32'hA5A5892C, v); check("TB_ERR_RD_CODE RO inputs", v, 32'h0000E1EA);
-
-        // ---- TB_ERR_RD_ADDR
-        i_tb_err_rd_addr = 16'h7FD6;
-        axi_read(32'hA5A58930, v); check("TB_ERR_RD_ADDR RO inputs", v, 32'h00007FD6);
+        // ---- TB_ERR_RD_INFO
+        i_tb_err_rd_info_code = 16'hF0DF;
+        i_tb_err_rd_info_addr = 16'h815A;
+        axi_read(32'hA5A5892C, v); check("TB_ERR_RD_INFO RO inputs", v, 32'h815AF0DF);
 
         // ---- TB_ERR_RD_DATA
-        i_tb_err_rd_data = 32'hD8A064DF;
-        axi_read(32'hA5A58934, v); check("TB_ERR_RD_DATA RO inputs", v, 32'hD8A064DF);
+        i_tb_err_rd_data = 32'h64B2D2BC;
+        axi_read(32'hA5A58930, v); check("TB_ERR_RD_DATA RO inputs", v, 32'h64B2D2BC);
         cnt_o_tb_err_rd_data_rd = 0;
-        axi_read(32'hA5A58934, v);
+        axi_read(32'hA5A58930, v);
         repeat (2) @(posedge clk);
         check("o_tb_err_rd_data_rd strobe", cnt_o_tb_err_rd_data_rd, 1);
 
         // ---- TB_BIT_RADDR
-        axi_write(32'hA5A58940, 32'h0000041E, 4'hF);
-        axi_read(32'hA5A58940, v); check("TB_BIT_RADDR RW write", v, 32'h0000041E);
-        check("o_tb_bit_raddr_bit_idx", o_tb_bit_raddr_bit_idx, 32'h1E);
-        check("o_tb_bit_raddr_word_idx", o_tb_bit_raddr_word_idx, 32'h4);
-        axi_write(32'hA5A58940, 32'h0000040C, 4'h1);
-        axi_read(32'hA5A58940, v); check("TB_BIT_RADDR WSTRB lane 0", v, 32'h0000040C);
+        axi_write(32'hA5A58940, 32'h00000612, 4'hF);
+        axi_read(32'hA5A58940, v); check("TB_BIT_RADDR RW write", v, 32'h00000612);
+        check("o_tb_bit_raddr_bit_idx", o_tb_bit_raddr_bit_idx, 32'h12);
+        check("o_tb_bit_raddr_word_idx", o_tb_bit_raddr_word_idx, 32'h6);
+        axi_write(32'hA5A58940, 32'h00000301, 4'h1);
+        axi_read(32'hA5A58940, v); check("TB_BIT_RADDR WSTRB lane 0", v, 32'h00000601);
         cnt_o_tb_bit_raddr_wr = 0;
-        axi_write(32'hA5A58940, 32'h0000040C, 4'hF);
+        axi_write(32'hA5A58940, 32'h00000601, 4'hF);
         repeat (2) @(posedge clk);
         check("o_tb_bit_raddr_wr strobe", cnt_o_tb_bit_raddr_wr, 1);
 
         // ---- TB_BIT_RD_PULSE
-        i_tb_bit_rd_pulse = 16'hDA71;
-        axi_read(32'hA5A58944, v); check("TB_BIT_RD_PULSE RO inputs", v, 32'h0000DA71);
-
-        // ---- TB_BIT_RD_PULSE_ERR
-        i_tb_bit_rd_pulse_err = 16'h8D6;
-        axi_read(32'hA5A58948, v); check("TB_BIT_RD_PULSE_ERR RO inputs", v, 32'h000008D6);
+        i_tb_bit_rd_pulse_dur = 16'h3E24;
+        i_tb_bit_rd_pulse_err = 16'hBE65;
+        axi_read(32'hA5A58944, v); check("TB_BIT_RD_PULSE RO inputs", v, 32'hBE653E24);
 
         // ---- TB_BIT_RD_NULL
-        i_tb_bit_rd_null = 16'h7AF0;
-        axi_read(32'hA5A5894C, v); check("TB_BIT_RD_NULL RO inputs", v, 32'h00007AF0);
-
-        // ---- TB_BIT_RD_NULL_ERR
-        i_tb_bit_rd_null_err = 16'h3E24;
-        axi_read(32'hA5A58950, v); check("TB_BIT_RD_NULL_ERR RO inputs", v, 32'h00003E24);
-        cnt_o_tb_bit_rd_null_err_rd = 0;
-        axi_read(32'hA5A58950, v);
+        i_tb_bit_rd_null_dur = 16'hCC22;
+        i_tb_bit_rd_null_err = 16'h677F;
+        axi_read(32'hA5A58948, v); check("TB_BIT_RD_NULL RO inputs", v, 32'h677FCC22);
+        cnt_o_tb_bit_rd_null_rd = 0;
+        axi_read(32'hA5A58948, v);
         repeat (2) @(posedge clk);
-        check("o_tb_bit_rd_null_err_rd strobe", cnt_o_tb_bit_rd_null_err_rd, 1);
+        check("o_tb_bit_rd_null_rd strobe", cnt_o_tb_bit_rd_null_rd, 1);
 
         // ---- TB_CHK_CTRL
         axi_write(32'hA5A589C0, 32'h00000001, 4'hF);
@@ -1082,34 +956,34 @@ module tb;
         check("o_tb_chk_ctrl_clear idle", o_tb_chk_ctrl_clear, 0);
 
         // ---- TB_CHK_TIMEOUT
-        axi_write(32'hA5A589C4, 32'h677F6CBD, 4'hF);
-        axi_read(32'hA5A589C4, v); check("TB_CHK_TIMEOUT RW write", v, 32'h677F6CBD);
-        check("o_tb_chk_timeout", o_tb_chk_timeout, 32'h677F6CBD);
-        axi_write(32'hA5A589C4, 32'h6A107B75, 4'h1);
-        axi_read(32'hA5A589C4, v); check("TB_CHK_TIMEOUT WSTRB lane 0", v, 32'h677F6C75);
+        axi_write(32'hA5A589C4, 32'h2C4A3698, 4'hF);
+        axi_read(32'hA5A589C4, v); check("TB_CHK_TIMEOUT RW write", v, 32'h2C4A3698);
+        check("o_tb_chk_timeout", o_tb_chk_timeout, 32'h2C4A3698);
+        axi_write(32'hA5A589C4, 32'h5DFBD3D1, 4'h1);
+        axi_read(32'hA5A589C4, v); check("TB_CHK_TIMEOUT WSTRB lane 0", v, 32'h2C4A36D1);
 
         // ---- TB_CHK_OK_CNT
-        i_tb_chk_ok_cnt = 32'hAA2CA1AF;
-        axi_read(32'hA5A589C8, v); check("TB_CHK_OK_CNT RO inputs", v, 32'hAA2CA1AF);
+        i_tb_chk_ok_cnt = 32'h8C7E134F;
+        axi_read(32'hA5A589C8, v); check("TB_CHK_OK_CNT RO inputs", v, 32'h8C7E134F);
 
         // ---- TB_CHK_ERR_CNT
-        i_tb_chk_err_cnt = 32'h2C4A3698;
-        axi_read(32'hA5A589CC, v); check("TB_CHK_ERR_CNT RO inputs", v, 32'h2C4A3698);
+        i_tb_chk_err_cnt = 32'hE1FAB9D7;
+        axi_read(32'hA5A589CC, v); check("TB_CHK_ERR_CNT RO inputs", v, 32'hE1FAB9D7);
 
         // ---- TB_CHK_STATUS
-        i_tb_chk_status_fifo_level = 4'h5;
+        i_tb_chk_status_fifo_level = 4'hB;
         i_tb_chk_status_fifo_ovf = 1'h1;
-        axi_read(32'hA5A589D0, v); check("TB_CHK_STATUS RO inputs", v, 32'h00000015);
+        axi_read(32'hA5A589D0, v); check("TB_CHK_STATUS RO inputs", v, 32'h0000001B);
 
         // ---- RX0_CTRL
         axi_write(32'hA5A5C000, 32'h00000003, 4'hF);
         axi_read(32'hA5A5C000, v); check("RX0_CTRL RW write", v, 32'h00000003);
         check("o_rx0_ctrl_enable", o_rx0_ctrl_enable, 32'h1);
         check("o_rx0_ctrl_freeze", o_rx0_ctrl_freeze, 32'h1);
-        axi_write(32'hA5A5C000, 32'h00000003, 4'h1);
-        axi_read(32'hA5A5C000, v); check("RX0_CTRL WSTRB lane 0", v, 32'h00000003);
+        axi_write(32'hA5A5C000, 32'h00000000, 4'h1);
+        axi_read(32'hA5A5C000, v); check("RX0_CTRL WSTRB lane 0", v, 32'h00000000);
         cnt_o_rx0_ctrl_clear = 0;
-        axi_write(32'hA5A5C000, 32'h00000007, 4'hF);
+        axi_write(32'hA5A5C000, 32'h00000004, 4'hF);
         repeat (3) @(posedge clk);
         check("o_rx0_ctrl_clear one pulse", cnt_o_rx0_ctrl_clear, 1);
         check("o_rx0_ctrl_clear value", last_o_rx0_ctrl_clear, 32'h1);
@@ -1120,245 +994,201 @@ module tb;
         i_rx0_status_word_wrap = 1'h1;
         i_rx0_status_err_wrap = 1'h1;
         i_rx0_status_act_cfg = 2'h1;
-        axi_read(32'hA5A5C004, v); check("RX0_STATUS RO inputs", v, 32'h00000170);
+        i_rx0_status_line_high = 1'h1;
+        i_rx0_status_line_low = 1'h1;
+        i_rx0_status_sync_wait = 1'h1;
+        axi_read(32'hA5A5C004, v); check("RX0_STATUS RO inputs", v, 32'h00007170);
 
-        // ---- RX0_CFG_SEL
-        axi_write(32'hA5A5C008, 32'h00000002, 4'hF);
-        axi_read(32'hA5A5C008, v); check("RX0_CFG_SEL RW write", v, 32'h00000002);
-        check("o_rx0_cfg_sel", o_rx0_cfg_sel, 32'h2);
-        axi_write(32'hA5A5C008, 32'h00000002, 4'h1);
-        axi_read(32'hA5A5C008, v); check("RX0_CFG_SEL WSTRB lane 0", v, 32'h00000002);
-
-        // ---- RX0_CFG_APPLY
-        cnt_o_rx0_cfg_apply_apply = 0;
-        axi_write(32'hA5A5C00C, 32'h00000001, 4'hF);
+        // ---- RX0_CFG
+        axi_write(32'hA5A5C008, 32'h00000003, 4'hF);
+        axi_read(32'hA5A5C008, v); check("RX0_CFG RW write", v, 32'h00000003);
+        check("o_rx0_cfg_sel", o_rx0_cfg_sel, 32'h3);
+        axi_write(32'hA5A5C008, 32'h00000001, 4'h1);
+        axi_read(32'hA5A5C008, v); check("RX0_CFG WSTRB lane 0", v, 32'h00000001);
+        cnt_o_rx0_cfg_apply = 0;
+        axi_write(32'hA5A5C008, 32'h00000011, 4'hF);
         repeat (3) @(posedge clk);
-        check("o_rx0_cfg_apply_apply one pulse", cnt_o_rx0_cfg_apply_apply, 1);
-        check("o_rx0_cfg_apply_apply value", last_o_rx0_cfg_apply_apply, 32'h1);
-        check("o_rx0_cfg_apply_apply idle", o_rx0_cfg_apply_apply, 0);
+        check("o_rx0_cfg_apply one pulse", cnt_o_rx0_cfg_apply, 1);
+        check("o_rx0_cfg_apply value", last_o_rx0_cfg_apply, 32'h1);
+        check("o_rx0_cfg_apply idle", o_rx0_cfg_apply, 0);
 
-        // ---- RX0_CUST_GLITCH_FILTER_SIZE
-        axi_write(32'hA5A5C040, 32'h00001BA1, 4'hF);
-        axi_read(32'hA5A5C040, v); check("RX0_CUST_GLITCH_FILTER_SIZE RW write", v, 32'h00001BA1);
-        check("o_rx0_cust_glitch_filter_size", o_rx0_cust_glitch_filter_size, 32'h1BA1);
-        axi_write(32'hA5A5C040, 32'h0000C748, 4'h1);
-        axi_read(32'hA5A5C040, v); check("RX0_CUST_GLITCH_FILTER_SIZE WSTRB lane 0", v, 32'h00001B48);
+        // ---- RX0_CUST_PULSE
+        axi_write(32'hA5A5C040, 32'h7D5C5EDA, 4'hF);
+        axi_read(32'hA5A5C040, v); check("RX0_CUST_PULSE RW write", v, 32'h7D5C5EDA);
+        check("o_rx0_cust_pulse_min", o_rx0_cust_pulse_min, 32'h5EDA);
+        check("o_rx0_cust_pulse_max", o_rx0_cust_pulse_max, 32'h7D5C);
+        axi_write(32'hA5A5C040, 32'h0792BB96, 4'h1);
+        axi_read(32'hA5A5C040, v); check("RX0_CUST_PULSE WSTRB lane 0", v, 32'h7D5C5E96);
 
-        // ---- RX0_CUST_MIN_PULSE
-        axi_write(32'hA5A5C044, 32'h000029E8, 4'hF);
-        axi_read(32'hA5A5C044, v); check("RX0_CUST_MIN_PULSE RW write", v, 32'h000029E8);
-        check("o_rx0_cust_min_pulse", o_rx0_cust_min_pulse, 32'h29E8);
-        axi_write(32'hA5A5C044, 32'h0000855C, 4'h1);
-        axi_read(32'hA5A5C044, v); check("RX0_CUST_MIN_PULSE WSTRB lane 0", v, 32'h0000295C);
+        // ---- RX0_CUST_BIT
+        axi_write(32'hA5A5C044, 32'h0B217825, 4'hF);
+        axi_read(32'hA5A5C044, v); check("RX0_CUST_BIT RW write", v, 32'h0B217825);
+        check("o_rx0_cust_bit_min", o_rx0_cust_bit_min, 32'h7825);
+        check("o_rx0_cust_bit_max", o_rx0_cust_bit_max, 32'hB21);
+        axi_write(32'hA5A5C044, 32'hB4104EFB, 4'h1);
+        axi_read(32'hA5A5C044, v); check("RX0_CUST_BIT WSTRB lane 0", v, 32'h0B2178FB);
 
-        // ---- RX0_CUST_MAX_PULSE
-        axi_write(32'hA5A5C048, 32'h0000D707, 4'hF);
-        axi_read(32'hA5A5C048, v); check("RX0_CUST_MAX_PULSE RW write", v, 32'h0000D707);
-        check("o_rx0_cust_max_pulse", o_rx0_cust_max_pulse, 32'hD707);
-        axi_write(32'hA5A5C048, 32'h000064AC, 4'h1);
-        axi_read(32'hA5A5C048, v); check("RX0_CUST_MAX_PULSE WSTRB lane 0", v, 32'h0000D7AC);
+        // ---- RX0_CUST_NOISE
+        axi_write(32'hA5A5C048, 32'hFBB2D92A, 4'hF);
+        axi_read(32'hA5A5C048, v); check("RX0_CUST_NOISE RW write", v, 32'hFBB2D92A);
+        check("o_rx0_cust_noise_pulse_err", o_rx0_cust_noise_pulse_err, 32'hD92A);
+        check("o_rx0_cust_noise_null_err", o_rx0_cust_noise_null_err, 32'hFBB2);
+        axi_write(32'hA5A5C048, 32'h97DA9D64, 4'h1);
+        axi_read(32'hA5A5C048, v); check("RX0_CUST_NOISE WSTRB lane 0", v, 32'hFBB2D964);
 
-        // ---- RX0_CUST_MIN_BIT
-        axi_write(32'hA5A5C04C, 32'h00005EDA, 4'hF);
-        axi_read(32'hA5A5C04C, v); check("RX0_CUST_MIN_BIT RW write", v, 32'h00005EDA);
-        check("o_rx0_cust_min_bit", o_rx0_cust_min_bit, 32'h5EDA);
-        axi_write(32'hA5A5C04C, 32'h00007D5C, 4'h1);
-        axi_read(32'hA5A5C04C, v); check("RX0_CUST_MIN_BIT WSTRB lane 0", v, 32'h00005E5C);
+        // ---- RX0_CUST_FILTER
+        axi_write(32'hA5A5C04C, 32'h64C29403, 4'hF);
+        axi_read(32'hA5A5C04C, v); check("RX0_CUST_FILTER RW write", v, 32'h64C29403);
+        check("o_rx0_cust_filter_glitch_size", o_rx0_cust_filter_glitch_size, 32'h9403);
+        check("o_rx0_cust_filter_gap_err", o_rx0_cust_filter_gap_err, 32'h64C2);
+        axi_write(32'hA5A5C04C, 32'h2B9CA5AC, 4'h1);
+        axi_read(32'hA5A5C04C, v); check("RX0_CUST_FILTER WSTRB lane 0", v, 32'h64C294AC);
 
-        // ---- RX0_CUST_MAX_BIT
-        axi_write(32'hA5A5C050, 32'h0000BB96, 4'hF);
-        axi_read(32'hA5A5C050, v); check("RX0_CUST_MAX_BIT RW write", v, 32'h0000BB96);
-        check("o_rx0_cust_max_bit", o_rx0_cust_max_bit, 32'hBB96);
-        axi_write(32'hA5A5C050, 32'h00000792, 4'h1);
-        axi_read(32'hA5A5C050, v); check("RX0_CUST_MAX_BIT WSTRB lane 0", v, 32'h0000BB92);
+        // ---- RX0_CUST_PARITY
+        axi_write(32'hA5A5C050, 32'h00000001, 4'hF);
+        axi_read(32'hA5A5C050, v); check("RX0_CUST_PARITY RW write", v, 32'h00000001);
+        check("o_rx0_cust_parity", o_rx0_cust_parity, 32'h1);
+        axi_write(32'hA5A5C050, 32'h00000002, 4'h1);
+        axi_read(32'hA5A5C050, v); check("RX0_CUST_PARITY WSTRB lane 0", v, 32'h00000002);
 
-        // ---- RX0_CUST_MAX_PULSE_ERR
-        axi_write(32'hA5A5C054, 32'h00007825, 4'hF);
-        axi_read(32'hA5A5C054, v); check("RX0_CUST_MAX_PULSE_ERR RW write", v, 32'h00007825);
-        check("o_rx0_cust_max_pulse_err", o_rx0_cust_max_pulse_err, 32'h7825);
-        axi_write(32'hA5A5C054, 32'h00000B21, 4'h1);
-        axi_read(32'hA5A5C054, v); check("RX0_CUST_MAX_PULSE_ERR WSTRB lane 0", v, 32'h00007821);
+        // ---- RX0_ACT_PULSE
+        i_rx0_act_pulse_min = 16'h3A18;
+        i_rx0_act_pulse_max = 16'hFB69;
+        axi_read(32'hA5A5C060, v); check("RX0_ACT_PULSE RO inputs", v, 32'hFB693A18);
 
-        // ---- RX0_CUST_MAX_NULL_ERR
-        axi_write(32'hA5A5C058, 32'h00004EFB, 4'hF);
-        axi_read(32'hA5A5C058, v); check("RX0_CUST_MAX_NULL_ERR RW write", v, 32'h00004EFB);
-        check("o_rx0_cust_max_null_err", o_rx0_cust_max_null_err, 32'h4EFB);
-        axi_write(32'hA5A5C058, 32'h0000B410, 4'h1);
-        axi_read(32'hA5A5C058, v); check("RX0_CUST_MAX_NULL_ERR WSTRB lane 0", v, 32'h00004E10);
+        // ---- RX0_ACT_BIT
+        i_rx0_act_bit_min = 16'h326;
+        i_rx0_act_bit_max = 16'hC541;
+        axi_read(32'hA5A5C064, v); check("RX0_ACT_BIT RO inputs", v, 32'hC5410326);
 
-        // ---- RX0_CUST_MAX_GAP_ERR
-        axi_write(32'hA5A5C05C, 32'h0000D92A, 4'hF);
-        axi_read(32'hA5A5C05C, v); check("RX0_CUST_MAX_GAP_ERR RW write", v, 32'h0000D92A);
-        check("o_rx0_cust_max_gap_err", o_rx0_cust_max_gap_err, 32'hD92A);
-        axi_write(32'hA5A5C05C, 32'h0000FBB2, 4'h1);
-        axi_read(32'hA5A5C05C, v); check("RX0_CUST_MAX_GAP_ERR WSTRB lane 0", v, 32'h0000D9B2);
+        // ---- RX0_ACT_NOISE
+        i_rx0_act_noise_pulse_err = 16'h3313;
+        i_rx0_act_noise_null_err = 16'h8A24;
+        axi_read(32'hA5A5C068, v); check("RX0_ACT_NOISE RO inputs", v, 32'h8A243313);
 
-        // ---- RX0_CUST_PARITY_MODE
-        axi_write(32'hA5A5C060, 32'h00000002, 4'hF);
-        axi_read(32'hA5A5C060, v); check("RX0_CUST_PARITY_MODE RW write", v, 32'h00000002);
-        check("o_rx0_cust_parity_mode", o_rx0_cust_parity_mode, 32'h2);
-        axi_write(32'hA5A5C060, 32'h00000002, 4'h1);
-        axi_read(32'hA5A5C060, v); check("RX0_CUST_PARITY_MODE WSTRB lane 0", v, 32'h00000002);
+        // ---- RX0_ACT_FILTER
+        i_rx0_act_filter_glitch_size = 16'hEB8A;
+        i_rx0_act_filter_gap_err = 16'hDC3B;
+        axi_read(32'hA5A5C06C, v); check("RX0_ACT_FILTER RO inputs", v, 32'hDC3BEB8A);
 
-        // ---- RX0_ACT_GLITCH_FILTER_SIZE
-        i_rx0_act_glitch_filter_size = 16'h9403;
-        axi_read(32'hA5A5C0A0, v); check("RX0_ACT_GLITCH_FILTER_SIZE RO inputs", v, 32'h00009403);
-
-        // ---- RX0_ACT_MIN_PULSE
-        i_rx0_act_min_pulse = 16'h64C2;
-        axi_read(32'hA5A5C0A4, v); check("RX0_ACT_MIN_PULSE RO inputs", v, 32'h000064C2);
-
-        // ---- RX0_ACT_MAX_PULSE
-        i_rx0_act_max_pulse = 16'hA5AC;
-        axi_read(32'hA5A5C0A8, v); check("RX0_ACT_MAX_PULSE RO inputs", v, 32'h0000A5AC);
-
-        // ---- RX0_ACT_MIN_BIT
-        i_rx0_act_min_bit = 16'h2B9C;
-        axi_read(32'hA5A5C0AC, v); check("RX0_ACT_MIN_BIT RO inputs", v, 32'h00002B9C);
-
-        // ---- RX0_ACT_MAX_BIT
-        i_rx0_act_max_bit = 16'h2B28;
-        axi_read(32'hA5A5C0B0, v); check("RX0_ACT_MAX_BIT RO inputs", v, 32'h00002B28);
-
-        // ---- RX0_ACT_MAX_PULSE_ERR
-        i_rx0_act_max_pulse_err = 16'h8092;
-        axi_read(32'hA5A5C0B4, v); check("RX0_ACT_MAX_PULSE_ERR RO inputs", v, 32'h00008092);
-
-        // ---- RX0_ACT_MAX_NULL_ERR
-        i_rx0_act_max_null_err = 16'h3A18;
-        axi_read(32'hA5A5C0B8, v); check("RX0_ACT_MAX_NULL_ERR RO inputs", v, 32'h00003A18);
-
-        // ---- RX0_ACT_MAX_GAP_ERR
-        i_rx0_act_max_gap_err = 16'hFB69;
-        axi_read(32'hA5A5C0BC, v); check("RX0_ACT_MAX_GAP_ERR RO inputs", v, 32'h0000FB69);
-
-        // ---- RX0_ACT_PARITY_MODE
-        i_rx0_act_parity_mode = 2'h1;
-        axi_read(32'hA5A5C0C0, v); check("RX0_ACT_PARITY_MODE RO inputs", v, 32'h00000001);
+        // ---- RX0_ACT_PARITY
+        i_rx0_act_parity = 2'h2;
+        axi_read(32'hA5A5C070, v); check("RX0_ACT_PARITY RO inputs", v, 32'h00000002);
 
         // ---- RX0_WORD_CNT
-        i_rx0_word_cnt = 32'hC541013D;
-        axi_read(32'hA5A5C0E0, v); check("RX0_WORD_CNT RO inputs", v, 32'hC541013D);
+        i_rx0_word_cnt = 32'h3B6FE507;
+        axi_read(32'hA5A5C0E0, v); check("RX0_WORD_CNT RO inputs", v, 32'h3B6FE507);
 
         // ---- RX0_ERR_CNT
-        i_rx0_err_cnt = 32'h33138131;
-        axi_read(32'hA5A5C0E4, v); check("RX0_ERR_CNT RO inputs", v, 32'h33138131);
+        i_rx0_err_cnt = 32'h678A5AA3;
+        axi_read(32'hA5A5C0E4, v); check("RX0_ERR_CNT RO inputs", v, 32'h678A5AA3);
 
         // ---- RX0_DROP_CNT
-        i_rx0_drop_cnt = 32'h8A245E6B;
-        axi_read(32'hA5A5C0E8, v); check("RX0_DROP_CNT RO inputs", v, 32'h8A245E6B);
+        i_rx0_drop_cnt = 32'h83868A29;
+        axi_read(32'hA5A5C0E8, v); check("RX0_DROP_CNT RO inputs", v, 32'h83868A29);
 
         // ---- RX0_LAST_WORD
-        i_rx0_last_word = 32'hEB8AC8CE;
-        axi_read(32'hA5A5C0EC, v); check("RX0_LAST_WORD RO inputs", v, 32'hEB8AC8CE);
+        i_rx0_last_word = 32'h5804F922;
+        axi_read(32'hA5A5C0EC, v); check("RX0_LAST_WORD RO inputs", v, 32'h5804F922);
 
         // ---- RX0_WORD_RADDR
-        axi_write(32'hA5A5C100, 32'h000000DC, 4'hF);
-        axi_read(32'hA5A5C100, v); check("RX0_WORD_RADDR RW write", v, 32'h000000DC);
-        check("o_rx0_word_raddr", o_rx0_word_raddr, 32'hDC);
-        axi_write(32'hA5A5C100, 32'h0000008C, 4'h1);
-        axi_read(32'hA5A5C100, v); check("RX0_WORD_RADDR WSTRB lane 0", v, 32'h0000008C);
+        axi_write(32'hA5A5C100, 32'h000000F3, 4'hF);
+        axi_read(32'hA5A5C100, v); check("RX0_WORD_RADDR RW write", v, 32'h000000F3);
+        check("o_rx0_word_raddr", o_rx0_word_raddr, 32'hF3);
+        axi_write(32'hA5A5C100, 32'h000000D8, 4'h1);
+        axi_read(32'hA5A5C100, v); check("RX0_WORD_RADDR WSTRB lane 0", v, 32'h000000D8);
         cnt_o_rx0_word_raddr_wr = 0;
-        axi_write(32'hA5A5C100, 32'h0000008C, 4'hF);
+        axi_write(32'hA5A5C100, 32'h000000D8, 4'hF);
         repeat (2) @(posedge clk);
         check("o_rx0_word_raddr_wr strobe", cnt_o_rx0_word_raddr_wr, 1);
 
         // ---- RX0_WORD_RD_TS_MSB
-        i_rx0_word_rd_ts_msb = 32'h3B6FE507;
-        axi_read(32'hA5A5C104, v); check("RX0_WORD_RD_TS_MSB RO inputs", v, 32'h3B6FE507);
+        i_rx0_word_rd_ts_msb = 32'h93EA5C4E;
+        axi_read(32'hA5A5C104, v); check("RX0_WORD_RD_TS_MSB RO inputs", v, 32'h93EA5C4E);
 
         // ---- RX0_WORD_RD_TS_LSB
-        i_rx0_word_rd_ts_lsb = 32'h678A5AA3;
-        axi_read(32'hA5A5C108, v); check("RX0_WORD_RD_TS_LSB RO inputs", v, 32'h678A5AA3);
+        i_rx0_word_rd_ts_lsb = 32'h5A702CFA;
+        axi_read(32'hA5A5C108, v); check("RX0_WORD_RD_TS_LSB RO inputs", v, 32'h5A702CFA);
 
         // ---- RX0_WORD_RD_DATA
-        i_rx0_word_rd_data = 32'h83868A29;
-        axi_read(32'hA5A5C10C, v); check("RX0_WORD_RD_DATA RO inputs", v, 32'h83868A29);
+        i_rx0_word_rd_data = 32'h7589A82B;
+        axi_read(32'hA5A5C10C, v); check("RX0_WORD_RD_DATA RO inputs", v, 32'h7589A82B);
 
         // ---- RX0_WORD_RD_GAP
-        i_rx0_word_rd_gap = 32'h5804F922;
-        axi_read(32'hA5A5C110, v); check("RX0_WORD_RD_GAP RO inputs", v, 32'h5804F922);
+        i_rx0_word_rd_gap = 32'hE8E5B461;
+        axi_read(32'hA5A5C110, v); check("RX0_WORD_RD_GAP RO inputs", v, 32'hE8E5B461);
 
         // ---- RX0_WORD_RD_GAP_ERR
-        i_rx0_word_rd_gap_err = 16'hF3D4;
-        axi_read(32'hA5A5C114, v); check("RX0_WORD_RD_GAP_ERR RO inputs", v, 32'h0000F3D4);
+        i_rx0_word_rd_gap_err = 16'h44EF;
+        axi_read(32'hA5A5C114, v); check("RX0_WORD_RD_GAP_ERR RO inputs", v, 32'h000044EF);
         cnt_o_rx0_word_rd_gap_err_rd = 0;
         axi_read(32'hA5A5C114, v);
         repeat (2) @(posedge clk);
         check("o_rx0_word_rd_gap_err_rd strobe", cnt_o_rx0_word_rd_gap_err_rd, 1);
 
         // ---- RX0_ERR_RADDR
-        axi_write(32'hA5A5C120, 32'h000000D8, 4'hF);
-        axi_read(32'hA5A5C120, v); check("RX0_ERR_RADDR RW write", v, 32'h000000D8);
-        check("o_rx0_err_raddr", o_rx0_err_raddr, 32'hD8);
-        axi_write(32'hA5A5C120, 32'h00000093, 4'h1);
-        axi_read(32'hA5A5C120, v); check("RX0_ERR_RADDR WSTRB lane 0", v, 32'h00000093);
+        axi_write(32'hA5A5C120, 32'h000000A8, 4'hF);
+        axi_read(32'hA5A5C120, v); check("RX0_ERR_RADDR RW write", v, 32'h000000A8);
+        check("o_rx0_err_raddr", o_rx0_err_raddr, 32'hA8);
+        axi_write(32'hA5A5C120, 32'h0000008C, 4'h1);
+        axi_read(32'hA5A5C120, v); check("RX0_ERR_RADDR WSTRB lane 0", v, 32'h0000008C);
         cnt_o_rx0_err_raddr_wr = 0;
-        axi_write(32'hA5A5C120, 32'h00000093, 4'hF);
+        axi_write(32'hA5A5C120, 32'h0000008C, 4'hF);
         repeat (2) @(posedge clk);
         check("o_rx0_err_raddr_wr strobe", cnt_o_rx0_err_raddr_wr, 1);
 
         // ---- RX0_ERR_RD_TS_MSB
-        i_rx0_err_rd_ts_msb = 32'h5A702CFA;
-        axi_read(32'hA5A5C124, v); check("RX0_ERR_RD_TS_MSB RO inputs", v, 32'h5A702CFA);
+        i_rx0_err_rd_ts_msb = 32'h9BE3CECB;
+        axi_read(32'hA5A5C124, v); check("RX0_ERR_RD_TS_MSB RO inputs", v, 32'h9BE3CECB);
 
         // ---- RX0_ERR_RD_TS_LSB
-        i_rx0_err_rd_ts_lsb = 32'h7589A82B;
-        axi_read(32'hA5A5C128, v); check("RX0_ERR_RD_TS_LSB RO inputs", v, 32'h7589A82B);
+        i_rx0_err_rd_ts_lsb = 32'hF5059285;
+        axi_read(32'hA5A5C128, v); check("RX0_ERR_RD_TS_LSB RO inputs", v, 32'hF5059285);
 
-        // ---- RX0_ERR_RD_CODE
-        i_rx0_err_rd_code = 16'hE8E5;
-        axi_read(32'hA5A5C12C, v); check("RX0_ERR_RD_CODE RO inputs", v, 32'h0000E8E5);
-
-        // ---- RX0_ERR_RD_ADDR
-        i_rx0_err_rd_addr = 16'h44EF;
-        axi_read(32'hA5A5C130, v); check("RX0_ERR_RD_ADDR RO inputs", v, 32'h000044EF);
+        // ---- RX0_ERR_RD_INFO
+        i_rx0_err_rd_info_code = 16'hBAB9;
+        i_rx0_err_rd_info_addr = 16'h176;
+        axi_read(32'hA5A5C12C, v); check("RX0_ERR_RD_INFO RO inputs", v, 32'h0176BAB9);
 
         // ---- RX0_ERR_RD_DATA
-        i_rx0_err_rd_data = 32'hA8C24D42;
-        axi_read(32'hA5A5C134, v); check("RX0_ERR_RD_DATA RO inputs", v, 32'hA8C24D42);
+        i_rx0_err_rd_data = 32'h62397BC7;
+        axi_read(32'hA5A5C130, v); check("RX0_ERR_RD_DATA RO inputs", v, 32'h62397BC7);
         cnt_o_rx0_err_rd_data_rd = 0;
-        axi_read(32'hA5A5C134, v);
+        axi_read(32'hA5A5C130, v);
         repeat (2) @(posedge clk);
         check("o_rx0_err_rd_data_rd strobe", cnt_o_rx0_err_rd_data_rd, 1);
 
         // ---- RX0_BIT_RADDR
-        axi_write(32'hA5A5C140, 32'h00000411, 4'hF);
-        axi_read(32'hA5A5C140, v); check("RX0_BIT_RADDR RW write", v, 32'h00000411);
-        check("o_rx0_bit_raddr_bit_idx", o_rx0_bit_raddr_bit_idx, 32'h11);
-        check("o_rx0_bit_raddr_word_idx", o_rx0_bit_raddr_word_idx, 32'h4);
-        axi_write(32'hA5A5C140, 32'h0000051E, 4'h1);
-        axi_read(32'hA5A5C140, v); check("RX0_BIT_RADDR WSTRB lane 0", v, 32'h0000041E);
+        axi_write(32'hA5A5C140, 32'h00000619, 4'hF);
+        axi_read(32'hA5A5C140, v); check("RX0_BIT_RADDR RW write", v, 32'h00000619);
+        check("o_rx0_bit_raddr_bit_idx", o_rx0_bit_raddr_bit_idx, 32'h19);
+        check("o_rx0_bit_raddr_word_idx", o_rx0_bit_raddr_word_idx, 32'h6);
+        axi_write(32'hA5A5C140, 32'h0000071A, 4'h1);
+        axi_read(32'hA5A5C140, v); check("RX0_BIT_RADDR WSTRB lane 0", v, 32'h0000061A);
         cnt_o_rx0_bit_raddr_wr = 0;
-        axi_write(32'hA5A5C140, 32'h0000041E, 4'hF);
+        axi_write(32'hA5A5C140, 32'h0000061A, 4'hF);
         repeat (2) @(posedge clk);
         check("o_rx0_bit_raddr_wr strobe", cnt_o_rx0_bit_raddr_wr, 1);
 
         // ---- RX0_BIT_RD_PULSE
-        i_rx0_bit_rd_pulse = 16'h176;
-        axi_read(32'hA5A5C144, v); check("RX0_BIT_RD_PULSE RO inputs", v, 32'h00000176);
-
-        // ---- RX0_BIT_RD_PULSE_ERR
-        i_rx0_bit_rd_pulse_err = 16'h6239;
-        axi_read(32'hA5A5C148, v); check("RX0_BIT_RD_PULSE_ERR RO inputs", v, 32'h00006239);
+        i_rx0_bit_rd_pulse_dur = 16'hE2DC;
+        i_rx0_bit_rd_pulse_err = 16'hF03E;
+        axi_read(32'hA5A5C144, v); check("RX0_BIT_RD_PULSE RO inputs", v, 32'hF03EE2DC);
 
         // ---- RX0_BIT_RD_NULL
-        i_rx0_bit_rd_null = 16'hC89D;
-        axi_read(32'hA5A5C14C, v); check("RX0_BIT_RD_NULL RO inputs", v, 32'h0000C89D);
-
-        // ---- RX0_BIT_RD_NULL_ERR
-        i_rx0_bit_rd_null_err = 16'hDB61;
-        axi_read(32'hA5A5C150, v); check("RX0_BIT_RD_NULL_ERR RO inputs", v, 32'h0000DB61);
-        cnt_o_rx0_bit_rd_null_err_rd = 0;
-        axi_read(32'hA5A5C150, v);
+        i_rx0_bit_rd_null_dur = 16'hBD91;
+        i_rx0_bit_rd_null_err = 16'h8333;
+        axi_read(32'hA5A5C148, v); check("RX0_BIT_RD_NULL RO inputs", v, 32'h8333BD91);
+        cnt_o_rx0_bit_rd_null_rd = 0;
+        axi_read(32'hA5A5C148, v);
         repeat (2) @(posedge clk);
-        check("o_rx0_bit_rd_null_err_rd strobe", cnt_o_rx0_bit_rd_null_err_rd, 1);
+        check("o_rx0_bit_rd_null_rd strobe", cnt_o_rx0_bit_rd_null_rd, 1);
 
         // Unused offset reads 0
         axi_read(32'hA5A58014, v); check("unused offset 0x14", v, 0);
         // Final read-back of every register
         axi_read(32'hA5A58000, v); check("IP_ID final", v, 32'h41343239);
-        axi_read(32'hA5A58004, v); check("IP_VERSION final", v, 32'h00010000);
+        axi_read(32'hA5A58004, v); check("IP_VERSION final", v, 32'h00020000);
         axi_read(32'hA5A58008, v); check("CAPS final", v, 32'h00000B01);
         axi_read(32'hA5A5800C, v); check("CAPS_MEM final", v, 32'h00030808);
         axi_read(32'hA5A58010, v); check("CLK_HZ final", v, 32'h02FAF080);
@@ -1367,124 +1197,89 @@ module tb;
         axi_read(32'hA5A58028, v); check("TS_CTRL final", v, 32'h00000001);
         axi_read(32'hA5A5802C, v); check("TS_LSB final", v, 32'hC386BBC4);
         axi_read(32'hA5A58030, v); check("TS_MSB final", v, 32'h1027C4D1);
-        axi_read(32'hA5A58400, v); check("TX_TRANSMITTER_EN final", v, 32'h00000000);
-        axi_read(32'hA5A58404, v); check("TX_MSG_SCHED_EN final", v, 32'h00000001);
-        axi_read(32'hA5A58408, v); check("TX_BUILDER_EN final", v, 32'h00000000);
-        axi_read(32'hA5A5840C, v); check("TX_LABEL final", v, 32'h00000061);
-        axi_read(32'hA5A58410, v); check("TX_SDI final", v, 32'h00000000);
-        axi_read(32'hA5A58414, v); check("TX_DATA final", v, 32'h0000C021);
-        axi_read(32'hA5A58418, v); check("TX_SSM final", v, 32'h00000003);
-        axi_read(32'hA5A5841C, v); check("TX_PARITY_TYPE final", v, 32'h00000000);
-        axi_read(32'hA5A58420, v); check("TX_SCHED_EN final", v, 32'h00000001);
-        axi_read(32'hA5A58424, v); check("TX_INITIAL_DELAY final", v, 32'hC324C959);
-        axi_read(32'hA5A58428, v); check("TX_INTER_WORD_GAP final", v, 32'h008A0558);
-        axi_read(32'hA5A5842C, v); check("TX_SEND_CMD final", v, 32'h00000000);
-        axi_read(32'hA5A58430, v); check("TX_EXT_DATA final", v, 32'h7204E543);
-        axi_read(32'hA5A58434, v); check("TX_EXT_HIGH final", v, 32'h00000001);
-        axi_read(32'hA5A58438, v); check("TX_EXT_LOW final", v, 32'h00000001);
-        axi_read(32'hA5A58440, v); check("TX_CFG_SEL final", v, 32'h00000000);
-        axi_read(32'hA5A58444, v); check("TX_CFG_APPLY final", v, 32'h00000000);
-        axi_read(32'hA5A58448, v); check("TX_CUST_PULSE_DUR final", v, 32'h0000E643);
-        axi_read(32'hA5A5844C, v); check("TX_CUST_NULL_DUR final", v, 32'h000007B6);
-        axi_read(32'hA5A58450, v); check("TX_CUST_GAP_DUR final", v, 32'h06839EDD);
-        axi_read(32'hA5A58454, v); check("TX_CUST_SLP final", v, 32'h00000000);
-        axi_read(32'hA5A58460, v); check("TX_ACT_PULSE_DUR final", v, 32'h0000F06C);
-        axi_read(32'hA5A58464, v); check("TX_ACT_NULL_DUR final", v, 32'h0000E198);
-        axi_read(32'hA5A58468, v); check("TX_ACT_GAP_DUR final", v, 32'h619699CF);
-        axi_read(32'hA5A5846C, v); check("TX_ACT_SLP final", v, 32'h00000001);
+        axi_read(32'hA5A58400, v); check("TX_CTRL final", v, 32'h00000004);
+        axi_read(32'hA5A58404, v); check("TX_WORD final", v, 32'hA300E5E4);
+        axi_read(32'hA5A58408, v); check("TX_SEND_CMD final", v, 32'h00000000);
+        axi_read(32'hA5A5840C, v); check("TX_EXT_DATA final", v, 32'hC324C959);
+        axi_read(32'hA5A58410, v); check("TX_EXT_LINE final", v, 32'h00000000);
+        axi_read(32'hA5A58420, v); check("TX_INITIAL_DELAY final", v, 32'hB8B6D835);
+        axi_read(32'hA5A58424, v); check("TX_INTER_WORD_GAP final", v, 32'h3A9029C1);
+        axi_read(32'hA5A58440, v); check("TX_CFG final", v, 32'h00000000);
+        axi_read(32'hA5A58444, v); check("TX_CUST_TIMING final", v, 32'h5143E6D4);
+        axi_read(32'hA5A58448, v); check("TX_CUST_GAP_DUR final", v, 32'h06839EDD);
+        axi_read(32'hA5A5844C, v); check("TX_CUST_SLP final", v, 32'h00000000);
+        axi_read(32'hA5A58460, v); check("TX_ACT_TIMING final", v, 32'hE198F06C);
+        axi_read(32'hA5A58464, v); check("TX_ACT_GAP_DUR final", v, 32'h619699CF);
+        axi_read(32'hA5A58468, v); check("TX_ACT_SLP final", v, 32'h00000001);
         axi_read(32'hA5A58480, v); check("TX_STATUS final", v, 32'h00000007);
         axi_read(32'hA5A58484, v); check("TX_WORD_CNT final", v, 32'hB9D179E0);
         axi_read(32'hA5A58800, v); check("TB_CTRL final", v, 32'h00000002);
-        axi_read(32'hA5A58804, v); check("TB_STATUS final", v, 32'h00000270);
-        axi_read(32'hA5A58808, v); check("TB_CFG_SEL final", v, 32'h00000001);
-        axi_read(32'hA5A5880C, v); check("TB_CFG_APPLY final", v, 32'h00000000);
-        axi_read(32'hA5A58840, v); check("TB_CUST_GLITCH_FILTER_SIZE final", v, 32'h00003B45);
-        axi_read(32'hA5A58844, v); check("TB_CUST_MIN_PULSE final", v, 32'h000038CD);
-        axi_read(32'hA5A58848, v); check("TB_CUST_MAX_PULSE final", v, 32'h000075C6);
-        axi_read(32'hA5A5884C, v); check("TB_CUST_MIN_BIT final", v, 32'h00004A2F);
-        axi_read(32'hA5A58850, v); check("TB_CUST_MAX_BIT final", v, 32'h0000058A);
-        axi_read(32'hA5A58854, v); check("TB_CUST_MAX_PULSE_ERR final", v, 32'h0000D690);
-        axi_read(32'hA5A58858, v); check("TB_CUST_MAX_NULL_ERR final", v, 32'h00008E14);
-        axi_read(32'hA5A5885C, v); check("TB_CUST_MAX_GAP_ERR final", v, 32'h0000A499);
-        axi_read(32'hA5A58860, v); check("TB_CUST_PARITY_MODE final", v, 32'h00000002);
-        axi_read(32'hA5A588A0, v); check("TB_ACT_GLITCH_FILTER_SIZE final", v, 32'h0000FE17);
-        axi_read(32'hA5A588A4, v); check("TB_ACT_MIN_PULSE final", v, 32'h0000B940);
-        axi_read(32'hA5A588A8, v); check("TB_ACT_MAX_PULSE final", v, 32'h0000DC25);
-        axi_read(32'hA5A588AC, v); check("TB_ACT_MIN_BIT final", v, 32'h00004BE0);
-        axi_read(32'hA5A588B0, v); check("TB_ACT_MAX_BIT final", v, 32'h00001EF2);
-        axi_read(32'hA5A588B4, v); check("TB_ACT_MAX_PULSE_ERR final", v, 32'h0000BE3E);
-        axi_read(32'hA5A588B8, v); check("TB_ACT_MAX_NULL_ERR final", v, 32'h0000552B);
-        axi_read(32'hA5A588BC, v); check("TB_ACT_MAX_GAP_ERR final", v, 32'h0000E544);
-        axi_read(32'hA5A588C0, v); check("TB_ACT_PARITY_MODE final", v, 32'h00000002);
-        axi_read(32'hA5A588E0, v); check("TB_WORD_CNT final", v, 32'hF9270F4E);
-        axi_read(32'hA5A588E4, v); check("TB_ERR_CNT final", v, 32'hB610A9F7);
-        axi_read(32'hA5A588E8, v); check("TB_DROP_CNT final", v, 32'h803468B6);
-        axi_read(32'hA5A588EC, v); check("TB_LAST_WORD final", v, 32'hEFBA91FC);
-        axi_read(32'hA5A58900, v); check("TB_WORD_RADDR final", v, 32'h0000006C);
-        axi_read(32'hA5A58904, v); check("TB_WORD_RD_TS_MSB final", v, 32'h81F9C1F6);
-        axi_read(32'hA5A58908, v); check("TB_WORD_RD_TS_LSB final", v, 32'hD47D380D);
-        axi_read(32'hA5A5890C, v); check("TB_WORD_RD_DATA final", v, 32'hE901E35C);
-        axi_read(32'hA5A58910, v); check("TB_WORD_RD_GAP final", v, 32'hAB99254A);
-        axi_read(32'hA5A58914, v); check("TB_WORD_RD_GAP_ERR final", v, 32'h00003099);
-        axi_read(32'hA5A58920, v); check("TB_ERR_RADDR final", v, 32'h00000048);
-        axi_read(32'hA5A58924, v); check("TB_ERR_RD_TS_MSB final", v, 32'h966BAEA1);
-        axi_read(32'hA5A58928, v); check("TB_ERR_RD_TS_LSB final", v, 32'hF9341C68);
-        axi_read(32'hA5A5892C, v); check("TB_ERR_RD_CODE final", v, 32'h0000E1EA);
-        axi_read(32'hA5A58930, v); check("TB_ERR_RD_ADDR final", v, 32'h00007FD6);
-        axi_read(32'hA5A58934, v); check("TB_ERR_RD_DATA final", v, 32'hD8A064DF);
-        axi_read(32'hA5A58940, v); check("TB_BIT_RADDR final", v, 32'h0000040C);
-        axi_read(32'hA5A58944, v); check("TB_BIT_RD_PULSE final", v, 32'h0000DA71);
-        axi_read(32'hA5A58948, v); check("TB_BIT_RD_PULSE_ERR final", v, 32'h000008D6);
-        axi_read(32'hA5A5894C, v); check("TB_BIT_RD_NULL final", v, 32'h00007AF0);
-        axi_read(32'hA5A58950, v); check("TB_BIT_RD_NULL_ERR final", v, 32'h00003E24);
+        axi_read(32'hA5A58804, v); check("TB_STATUS final", v, 32'h00007270);
+        axi_read(32'hA5A58808, v); check("TB_CFG final", v, 32'h00000000);
+        axi_read(32'hA5A58840, v); check("TB_CUST_PULSE final", v, 32'h75A8C2C6);
+        axi_read(32'hA5A58844, v); check("TB_CUST_BIT final", v, 32'h0580ED8A);
+        axi_read(32'hA5A58848, v); check("TB_CUST_NOISE final", v, 32'h8E73EA14);
+        axi_read(32'hA5A5884C, v); check("TB_CUST_FILTER final", v, 32'h2F97191D);
+        axi_read(32'hA5A58850, v); check("TB_CUST_PARITY final", v, 32'h00000003);
+        axi_read(32'hA5A58860, v); check("TB_ACT_PULSE final", v, 32'h1EF24BE0);
+        axi_read(32'hA5A58864, v); check("TB_ACT_BIT final", v, 32'h552BBE3E);
+        axi_read(32'hA5A58868, v); check("TB_ACT_NOISE final", v, 32'hB8B3E544);
+        axi_read(32'hA5A5886C, v); check("TB_ACT_FILTER final", v, 32'hB610F927);
+        axi_read(32'hA5A58870, v); check("TB_ACT_PARITY final", v, 32'h00000002);
+        axi_read(32'hA5A588E0, v); check("TB_WORD_CNT final", v, 32'hEFBA91FC);
+        axi_read(32'hA5A588E4, v); check("TB_ERR_CNT final", v, 32'hF79B17AE);
+        axi_read(32'hA5A588E8, v); check("TB_DROP_CNT final", v, 32'h6C0F3459);
+        axi_read(32'hA5A588EC, v); check("TB_LAST_WORD final", v, 32'h81F9C1F6);
+        axi_read(32'hA5A58900, v); check("TB_WORD_RADDR final", v, 32'h000000E9);
+        axi_read(32'hA5A58904, v); check("TB_WORD_RD_TS_MSB final", v, 32'hAB99254A);
+        axi_read(32'hA5A58908, v); check("TB_WORD_RD_TS_LSB final", v, 32'h3099FDF5);
+        axi_read(32'hA5A5890C, v); check("TB_WORD_RD_DATA final", v, 32'h4DA98F1D);
+        axi_read(32'hA5A58910, v); check("TB_WORD_RD_GAP final", v, 32'h48BEAB13);
+        axi_read(32'hA5A58914, v); check("TB_WORD_RD_GAP_ERR final", v, 32'h0000966B);
+        axi_read(32'hA5A58920, v); check("TB_ERR_RADDR final", v, 32'h000000E1);
+        axi_read(32'hA5A58924, v); check("TB_ERR_RD_TS_MSB final", v, 32'h7FD63116);
+        axi_read(32'hA5A58928, v); check("TB_ERR_RD_TS_LSB final", v, 32'hD8A064DF);
+        axi_read(32'hA5A5892C, v); check("TB_ERR_RD_INFO final", v, 32'h815AF0DF);
+        axi_read(32'hA5A58930, v); check("TB_ERR_RD_DATA final", v, 32'h64B2D2BC);
+        axi_read(32'hA5A58940, v); check("TB_BIT_RADDR final", v, 32'h00000601);
+        axi_read(32'hA5A58944, v); check("TB_BIT_RD_PULSE final", v, 32'hBE653E24);
+        axi_read(32'hA5A58948, v); check("TB_BIT_RD_NULL final", v, 32'h677FCC22);
         axi_read(32'hA5A589C0, v); check("TB_CHK_CTRL final", v, 32'h00000001);
-        axi_read(32'hA5A589C4, v); check("TB_CHK_TIMEOUT final", v, 32'h677F6C75);
-        axi_read(32'hA5A589C8, v); check("TB_CHK_OK_CNT final", v, 32'hAA2CA1AF);
-        axi_read(32'hA5A589CC, v); check("TB_CHK_ERR_CNT final", v, 32'h2C4A3698);
-        axi_read(32'hA5A589D0, v); check("TB_CHK_STATUS final", v, 32'h00000015);
-        axi_read(32'hA5A5C000, v); check("RX0_CTRL final", v, 32'h00000003);
-        axi_read(32'hA5A5C004, v); check("RX0_STATUS final", v, 32'h00000170);
-        axi_read(32'hA5A5C008, v); check("RX0_CFG_SEL final", v, 32'h00000002);
-        axi_read(32'hA5A5C00C, v); check("RX0_CFG_APPLY final", v, 32'h00000000);
-        axi_read(32'hA5A5C040, v); check("RX0_CUST_GLITCH_FILTER_SIZE final", v, 32'h00001B48);
-        axi_read(32'hA5A5C044, v); check("RX0_CUST_MIN_PULSE final", v, 32'h0000295C);
-        axi_read(32'hA5A5C048, v); check("RX0_CUST_MAX_PULSE final", v, 32'h0000D7AC);
-        axi_read(32'hA5A5C04C, v); check("RX0_CUST_MIN_BIT final", v, 32'h00005E5C);
-        axi_read(32'hA5A5C050, v); check("RX0_CUST_MAX_BIT final", v, 32'h0000BB92);
-        axi_read(32'hA5A5C054, v); check("RX0_CUST_MAX_PULSE_ERR final", v, 32'h00007821);
-        axi_read(32'hA5A5C058, v); check("RX0_CUST_MAX_NULL_ERR final", v, 32'h00004E10);
-        axi_read(32'hA5A5C05C, v); check("RX0_CUST_MAX_GAP_ERR final", v, 32'h0000D9B2);
-        axi_read(32'hA5A5C060, v); check("RX0_CUST_PARITY_MODE final", v, 32'h00000002);
-        axi_read(32'hA5A5C0A0, v); check("RX0_ACT_GLITCH_FILTER_SIZE final", v, 32'h00009403);
-        axi_read(32'hA5A5C0A4, v); check("RX0_ACT_MIN_PULSE final", v, 32'h000064C2);
-        axi_read(32'hA5A5C0A8, v); check("RX0_ACT_MAX_PULSE final", v, 32'h0000A5AC);
-        axi_read(32'hA5A5C0AC, v); check("RX0_ACT_MIN_BIT final", v, 32'h00002B9C);
-        axi_read(32'hA5A5C0B0, v); check("RX0_ACT_MAX_BIT final", v, 32'h00002B28);
-        axi_read(32'hA5A5C0B4, v); check("RX0_ACT_MAX_PULSE_ERR final", v, 32'h00008092);
-        axi_read(32'hA5A5C0B8, v); check("RX0_ACT_MAX_NULL_ERR final", v, 32'h00003A18);
-        axi_read(32'hA5A5C0BC, v); check("RX0_ACT_MAX_GAP_ERR final", v, 32'h0000FB69);
-        axi_read(32'hA5A5C0C0, v); check("RX0_ACT_PARITY_MODE final", v, 32'h00000001);
-        axi_read(32'hA5A5C0E0, v); check("RX0_WORD_CNT final", v, 32'hC541013D);
-        axi_read(32'hA5A5C0E4, v); check("RX0_ERR_CNT final", v, 32'h33138131);
-        axi_read(32'hA5A5C0E8, v); check("RX0_DROP_CNT final", v, 32'h8A245E6B);
-        axi_read(32'hA5A5C0EC, v); check("RX0_LAST_WORD final", v, 32'hEB8AC8CE);
-        axi_read(32'hA5A5C100, v); check("RX0_WORD_RADDR final", v, 32'h0000008C);
-        axi_read(32'hA5A5C104, v); check("RX0_WORD_RD_TS_MSB final", v, 32'h3B6FE507);
-        axi_read(32'hA5A5C108, v); check("RX0_WORD_RD_TS_LSB final", v, 32'h678A5AA3);
-        axi_read(32'hA5A5C10C, v); check("RX0_WORD_RD_DATA final", v, 32'h83868A29);
-        axi_read(32'hA5A5C110, v); check("RX0_WORD_RD_GAP final", v, 32'h5804F922);
-        axi_read(32'hA5A5C114, v); check("RX0_WORD_RD_GAP_ERR final", v, 32'h0000F3D4);
-        axi_read(32'hA5A5C120, v); check("RX0_ERR_RADDR final", v, 32'h00000093);
-        axi_read(32'hA5A5C124, v); check("RX0_ERR_RD_TS_MSB final", v, 32'h5A702CFA);
-        axi_read(32'hA5A5C128, v); check("RX0_ERR_RD_TS_LSB final", v, 32'h7589A82B);
-        axi_read(32'hA5A5C12C, v); check("RX0_ERR_RD_CODE final", v, 32'h0000E8E5);
-        axi_read(32'hA5A5C130, v); check("RX0_ERR_RD_ADDR final", v, 32'h000044EF);
-        axi_read(32'hA5A5C134, v); check("RX0_ERR_RD_DATA final", v, 32'hA8C24D42);
-        axi_read(32'hA5A5C140, v); check("RX0_BIT_RADDR final", v, 32'h0000041E);
-        axi_read(32'hA5A5C144, v); check("RX0_BIT_RD_PULSE final", v, 32'h00000176);
-        axi_read(32'hA5A5C148, v); check("RX0_BIT_RD_PULSE_ERR final", v, 32'h00006239);
-        axi_read(32'hA5A5C14C, v); check("RX0_BIT_RD_NULL final", v, 32'h0000C89D);
-        axi_read(32'hA5A5C150, v); check("RX0_BIT_RD_NULL_ERR final", v, 32'h0000DB61);
+        axi_read(32'hA5A589C4, v); check("TB_CHK_TIMEOUT final", v, 32'h2C4A36D1);
+        axi_read(32'hA5A589C8, v); check("TB_CHK_OK_CNT final", v, 32'h8C7E134F);
+        axi_read(32'hA5A589CC, v); check("TB_CHK_ERR_CNT final", v, 32'hE1FAB9D7);
+        axi_read(32'hA5A589D0, v); check("TB_CHK_STATUS final", v, 32'h0000001B);
+        axi_read(32'hA5A5C000, v); check("RX0_CTRL final", v, 32'h00000000);
+        axi_read(32'hA5A5C004, v); check("RX0_STATUS final", v, 32'h00007170);
+        axi_read(32'hA5A5C008, v); check("RX0_CFG final", v, 32'h00000001);
+        axi_read(32'hA5A5C040, v); check("RX0_CUST_PULSE final", v, 32'h7D5C5E96);
+        axi_read(32'hA5A5C044, v); check("RX0_CUST_BIT final", v, 32'h0B2178FB);
+        axi_read(32'hA5A5C048, v); check("RX0_CUST_NOISE final", v, 32'hFBB2D964);
+        axi_read(32'hA5A5C04C, v); check("RX0_CUST_FILTER final", v, 32'h64C294AC);
+        axi_read(32'hA5A5C050, v); check("RX0_CUST_PARITY final", v, 32'h00000002);
+        axi_read(32'hA5A5C060, v); check("RX0_ACT_PULSE final", v, 32'hFB693A18);
+        axi_read(32'hA5A5C064, v); check("RX0_ACT_BIT final", v, 32'hC5410326);
+        axi_read(32'hA5A5C068, v); check("RX0_ACT_NOISE final", v, 32'h8A243313);
+        axi_read(32'hA5A5C06C, v); check("RX0_ACT_FILTER final", v, 32'hDC3BEB8A);
+        axi_read(32'hA5A5C070, v); check("RX0_ACT_PARITY final", v, 32'h00000002);
+        axi_read(32'hA5A5C0E0, v); check("RX0_WORD_CNT final", v, 32'h3B6FE507);
+        axi_read(32'hA5A5C0E4, v); check("RX0_ERR_CNT final", v, 32'h678A5AA3);
+        axi_read(32'hA5A5C0E8, v); check("RX0_DROP_CNT final", v, 32'h83868A29);
+        axi_read(32'hA5A5C0EC, v); check("RX0_LAST_WORD final", v, 32'h5804F922);
+        axi_read(32'hA5A5C100, v); check("RX0_WORD_RADDR final", v, 32'h000000D8);
+        axi_read(32'hA5A5C104, v); check("RX0_WORD_RD_TS_MSB final", v, 32'h93EA5C4E);
+        axi_read(32'hA5A5C108, v); check("RX0_WORD_RD_TS_LSB final", v, 32'h5A702CFA);
+        axi_read(32'hA5A5C10C, v); check("RX0_WORD_RD_DATA final", v, 32'h7589A82B);
+        axi_read(32'hA5A5C110, v); check("RX0_WORD_RD_GAP final", v, 32'hE8E5B461);
+        axi_read(32'hA5A5C114, v); check("RX0_WORD_RD_GAP_ERR final", v, 32'h000044EF);
+        axi_read(32'hA5A5C120, v); check("RX0_ERR_RADDR final", v, 32'h0000008C);
+        axi_read(32'hA5A5C124, v); check("RX0_ERR_RD_TS_MSB final", v, 32'h9BE3CECB);
+        axi_read(32'hA5A5C128, v); check("RX0_ERR_RD_TS_LSB final", v, 32'hF5059285);
+        axi_read(32'hA5A5C12C, v); check("RX0_ERR_RD_INFO final", v, 32'h0176BAB9);
+        axi_read(32'hA5A5C130, v); check("RX0_ERR_RD_DATA final", v, 32'h62397BC7);
+        axi_read(32'hA5A5C140, v); check("RX0_BIT_RADDR final", v, 32'h0000061A);
+        axi_read(32'hA5A5C144, v); check("RX0_BIT_RD_PULSE final", v, 32'hF03EE2DC);
+        axi_read(32'hA5A5C148, v); check("RX0_BIT_RD_NULL final", v, 32'h8333BD91);
 
         $display("%0d checks, %0d errors: %0s", checks, errors, errors ? "FAILED" : "PASSED");
         $finish;

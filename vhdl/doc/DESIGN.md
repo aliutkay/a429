@@ -19,7 +19,7 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
                                     │ S_AXI_*
                   ┌─────────────────▼─────────────────┐
                   │  arinc429_axil.v (AXIL Studio)    │  <- vhdl/axil/arinc429_axil.regspec.json
-                  │  easyaxil tabanlı AXI4-Lite slave │     (128 register, 64 KB pencere)
+                  │  easyaxil tabanlı AXI4-Lite slave │     (93 register, 64 KB pencere)
                   │  RW / RO / PULSE / CONST / rd_stb │
                   └─────────────────┬─────────────────┘
                      o_* / i_*      │      (arinc429_ip.vhd bağlar)
@@ -45,7 +45,9 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
 | `vhdl/axil/arinc429_axil_pk.v` | HDL Designer için paketli (`SLAVE_AXI_REQ/RSP`) sarmalayıcı |
 | `vhdl/axil/arinc429_axil_tb.v` | Icarus Verilog kendi kendini doğrulayan AXI4-Lite testbench (685 kontrol) |
 | `vhdl/axil/arinc429_axil_regs.md` | Otomatik üretilmiş tam register haritası dokümanı |
-| `vhdl/scripts/gen_axil_spec.py` | Farklı `G_NUM_RX` / `G_CLK_HZ` yapılandırmaları için spec + `arinc429_ip.vhd` üreteci |
+| `a429/ipmap.py` | Register haritasının tek kaynağı (alanlar, gruplama, top VHDL bağlantıları, uygulama mantıksal adları) |
+| `vhdl/scripts/gen_axil_spec.py` | Farklı `G_NUM_RX` / `G_CLK_HZ` yapılandırmaları için spec + `arinc429_ip.vhd` üreteci (`a429/ipmap.py`'den) |
+| `vhdl/tb/tb_arinc429_ip_loopback.v` | TX→RX0 loopback: `CTRL.ENABLE`, gruplanmış register'lar, `STATUS.LINE_*/SYNC_WAIT` hat teşhisi |
 | `vhdl/rtl/a429_pkg.vhd` | Config record'ları, hata kodu sabitleri, kanal register record'ları |
 | `vhdl/rtl/a429_presets_pkg.vhd` | 50 MHz High Speed (100 kbps) ve Low Speed (12.5 kbps) RX/TX preset sabitleri |
 | `vhdl/rtl/a429_rst_sync.vhd` | Asenkron assert, senkron deassert 2-FF reset senkronizatörü |
@@ -79,16 +81,16 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
 | Sayfa | Offset Aralığı | İçerik |
 |---|---|---|
 | Global | `0x0000 – 0x0030` | `IP_ID`, `IP_VERSION`, `CAPS`, `CAPS_MEM`, `CLK_HZ`, `SOFT_RESET`, `GLOBAL_FREEZE`, `TS_CTRL`, `TS_LSB` (`rd_strobe`), `TS_MSB` |
-| TX | `0x0400 – 0x0484` | `TX_TRANSMITTER_EN..TX_EXT_LOW`, `TX_CFG_SEL/APPLY`, `TX_CUST_*`, `TX_ACT_*`, `TX_STATUS [BUSY, SCHED_ACTIVE, ACT_CFG]`, `TX_WORD_CNT` |
+| TX | `0x0400 – 0x0484` | `TX_CTRL`, `TX_WORD [LABEL_VAL, SDI, DATA, SSM, PARITY_TYPE]`, `TX_SEND_CMD`, `TX_EXT_DATA`, `TX_EXT_LINE`, `TX_INITIAL_DELAY`, `TX_INTER_WORD_GAP`, `TX_CFG [SEL, APPLY]`, `TX_CUST_TIMING`, `TX_CUST_GAP_DUR`, `TX_CUST_SLP`, `TX_ACT_*`, `TX_STATUS [BUSY, SCHED_ACTIVE, ACT_CFG]`, `TX_WORD_CNT` |
 | TX BIT (`TB_`) | `0x0800 – 0x09D0` | RX kanal sayfası + `TB_CHK_CTRL`, `TB_CHK_TIMEOUT`, `TB_CHK_OK_CNT`, `TB_CHK_ERR_CNT`, `TB_CHK_STATUS` |
-| RX *n* (`RX{n}_`) | `0x4000 + n×0x400` | `CTRL`, `STATUS [FROZEN, WORD_WRAP, ERR_WRAP, ACT_CFG]`, `CFG_SEL/APPLY`, `CUST_*`, `ACT_*`, sayaçlar, Word/Error/Bit RAM portları |
+| RX *n* (`RX{n}_`) | `0x4000 + n×0x400` | `CTRL`, `STATUS [FROZEN, WORD_WRAP, ERR_WRAP, ACT_CFG, LINE_HIGH, LINE_LOW, SYNC_WAIT]`, `CFG [SEL, APPLY]`, `CUST_PULSE/BIT/NOISE/FILTER [MIN\|MAX …]`, `CUST_PARITY`, `ACT_*` (aynı düzen), sayaçlar, Word / Error (`ERR_RD_INFO [CODE\|ADDR]`) / Bit (`BIT_RD_PULSE/NULL [DUR\|ERR]`) RAM portları |
 
 Tam bit-bazlı tablo: [`vhdl/axil/arinc429_axil_regs.md`](../axil/arinc429_axil_regs.md).
 
 ### RAM Okuma Mekanizması (`wr_strobe` + `rd_strobe` Auto-Increment)
 
 - **Rastgele erişim:** `WORD_RADDR` / `ERR_RADDR` / `BIT_RADDR` yazıldığında (`wr_strobe`) kanal içi okuma pointer'ı doğrudan istenen adrese yüklenir ve BRAM çıkışı 1 clk içinde hazırlanır.
-- **Blok okuma (otomatik artış):** Kaydın son register'ı (`WORD_RD_GAP_ERR`, `ERR_RD_DATA`, `BIT_RD_NULL_ERR`) okunduğunda (`rd_strobe`) dahili pointer dairesel olarak `+1` ilerler (`BIT` pointer'ında `{word_idx, bit_idx}` birlikte arttığından 31. bitten sonraki Word'ün 0. bitine otomatik geçilir).
+- **Blok okuma (otomatik artış):** Kaydın son register'ı (`WORD_RD_GAP_ERR`, `ERR_RD_DATA`, `BIT_RD_NULL`) okunduğunda (`rd_strobe`) dahili pointer dairesel olarak `+1` ilerler (`BIT` pointer'ında `{word_idx, bit_idx}` birlikte arttığından 31. bitten sonraki Word'ün 0. bitine otomatik geçilir).
 - Böylece 1 kez başlangıç adresi yazıp tüm blok veya "Son N kayıt" hiç ek `RADDR` yazmadan okunur; kanal başı adres alanı **1 KB** kalır.
 
 ---

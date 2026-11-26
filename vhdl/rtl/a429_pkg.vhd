@@ -99,6 +99,9 @@ package a429_pkg is
         status_word_wrap : std_logic;
         status_err_wrap  : std_logic;
         status_act_cfg   : std_logic_vector(1 downto 0);
+        status_line_high : std_logic;   -- senkronlanmış ham hat HIGH (alıcı OUTA)
+        status_line_low  : std_logic;   -- senkronlanmış ham hat LOW  (alıcı OUTB)
+        status_sync_wait : std_logic;   -- decoder hat senkronu (temiz NULL) bekliyor
         act              : t_rx_cfg;
         word_cnt         : std_logic_vector(31 downto 0);
         err_cnt          : std_logic_vector(31 downto 0);
