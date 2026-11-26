@@ -178,3 +178,41 @@ def test_ip_health_check_ui_and_fix():
     win._closing = True
     win.close()
 
+
+def test_test_tab_disabled_on_sim_and_runs_on_rtl():
+    app = _app()
+    win = MainWindow(SimClient())
+    win.show()
+    _wait(app, win)
+    assert win.tabs.indexOf(win.test_tab) >= 0
+    assert not win.test_tab.btn_run.isEnabled()
+    assert "simülatör" in win.test_tab.btn_run.toolTip()
+    win._closing = True
+    win.close()
+
+    from a429 import cosim
+    if not cosim.available():
+        return
+    cl = cosim.CosimClient()
+    win = MainWindow(cl)
+    win.show()
+    _wait(app, win)
+    assert win.test_tab.btn_run.isEnabled()
+    assert list(win.test_tab._rx_boxes) == ["RX0"]
+    from PySide6.QtCore import Qt
+    for i in range(win.test_tab.lst.count()):          # hızlı alt küme: tek Word + parity (+ zorunlu kimlik/hazırlık)
+        it = win.test_tab.lst.item(i)
+        if it.data(Qt.ItemDataRole.UserRole) not in ("single", "parity") and it.flags() & Qt.ItemFlag.ItemIsEnabled:
+            it.setCheckState(Qt.CheckState.Unchecked)
+    win.test_tab.chk_ls.setChecked(False)
+    win.test_tab._run()
+    _wait(app, win, 120)
+    rep = win.test_tab.report
+    assert rep is not None and rep["passed"], rep
+    assert [r.tid for r in rep["results"]] == ["ident", "prep", "single", "parity"]
+    assert win.test_tab.tree.topLevelItemCount() == 4
+    win._closing = True
+    win.close()
+    win.bus.shutdown()
+    cl.close()
+

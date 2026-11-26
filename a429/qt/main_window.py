@@ -34,6 +34,7 @@ from .dialogs import (
 from .figpanel import ChartWindow
 from .read_tab import ReadTab
 from .tx_sent_tab import TxSentTab
+from .test_tab import TestTab
 from .worker import Worker
 
 
@@ -41,6 +42,7 @@ class MainWindow(QWidget):
     _ev_sig = Signal(dict)        # AXIL Studio olayı (okuyucu thread -> GUI)
     _log_sig = Signal(str)
     _prog_sig = Signal(int, int, str)
+    _test_sig = Signal(object)    # selftest.TestResult (worker -> GUI)
 
     def __init__(self, client=None):
         super().__init__()
@@ -187,10 +189,12 @@ class MainWindow(QWidget):
         self.control_tab = ControlTab(self)
         self.read_tab = ReadTab(self)
         self.tx_sent_tab = TxSentTab(self)
+        self.test_tab = TestTab(self)
         self.tabs.addTab(self.config_tab, "Config")
         self.tabs.addTab(self.control_tab, "Kontrol")
         self.tabs.addTab(self.read_tab, "RX Okunan Veriler")
         self.tabs.addTab(self.tx_sent_tab, "TX Gönderilen Veriler")
+        self.tabs.addTab(self.test_tab, "Test")
 
         # Kontrol sekmesindeki bileşenlere kısa referanslar
         self.btn_send_rx = self.control_tab.btn_send_rx
@@ -216,6 +220,7 @@ class MainWindow(QWidget):
         self._ev_sig.connect(self._on_studio_event, Qt.ConnectionType.QueuedConnection)
         self._log_sig.connect(self._append_log, Qt.ConnectionType.QueuedConnection)
         self._prog_sig.connect(self._on_progress, Qt.ConnectionType.QueuedConnection)
+        self._test_sig.connect(self.test_tab.add_result, Qt.ConnectionType.QueuedConnection)
         if self.client is not None:
             self.client.on_event = self._ev_sig.emit
 
@@ -228,6 +233,7 @@ class MainWindow(QWidget):
         return self.cb_channel.currentData() or "RX0"
 
     def _populate_channels(self):
+        self.test_tab.populate_channels(self.rm)
         cur = self.current_channel()
         self.cb_channel.blockSignals(True)
         self.cb_channel.clear()
@@ -365,6 +371,18 @@ class MainWindow(QWidget):
         self.config_tab.btn_rx_add_cfg.setEnabled(self.client is not None and not rx_cfg_miss)
         self.config_tab.btn_tx_add_cfg.setEnabled(self.client is not None and not tx_cfg_miss)
         self.control_tab.update_map_summary(self.client, self.rm, ch)
+        models_line = getattr(self.client, "models_line", True)
+        if not self.client:
+            tip = "Çevrimdışı modda kapalı (AXIL Studio Debug Bridge'den açın veya --cosim kullanın)."
+        elif not self.connected:
+            tip = "Debug Bridge karta bağlı değil."
+        elif not models_line:
+            tip = "Dahili simülatör ARINC hattını modellemez: kartta ya da --cosim (RTL) ile çalıştırın."
+        elif not self.rm.grouped():
+            tip = "Test IP 2.x register haritası gerektirir."
+        else:
+            tip = ""
+        self.test_tab.set_controls(not tip, self.busy, tip)
 
     def _show_in_bridge(self):
         if self.client:
@@ -401,6 +419,8 @@ class MainWindow(QWidget):
         self.prog.setMaximum(max(1, total))
         self.prog.setValue(min(done, max(1, total)))
         self.set_status(msg)
+        if getattr(self, "_selftest_running", False):
+            self.test_tab.on_progress(done, total, msg)
 
     def schedule_recalc(self):
         self.mark_dirty()
@@ -1012,6 +1032,47 @@ class MainWindow(QWidget):
 
         title = "TX Scheduler " + ("başlatılıyor" if enable else "durduruluyor")
         return self._run_job(title, job, on_ok=ok_cb, on_done=done_cb)
+
+    # ------------------------------------------------------------- Loopback test
+    def do_run_selftest(self, opts: dict):
+        from .. import selftest
+        if not self.connected or self.busy:
+            return
+        rm = self.rm
+        self.recalc()
+        custom = None
+        if self.res and self.res_tx and self.res.rx_values:
+            custom = {"rx": dict(self.res.rx_values), "tx": list(self.res_tx["writes"])}
+        self.log(f"[Test] Loopback testi başlıyor: TX → {', '.join(opts['rx']) or '—'}"
+                 + (" + TX BIT" if opts["tb"] else "") + f", hızlar {'/'.join(opts['speeds'])}")
+        self._selftest_running = True
+
+        def job():
+            return selftest.run(
+                self.client, rm, opts["rx"], selected=opts["selected"], speeds=opts["speeds"], use_tb=opts["tb"],
+                pattern_len=opts["pattern_len"], burst_words=opts["burst_words"], custom=custom,
+                stop_on_fail=opts["stop_on_fail"], log=self.log, stop=self._stop_flag,
+                progress=lambda d, t, m: self._prog_sig.emit(d, t, m),
+                on_result=lambda r: self._test_sig.emit(r),
+            )
+
+        def done(rep):
+            self._selftest_running = False
+            self.test_tab.set_report(rep)
+            c = rep["counts"]
+            self.log(f"[Test] {'GEÇTİ' if rep['passed'] else 'KALDI'}: PASS {c['PASS']}, FAIL {c['FAIL']}, "
+                     f"ERROR {c['ERROR']}, SKIP {c['SKIP']} ({rep['duration_s']} s)")
+            self.do_refresh_status()
+            self.do_check_tx_config(show_dialog=False)
+            self.do_check_ip()
+
+        def finished(ok):
+            if not ok:
+                self._selftest_running = False
+                self.test_tab.set_report(None, "Test koşturulamadı (İşlem Logu'na bakın)")
+
+        self._run_job("Loopback testi", job, on_ok=done, on_done=finished, show_progress=True)
+        self._update_controls()
 
     def do_ip_reset(self):
         if not look.confirm(self, APP, "ARINC 429 IP bloğu resetlensin mi? (SOFT_RESET.ALL darbesi gönderilir)", "Resetle"):

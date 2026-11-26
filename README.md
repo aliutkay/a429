@@ -35,6 +35,10 @@ okumaları inceleme) çalışır.
   ```bash
   python main.py --sim
   ```
+- Gerçek RTL eş-simülasyonuyla (TX → RX0 loopback; `ghdl` + `verilator` ya da `iverilog` gerekli):
+  ```bash
+  python main.py --cosim
+  ```
 
 ## Sekmeler
 
@@ -43,9 +47,42 @@ okumaları inceleme) çalışır.
 | **Config** | Sol panelde **Genel** (System Clock, ±ppm), **RX Config** (ARINC 429 profili, Receiver entegresi, FPGA giriş standardı, Glitch Filter ve limitler, test toleransı, örnek dalga formu / tek bit grafikleri) ve **TX Config** (ARINC 429 profili). Sağda **RX / TX** alt sekmeleri: kontroller, ara hesaplar (çift tık → formül), hesaplanan register değerleri, panoya kopyalama ve **Debug Bridge config listesine ekle**. |
 | **Kontrol** | Okunacak RX verileri (Word / Error / Bit Diagnostic: Tümü / Son N / Okunmasın), okuma ve yazma dosyası ayarları, IP/kanal harita durumu; sağda **RX İşlemleri** (**RX Config gönder**, **RX verilerini oku**, **Config + oku**), **TX İşlemleri** (**TX Config gönder**, **TX Canlı Kontrol…**), **IP Kontrol** (**IP reset**, **Durdur**), ilerleme çubuğu ve **İşlem Logu**. |
 | **RX Okunan Veriler** | Word Listesi, Word Dalga Formu, Bit Diagnostic, Error Listesi, İstatistik ve tutarlılık kontrolleri. PASS/FAIL hücre renklendirmesi (neden için üzerine gelin veya sağ tıklayın). Word satırına çift tık → dalga formu. |
+| **Test** | TX → RX loopback otomatik testi (aşağıda **Test (Loopback) menüsü**). |
 | **TX Gönderilen Veriler** | TX Canlı Kontrol gönderim geçmişi (filtreleme, CSV dışa aktarma, projeyle kayıt) ve **TX Built-In Test (TX BIT · Wraparound Checker)** canlı sayaçları (`TX_WORD_CNT`, `TB_WORD_CNT`, `CHK_OK_CNT`, `CHK_ERR_CNT`, FIFO), Checker kontrolü ve tek tıkla `TB_` okuması. |
 
 Üst başlık çubuğundan hedef kanal (`RX0`…`RXn`, `TX BIT`) seçilir.
+
+## Test (Loopback) menüsü
+
+**Test** sekmesi ARINC 429 IP'sini ve hat entegrelerini (line driver / line receiver) birlikte otomatik test eder.
+Kartın ARINC **TX** çıkışını dışarıdan test edilecek **RX** girişlerine bağlayın (loopback) ve bu RX'leri
+işaretleyin; **TX BIT** kanalı TX hattını kart üzerindeki kendi alıcısıyla dinler ve Word Checker yankıyı karşılaştırır.
+
+| Test | Ne doğrular |
+|---|---|
+| Bağlantı ve IP kimliği, Hazırlık | `IP_ID`, sürüm, `CAPS`, `CLK_HZ`; `SOFT_RESET`, logger'lar açık + sayaçlar sıfır, checker |
+| Hat boşta seviyesi | Boşta tüm alıcılar `00` (ters / pull-up'lı alıcı `11` olarak yakalanır) |
+| Hat polaritesi | TX override HIGH / LOW / NULL → her alıcıda `10` / `01` / `00`: **A/B ters bağlantı**, kopuk kablo, ters alıcı çıkışı; HIGH-Z davranışı (bilgi) |
+| Tek Word *(HS / LS)* | Word Builder (Label/SDI/Data/SSM + IP parity) → TX, TB, RX sayaçları, `LAST_WORD`, Checker |
+| Veri bütünlüğü deseni *(HS / LS)* | 0x00.., 0x7F.., 0x55.., 0x2A.., walking-1 Word'leri; Word RAM sırası ve içeriği birebir |
+| Bit zamanlaması *(HS / LS)* | Bit Diagnostic: hattaki pulse / null / bit süreleri RX kabul aralığında mı; TX'e göre pulse farkı (sürücü + alıcı gecikme asimetrisi), gürültü sayısı |
+| Scheduler periyodu ve gap ölçümü *(HS / LS)* | Timestamp farkları = 32 bit + gap + inter-word gap; RX'in ölçtüğü gap |
+| Art arda gönderim *(HS / LS)* | Minimum gap (4 bit) ile kesintisiz akış: kayıpsız, hatasız, Checker FIFO taşmadan |
+| HS ↔ LS art arda geçiş | 3 tur hız değişimi, her turda alım |
+| Hız uyuşmazlığı tespiti | TX HS / RX LS ve TX LS / RX HS: Word kabul edilmez, `Pulse Glitch` / `Pulse Stuck` raporlanır |
+| Parity hatası tespiti | Even parity'li Word reddedilir, `Parity Error` + hatalı Word Error RAM'de |
+| Gap ihlali tespiti | 2 bit gap ile art arda Word → `Gap Violation`, standart gap'e dönünce alım devam |
+| Logger kontrolleri | `ENABLE=0` (kayıt yok), `FREEZE` / `GLOBAL_FREEZE` (`DROP_CNT`) |
+| Custom config | Config sekmesinde hesaplanan Custom TX / RX config ile desen + bit zamanlaması |
+
+Başarısız kontrollerde olası neden yazılır (logger kapalı, hat `11`, A/B ters, tüm bitler ters, hatta sinyal yok,
+son hata kodları). Sonuçlar ağaçta test → kontrol → ölçüm olarak listelenir, **Raporu Kaydet…** ile `.txt` / `.json`
+alınır. Test sonunda kart High Speed preset, Word Transmitter ve açık logger'larla bırakılır.
+
+**Kart olmadan (RTL eş-simülasyonu):** `python main.py --cosim` uygulamayı gerçek RTL'e (GHDL synth + Verilator,
+yoksa Icarus) bağlar; TX RTL içinde RX0'a ve TX BIT'e loopback bağlıdır, Test menüsü RTL'e karşı koşar
+(`tests/test_selftest.py` aynı testleri RTL'de çalıştırır ve A/B ters / ters alıcı / kopuk hat tanılarını doğrular).
+`--sim` (dahili simülatör) ARINC hattını modellemediği için Test menüsü orada kapalıdır.
 
 ## Register Haritası (`arinc429_ip`, IP 2.0.0)
 

@@ -55,6 +55,7 @@ class SimClient:
 
     def __init__(self, num_rx: int = 1, has_tx: bool = True, has_txbit: bool = True, seed: int = 1):
         self.ip = build_sim_ip_dict(num_rx=num_rx, has_tx=has_tx, has_txbit=has_txbit)
+        self.models_line = False        # ARINC hattını modellemez: Test menüsü için --cosim kullanın
         self.connected = True
         self.port = "SIM"
         self.lang = "tr"

@@ -4,6 +4,8 @@ Kullanım:
   AXIL Studio Debug Bridge'den otomatik başlatılır (AXIL_STUDIO_PORT / AXIL_STUDIO_TOKEN).
   Bağımsız (çevrimdışı) mod:   python a429_ui.py
   Simülatör modu:              python a429_ui.py --sim
+  RTL eş-simülasyonu:          python a429_ui.py --cosim [--num-rx N]   (ghdl + verilator/iverilog;
+                               TX gerçek RTL'de RX'lere loopback bağlı, Test menüsü RTL'e karşı koşar)
 """
 from __future__ import annotations
 
@@ -30,6 +32,9 @@ def _connect_studio():
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="ARINC 429 Test Aracı (AXIL Studio IP arayüzü)")
     parser.add_argument("--sim", action="store_true", help="AXIL Studio olmadan dahili IP simülatörüyle aç")
+    parser.add_argument("--cosim", action="store_true",
+                        help="Gerçek RTL eş-simülasyonuyla aç (TX -> RX loopback; ghdl + verilator/iverilog gerekli)")
+    parser.add_argument("--num-rx", type=int, default=1, help="--cosim RX kanal sayısı (1 dışı için AXIL_STUDIO gerekli)")
     parser.add_argument("--quit-after", type=int, default=0, help="Belirtilen ms sonra otomatik kapat (test için)")
     args, qt_args = parser.parse_known_args(argv)
 
@@ -52,7 +57,14 @@ def main(argv: list[str] | None = None) -> int:
     from a429.qt.main_window import MainWindow
 
     client = None
-    if args.sim:
+    if args.cosim:
+        from a429.cosim import CosimClient
+        try:
+            client = CosimClient(num_rx=args.num_rx)
+        except Exception as exc:
+            QMessageBox.critical(None, "ARINC 429 Test Aracı", f"RTL eş-simülasyonu başlatılamadı:\n\n{exc}")
+            return 2
+    elif args.sim:
         from a429.sim import SimClient
         client = SimClient()
     else:
