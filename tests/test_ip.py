@@ -336,3 +336,32 @@ def test_ip_health_check_finds_disabled_logger_and_stuck_line():
     write_fields(sim, rm, [("TX_CFG_SEL", 1), ("TX_CFG_APPLY", 1)])   # TX Low Speed, TB High Speed
     res = check_ip(sim, rm)
     assert any(f["area"] == "TX BIT" and "kabul aralığı" in f["title"] and f["level"] == "warn" for f in res["findings"])
+
+
+def test_multi_rx_map_and_channels_independent():
+    import pytest
+    for n in (1, 2, 4, 16):
+        spec = ipmap.build_regspec(num_rx=n)
+        offs = [int(r["offset"], 0) for r in spec["registers"]]
+        assert len(offs) == len(set(offs)) and max(offs) < 0x10000
+        ports = [b[0] for b in ipmap.port_bindings(num_rx=n)]
+        assert len(ports) == len(set(ports))
+        rst = next(r for r in spec["registers"] if r["name"] == "SOFT_RESET")
+        assert [f["lsb"] for f in rst["fields"] if f["name"].startswith("RX")] == [16 + i for i in range(n)]
+    with pytest.raises(ValueError):
+        ipmap.build_regspec(num_rx=17)
+
+    sim = SimClient(num_rx=4)
+    rm = RegMap(sim.ip)
+    assert rm.channels() == ["RX0", "RX1", "RX2", "RX3", "TB"]
+    assert [rm.offset(f"RX{i}_CTRL") for i in range(4)] == [0x4000, 0x4400, 0x4800, 0x4C00]
+    ci = ConfigInputs()
+    ci.err = 0.10
+    before = {c: read_rx_active_config(sim, rm, c)["rows"] for c in ("RX0", "RX1", "RX3")}
+    send_rx_config(sim, rm, "RX2", compute(ci, rm, "RX2").rx_values, verify=True)
+    assert read_rx_active_config(sim, rm, "RX2")["mode"] == 2
+    assert {c: read_rx_active_config(sim, rm, c)["rows"] for c in ("RX0", "RX1", "RX3")} == before
+    sim.sim_line["RX3"] = (1, 1)
+    res = check_ip(sim, rm)
+    assert any(f["area"] == "RX3" and "11" in f["title"] for f in res["findings"])
+    assert not any(f["area"] in ("RX0", "RX1", "RX2") and "11" in f["title"] for f in res["findings"])

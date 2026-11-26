@@ -18,6 +18,7 @@ IP_VERSION = (2, 0, 0)
 IP_VERSION_STR = "%d.%d.%d" % IP_VERSION
 IP_VERSION_WORD = (IP_VERSION[0] << 16) | (IP_VERSION[1] << 8) | IP_VERSION[2]
 IP_ID_WORD = 0x41343239  # 'A429'
+MAX_RX = 16              # SOFT_RESET[31:16], RXn sayfaları 0x4000..0x7FFF
 
 # ---------------------------------------------------------------------------
 # Mantıksal alanlar: eski (tek alanlı register) adı -> (fiziksel register, alan)
@@ -122,6 +123,9 @@ class _Builder:
 
 def _build(num_rx=1, has_tx=True, has_txbit=True, has_bitdiag=True, clk_hz=50_000_000,
            wdepth_log2=8, edepth_log2=8, bitdiag_log2=3) -> _Builder:
+    if not 0 <= num_rx <= MAX_RX:
+        # Sınırlar: SOFT_RESET.RXn bit 16..31, RXn sayfası 0x4000 + n*0x400 (64 KB pencere), CAPS.NUM_RX 5 bit
+        raise ValueError(f"num_rx 0..{MAX_RX} olmalı (verilen: {num_rx})")
     if not has_tx:
         has_txbit = False
     B = _Builder()
