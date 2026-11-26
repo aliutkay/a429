@@ -22,7 +22,7 @@ def _fld(name: str, lsb: int, width: int = 1, kind: str = "RW") -> dict:
     return {"name": name, "lsb": lsb, "width": width, "kind": kind}
 
 
-def build_sim_ip_dict(num_rx: int = 2, has_tx: bool = True, has_txbit: bool = True, base: int = 0x40000000) -> dict:
+def build_sim_ip_dict(num_rx: int = 1, has_tx: bool = True, has_txbit: bool = True, base: int = 0x40000000) -> dict:
     """DESIGN.md haritasına uygun örnek AXIL Studio IP sözlüğü üretir."""
     regs = [
         _reg("IP_ID", 0x0000, "RO", 0x41343239),
@@ -190,7 +190,7 @@ class _SimChannel:
 class SimClient:
     """AxilClient arayüzünü taklit eden bellek içi simülatör."""
 
-    def __init__(self, num_rx: int = 2, has_tx: bool = True, has_txbit: bool = True, seed: int = 1):
+    def __init__(self, num_rx: int = 1, has_tx: bool = True, has_txbit: bool = True, seed: int = 1):
         self.ip = build_sim_ip_dict(num_rx=num_rx, has_tx=has_tx, has_txbit=has_txbit)
         self.connected = True
         self.port = "SIM"

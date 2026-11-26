@@ -12,7 +12,7 @@ module tb_ip_pk;
   wire [31:0] rdata=rsp[34:3]; wire [1:0] bresp=rsp[38:37], rresp=rsp[2:1];
   wire txh, txl, slp;
   arinc429_ip dut(.S_AXI_ACLK(clk), .S_AXI_ARESETN(rstn), .SLAVE_AXI_REQ(req), .SLAVE_AXI_RSP(rsp),
-    .tx_high(txh), .tx_low(txl), .tx_slp(slp), .txbit_rx_high(1'b0), .txbit_rx_low(1'b0), .rx_high(2'b0), .rx_low(2'b0));
+    .tx_high(txh), .tx_low(txl), .tx_slp(slp), .txbit_rx_high(1'b0), .txbit_rx_low(1'b0), .rx_high(1'b0), .rx_low(1'b0));
   integer errs=0;
   task rd(input [31:0] a, output [31:0] d); begin
     @(negedge clk) araddr=a; arvalid=1; @(posedge clk); while(!arready) @(posedge clk);
@@ -25,7 +25,7 @@ module tb_ip_pk;
     repeat(5) @(posedge clk); rstn=1; repeat(20) @(posedge clk);
     rd(32'h0, d); $display("IP_ID      = %h", d); if (d!==32'h41343239) errs=errs+1;
     rd(32'h4, d); $display("IP_VERSION = %h", d); if (d!==32'h00010000) errs=errs+1;
-    rd(32'h8, d); $display("CAPS       = %h", d); if (d[4:0]!==5'd2) errs=errs+1;
+    rd(32'h8, d); $display("CAPS       = %h", d); if (d[4:0]!==5'd1) errs=errs+1;
     wr(32'h24, 32'h1); rd(32'h24, d); $display("GLOBAL_FREEZE = %h", d); if (d!==32'h1) errs=errs+1;
     if (dut.u_axil.o_global_freeze !== 1'b1) errs=errs+1;
     wr(32'h24, 32'h0); rd(32'h24, d); if (d!==32'h0) errs=errs+1;

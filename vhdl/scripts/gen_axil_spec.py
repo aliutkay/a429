@@ -2,7 +2,7 @@
 """ARINC 429 IP için AXIL Studio (.regspec.json / .axproj.json) üreteci.
 
 Kullanım:
-  python3 vhdl/scripts/gen_axil_spec.py -o vhdl/axil --num-rx 2 --axil-studio /yol/axil-studio
+  python3 vhdl/scripts/gen_axil_spec.py -o vhdl/axil --num-rx 1 --axil-studio /yol/axil-studio
 
 AXIL Studio yolu verilmezse yalnızca arinc429_axil.regspec.json, arinc429.axproj.json ve
 IP kütüphanesi arinc429.axlib.json (depo kökü, --library) dosyalarını üretir; bu dosyalar doğrudan AXIL Studio'da açılıp Slave Interface Wrapper ile
@@ -55,7 +55,7 @@ def _sreg(name: str, offset: int, width: int, kind: str = "RW", reset: int = 0, 
 
 def build_regspec(
     module: str = "arinc429_axil",
-    num_rx: int = 2,
+    num_rx: int = 1,
     has_tx: bool = True,
     has_txbit: bool = True,
     has_bitdiag: bool = True,
@@ -349,7 +349,7 @@ def _is_axi_chan(name: str) -> bool:
 
 def build_top_vhd(
     module: str = "arinc429_axil",
-    num_rx: int = 2,
+    num_rx: int = 1,
     has_tx: bool = True,
     has_txbit: bool = True,
     wdepth_log2: int = 8,
@@ -849,7 +849,7 @@ def main():
     ap.add_argument("-o", "--outdir", default="vhdl/axil", help="AXIL çıktı klasörü (varsayılan: vhdl/axil)")
     ap.add_argument("--top-vhd", default="vhdl/rtl/arinc429_ip.vhd", help="Üretilecek VHDL top wrapper yolu")
     ap.add_argument("--module", default="arinc429_axil", help="AXIL slave modül adı")
-    ap.add_argument("--num-rx", type=int, default=2, help="RX kanal sayısı (varsayılan: 2)")
+    ap.add_argument("--num-rx", type=int, default=1, help="RX kanal sayısı (varsayılan: 1)")
     ap.add_argument("--no-tx", action="store_true", help="TX kanalını kapat")
     ap.add_argument("--no-txbit", action="store_true", help="TX BIT kanalını kapat")
     ap.add_argument("--clk-hz", type=int, default=50_000_000, help="Sistem clock frekansı (Hz)")

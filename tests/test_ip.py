@@ -238,7 +238,7 @@ def test_generated_axil_project_matches_regmap():
     ip = proj["ips"][0]
     assert ip["panel"] == "arinc429"
     rm = RegMap(ip)
-    assert rm.channels() == ["RX0", "RX1", "TB"]
+    assert rm.channels() == ["RX0", "TB"]
     for ch in rm.channels():
         assert rm.missing_for_rx_config(ch) == []
         assert rm.missing_for_rx_read(ch) == []

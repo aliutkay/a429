@@ -43,8 +43,8 @@ entity arinc429_ip is
         tx_slp        : out std_logic;
         txbit_rx_high : in  std_logic := '0';
         txbit_rx_low  : in  std_logic := '0';
-        rx_high       : in  std_logic_vector(1 downto 0) := (others => '0');
-        rx_low        : in  std_logic_vector(1 downto 0) := (others => '0')
+        rx_high       : in  std_logic_vector(0 downto 0) := (others => '0');
+        rx_low        : in  std_logic_vector(0 downto 0) := (others => '0')
     );
 end entity arinc429_ip;
 
@@ -58,7 +58,6 @@ architecture rtl of arinc429_ip is
             o_soft_reset_tx                : out std_logic;
             o_soft_reset_txbit             : out std_logic;
             o_soft_reset_rx0               : out std_logic;
-            o_soft_reset_rx1               : out std_logic;
             o_global_freeze                : out std_logic;
             o_ts_ctrl_enable               : out std_logic;
             o_ts_ctrl_clear                : out std_logic;
@@ -211,61 +210,6 @@ architecture rtl of arinc429_ip is
             i_rx0_bit_rd_null              : in  std_logic_vector(15 downto 0);
             i_rx0_bit_rd_null_err          : in  std_logic_vector(15 downto 0);
             o_rx0_bit_rd_null_err_rd       : out std_logic;
-            o_rx1_ctrl_enable              : out std_logic;
-            o_rx1_ctrl_freeze              : out std_logic;
-            o_rx1_ctrl_clear               : out std_logic;
-            i_rx1_status_frozen            : in  std_logic;
-            i_rx1_status_word_wrap         : in  std_logic;
-            i_rx1_status_err_wrap          : in  std_logic;
-            i_rx1_status_act_cfg           : in  std_logic_vector(1 downto 0);
-            o_rx1_cfg_sel                  : out std_logic_vector(1 downto 0);
-            o_rx1_cfg_apply_apply          : out std_logic;
-            o_rx1_cust_glitch_filter_size  : out std_logic_vector(15 downto 0);
-            o_rx1_cust_min_pulse           : out std_logic_vector(15 downto 0);
-            o_rx1_cust_max_pulse           : out std_logic_vector(15 downto 0);
-            o_rx1_cust_min_bit             : out std_logic_vector(15 downto 0);
-            o_rx1_cust_max_bit             : out std_logic_vector(15 downto 0);
-            o_rx1_cust_max_pulse_err       : out std_logic_vector(15 downto 0);
-            o_rx1_cust_max_null_err        : out std_logic_vector(15 downto 0);
-            o_rx1_cust_max_gap_err         : out std_logic_vector(15 downto 0);
-            o_rx1_cust_parity_mode         : out std_logic_vector(1 downto 0);
-            i_rx1_act_glitch_filter_size   : in  std_logic_vector(15 downto 0);
-            i_rx1_act_min_pulse            : in  std_logic_vector(15 downto 0);
-            i_rx1_act_max_pulse            : in  std_logic_vector(15 downto 0);
-            i_rx1_act_min_bit              : in  std_logic_vector(15 downto 0);
-            i_rx1_act_max_bit              : in  std_logic_vector(15 downto 0);
-            i_rx1_act_max_pulse_err        : in  std_logic_vector(15 downto 0);
-            i_rx1_act_max_null_err         : in  std_logic_vector(15 downto 0);
-            i_rx1_act_max_gap_err          : in  std_logic_vector(15 downto 0);
-            i_rx1_act_parity_mode          : in  std_logic_vector(1 downto 0);
-            i_rx1_word_cnt                 : in  std_logic_vector(31 downto 0);
-            i_rx1_err_cnt                  : in  std_logic_vector(31 downto 0);
-            i_rx1_drop_cnt                 : in  std_logic_vector(31 downto 0);
-            i_rx1_last_word                : in  std_logic_vector(31 downto 0);
-            o_rx1_word_raddr               : out std_logic_vector(7 downto 0);
-            o_rx1_word_raddr_wr            : out std_logic;
-            i_rx1_word_rd_ts_msb           : in  std_logic_vector(31 downto 0);
-            i_rx1_word_rd_ts_lsb           : in  std_logic_vector(31 downto 0);
-            i_rx1_word_rd_data             : in  std_logic_vector(31 downto 0);
-            i_rx1_word_rd_gap              : in  std_logic_vector(31 downto 0);
-            i_rx1_word_rd_gap_err          : in  std_logic_vector(15 downto 0);
-            o_rx1_word_rd_gap_err_rd       : out std_logic;
-            o_rx1_err_raddr                : out std_logic_vector(7 downto 0);
-            o_rx1_err_raddr_wr             : out std_logic;
-            i_rx1_err_rd_ts_msb            : in  std_logic_vector(31 downto 0);
-            i_rx1_err_rd_ts_lsb            : in  std_logic_vector(31 downto 0);
-            i_rx1_err_rd_code              : in  std_logic_vector(15 downto 0);
-            i_rx1_err_rd_addr              : in  std_logic_vector(15 downto 0);
-            i_rx1_err_rd_data              : in  std_logic_vector(31 downto 0);
-            o_rx1_err_rd_data_rd           : out std_logic;
-            o_rx1_bit_raddr_bit_idx        : out std_logic_vector(4 downto 0);
-            o_rx1_bit_raddr_word_idx       : out std_logic_vector(2 downto 0);
-            o_rx1_bit_raddr_wr             : out std_logic;
-            i_rx1_bit_rd_pulse             : in  std_logic_vector(15 downto 0);
-            i_rx1_bit_rd_pulse_err         : in  std_logic_vector(15 downto 0);
-            i_rx1_bit_rd_null              : in  std_logic_vector(15 downto 0);
-            i_rx1_bit_rd_null_err          : in  std_logic_vector(15 downto 0);
-            o_rx1_bit_rd_null_err_rd       : out std_logic;
             SLAVE_AXI_REQ                  : in  std_logic_vector(110 downto 0);
             SLAVE_AXI_RSP                  : out std_logic_vector(40 downto 0)
         );
@@ -274,7 +218,7 @@ architecture rtl of arinc429_ip is
     signal rst_all       : std_logic;
     signal rst_tx        : std_logic;
     signal rst_txbit     : std_logic;
-    signal rst_rx        : std_logic_vector(1 downto 0) := (others => '0');
+    signal rst_rx        : std_logic_vector(0 downto 0) := (others => '0');
     signal global_freeze : std_logic;
     signal ts_en         : std_logic;
     signal ts_clr        : std_logic;
@@ -286,17 +230,14 @@ architecture rtl of arinc429_ip is
     signal tx_reg_out    : t_tx_reg_out;
     signal tb_reg_in     : t_rx_reg_in  := C_RX_REG_IN_ZERO;
     signal tb_reg_out    : t_rx_reg_out;
-    signal rx_reg_in     : t_rx_reg_in_arr(0 to 1) := (others => C_RX_REG_IN_ZERO);
-    signal rx_reg_out    : t_rx_reg_out_arr(0 to 1);
+    signal rx_reg_in     : t_rx_reg_in_arr(0 to 0) := (others => C_RX_REG_IN_ZERO);
+    signal rx_reg_out    : t_rx_reg_out_arr(0 to 0);
     signal s_tb_word_raddr : std_logic_vector(7 downto 0);
     signal s_tb_err_raddr  : std_logic_vector(7 downto 0);
     signal s_tb_bit_widx   : std_logic_vector(2 downto 0);
     signal s_rx0_word_raddr : std_logic_vector(7 downto 0);
     signal s_rx0_err_raddr  : std_logic_vector(7 downto 0);
     signal s_rx0_bit_widx   : std_logic_vector(2 downto 0);
-    signal s_rx1_word_raddr : std_logic_vector(7 downto 0);
-    signal s_rx1_err_raddr  : std_logic_vector(7 downto 0);
-    signal s_rx1_bit_widx   : std_logic_vector(2 downto 0);
 
 begin
 
@@ -306,9 +247,6 @@ begin
     rx_reg_in(0).word_raddr <= (15 downto 8 => '0') & s_rx0_word_raddr;
     rx_reg_in(0).err_raddr  <= (15 downto 8 => '0') & s_rx0_err_raddr;
     rx_reg_in(0).bit_raddr_word <= (7 downto 3 => '0') & s_rx0_bit_widx;
-    rx_reg_in(1).word_raddr <= (15 downto 8 => '0') & s_rx1_word_raddr;
-    rx_reg_in(1).err_raddr  <= (15 downto 8 => '0') & s_rx1_err_raddr;
-    rx_reg_in(1).bit_raddr_word <= (7 downto 3 => '0') & s_rx1_bit_widx;
 
     u_axil : arinc429_axil_pk
         port map (
@@ -318,7 +256,6 @@ begin
             o_soft_reset_tx                => rst_tx,
             o_soft_reset_txbit             => rst_txbit,
             o_soft_reset_rx0               => rst_rx(0),
-            o_soft_reset_rx1               => rst_rx(1),
             o_global_freeze                => global_freeze,
             o_ts_ctrl_enable               => ts_en,
             o_ts_ctrl_clear                => ts_clr,
@@ -471,68 +408,13 @@ begin
             i_rx0_bit_rd_null              => rx_reg_out(0).bit_rd_null,
             i_rx0_bit_rd_null_err          => rx_reg_out(0).bit_rd_null_err,
             o_rx0_bit_rd_null_err_rd       => rx_reg_in(0).bit_rd_last,
-            o_rx1_ctrl_enable              => rx_reg_in(1).ctrl_enable,
-            o_rx1_ctrl_freeze              => rx_reg_in(1).ctrl_freeze,
-            o_rx1_ctrl_clear               => rx_reg_in(1).ctrl_clear,
-            i_rx1_status_frozen            => rx_reg_out(1).status_frozen,
-            i_rx1_status_word_wrap         => rx_reg_out(1).status_word_wrap,
-            i_rx1_status_err_wrap          => rx_reg_out(1).status_err_wrap,
-            i_rx1_status_act_cfg           => rx_reg_out(1).status_act_cfg,
-            o_rx1_cfg_sel                  => rx_reg_in(1).cfg_sel,
-            o_rx1_cfg_apply_apply          => rx_reg_in(1).cfg_apply,
-            o_rx1_cust_glitch_filter_size  => rx_reg_in(1).cust.glitch_filter_size,
-            o_rx1_cust_min_pulse           => rx_reg_in(1).cust.min_pulse,
-            o_rx1_cust_max_pulse           => rx_reg_in(1).cust.max_pulse,
-            o_rx1_cust_min_bit             => rx_reg_in(1).cust.min_bit,
-            o_rx1_cust_max_bit             => rx_reg_in(1).cust.max_bit,
-            o_rx1_cust_max_pulse_err       => rx_reg_in(1).cust.max_pulse_err,
-            o_rx1_cust_max_null_err        => rx_reg_in(1).cust.max_null_err,
-            o_rx1_cust_max_gap_err         => rx_reg_in(1).cust.max_gap_err,
-            o_rx1_cust_parity_mode         => rx_reg_in(1).cust.parity_mode,
-            i_rx1_act_glitch_filter_size   => rx_reg_out(1).act.glitch_filter_size,
-            i_rx1_act_min_pulse            => rx_reg_out(1).act.min_pulse,
-            i_rx1_act_max_pulse            => rx_reg_out(1).act.max_pulse,
-            i_rx1_act_min_bit              => rx_reg_out(1).act.min_bit,
-            i_rx1_act_max_bit              => rx_reg_out(1).act.max_bit,
-            i_rx1_act_max_pulse_err        => rx_reg_out(1).act.max_pulse_err,
-            i_rx1_act_max_null_err         => rx_reg_out(1).act.max_null_err,
-            i_rx1_act_max_gap_err          => rx_reg_out(1).act.max_gap_err,
-            i_rx1_act_parity_mode          => rx_reg_out(1).act.parity_mode,
-            i_rx1_word_cnt                 => rx_reg_out(1).word_cnt,
-            i_rx1_err_cnt                  => rx_reg_out(1).err_cnt,
-            i_rx1_drop_cnt                 => rx_reg_out(1).drop_cnt,
-            i_rx1_last_word                => rx_reg_out(1).last_word,
-            o_rx1_word_raddr               => s_rx1_word_raddr,
-            o_rx1_word_raddr_wr            => rx_reg_in(1).word_raddr_wr,
-            i_rx1_word_rd_ts_msb           => rx_reg_out(1).word_rd_ts_msb,
-            i_rx1_word_rd_ts_lsb           => rx_reg_out(1).word_rd_ts_lsb,
-            i_rx1_word_rd_data             => rx_reg_out(1).word_rd_data,
-            i_rx1_word_rd_gap              => rx_reg_out(1).word_rd_gap,
-            i_rx1_word_rd_gap_err          => rx_reg_out(1).word_rd_gap_err,
-            o_rx1_word_rd_gap_err_rd       => rx_reg_in(1).word_rd_last,
-            o_rx1_err_raddr                => s_rx1_err_raddr,
-            o_rx1_err_raddr_wr             => rx_reg_in(1).err_raddr_wr,
-            i_rx1_err_rd_ts_msb            => rx_reg_out(1).err_rd_ts_msb,
-            i_rx1_err_rd_ts_lsb            => rx_reg_out(1).err_rd_ts_lsb,
-            i_rx1_err_rd_code              => rx_reg_out(1).err_rd_code,
-            i_rx1_err_rd_addr              => rx_reg_out(1).err_rd_addr,
-            i_rx1_err_rd_data              => rx_reg_out(1).err_rd_data,
-            o_rx1_err_rd_data_rd           => rx_reg_in(1).err_rd_last,
-            o_rx1_bit_raddr_bit_idx        => rx_reg_in(1).bit_raddr_bit,
-            o_rx1_bit_raddr_word_idx       => s_rx1_bit_widx,
-            o_rx1_bit_raddr_wr             => rx_reg_in(1).bit_raddr_wr,
-            i_rx1_bit_rd_pulse             => rx_reg_out(1).bit_rd_pulse,
-            i_rx1_bit_rd_pulse_err         => rx_reg_out(1).bit_rd_pulse_err,
-            i_rx1_bit_rd_null              => rx_reg_out(1).bit_rd_null,
-            i_rx1_bit_rd_null_err          => rx_reg_out(1).bit_rd_null_err,
-            o_rx1_bit_rd_null_err_rd       => rx_reg_in(1).bit_rd_last,
             SLAVE_AXI_REQ                  => SLAVE_AXI_REQ,
             SLAVE_AXI_RSP                  => SLAVE_AXI_RSP
         );
 
     u_core : entity work.arinc429_core
         generic map (
-            G_NUM_RX             => 2,
+            G_NUM_RX             => 1,
             G_TX_EN              => true,
             G_TXBIT_EN           => true,
             G_SYNC_STAGES        => G_SYNC_STAGES,

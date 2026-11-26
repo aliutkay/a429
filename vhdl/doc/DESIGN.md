@@ -19,7 +19,7 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
                                     │ S_AXI_*
                   ┌─────────────────▼─────────────────┐
                   │  arinc429_axil.v (AXIL Studio)    │  <- vhdl/axil/arinc429_axil.regspec.json
-                  │  easyaxil tabanlı AXI4-Lite slave │     (171 register, 64 KB pencere)
+                  │  easyaxil tabanlı AXI4-Lite slave │     (128 register, 64 KB pencere)
                   │  RW / RO / PULSE / CONST / rd_stb │
                   └─────────────────┬─────────────────┘
                      o_* / i_*      │      (arinc429_ip.vhd bağlar)
