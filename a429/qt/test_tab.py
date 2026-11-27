@@ -1,20 +1,21 @@
-"""Test sekmesi: Loopback (a429/selftest.py) ve Ballard Dış Doğrulama (a429/busbox_test.py) otomatik testleri."""
+"""Test sekmesi: Loopback (selftest.py), Ballard Dış Doğrulama (busbox_test.py) ve AXIL Studio PCS (pcs_test.py)."""
 from __future__ import annotations
 
 import json
 import os
 import time
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QBrush
 from PySide6.QtWidgets import (
     QAbstractItemView, QCheckBox, QComboBox, QFileDialog, QGridLayout, QHBoxLayout, QHeaderView,
-    QListWidget, QListWidgetItem, QProgressBar, QSpinBox, QSplitter, QStackedWidget, QTreeWidget,
-    QTreeWidgetItem, QVBoxLayout, QWidget,
+    QLineEdit, QListWidget, QListWidgetItem, QProgressBar, QSpinBox, QSplitter, QStackedWidget,
+    QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
-from .. import busbox_test, selftest
+from .. import busbox_test, pcs_test, selftest
 from ..ballard import CardInfo
+from ..pcs_test import PcsInfo
 from ..regs import channel_label
 from . import look
 
@@ -29,6 +30,10 @@ NOTE_BALLARD = (
     "Dış Doğrulama modu (Ballard BTIDriver 64-bit): Kart TX ↔ Ballard RX ve Ballard TX ↔ Kart RX ayrı ayrı "
     "doğrulanır; FPGA saat sapması, bit sırası ve alıcı entegre zamanlaması bağımsız ölçülür."
 )
+NOTE_PCS = (
+    "Otonom PCS modu (AXIL Studio cmd_seq · IP 2.1.0): Test programı PCS I-mem'ine bir kez yüklenir ve "
+    "FPGA içinde periyodik koşar. PC'den ARINC 429 IP'ye test komutu gönderilmez; yalnızca PCS D-mem sayaçları okunur."
+)
 
 
 class TestTab(QWidget):
@@ -38,12 +43,21 @@ class TestTab(QWidget):
         self.report: dict | None = None
         self._rx_boxes: dict[str, QCheckBox] = {}
         self._bb_rx_boxes: dict[str, QCheckBox] = {}
+        self._pcs_rx_boxes: dict[str, QCheckBox] = {}
         self._bb_cards: list[CardInfo] = []
         self._bb_dll_dir: str | None = None
+        self._pcs_list: list[PcsInfo] = []
+        self._pcs_imem_aw = 9
+        self._pcs_dmem_aw = 8
         self._can_run_base = False
         self._busy = False
         self._bb_scanning = False
+        self._pcs_scanning = False
         self._tip_base = ""
+
+        self._pcs_poll_timer = QTimer(self)
+        self._pcs_poll_timer.setInterval(1000)
+        self._pcs_poll_timer.timeout.connect(self._on_pcs_poll_tick)
 
         root = QHBoxLayout(self)
         root.setContentsMargins(10, 10, 10, 10)
@@ -59,6 +73,7 @@ class TestTab(QWidget):
         self.cb_mode = QComboBox()
         self.cb_mode.addItem("Loopback Testi (TX → RX)", "loopback")
         self.cb_mode.addItem("Dış Doğrulama Modu (Ballard BusBox / OmniBusBox)", "ballard")
+        self.cb_mode.addItem("Otonom Periyodik Test (AXIL Studio PCS)", "pcs")
         self.cb_mode.currentIndexChanged.connect(self._on_mode_changed)
         mrow.addWidget(self.cb_mode, 1)
         left.lay.addLayout(mrow)
@@ -145,7 +160,91 @@ class TestTab(QWidget):
         self._sync_bb_enabled()
         self.mode_stack.addWidget(pg_bb)
 
-        # ---- Ortak ayarlar
+        # ---- Sayfa 2: Otonom Periyodik Test (AXIL Studio PCS)
+        pg_pcs = QWidget()
+        l_pcs = QVBoxLayout(pg_pcs)
+        l_pcs.setContentsMargins(0, 0, 0, 0)
+        l_pcs.setSpacing(6)
+        l_pcs.addWidget(look.label(
+            "IP 2.1.0 loopback testini AXIL Studio PCS (cmd_seq) bloğuna bir kez yükler; test FPGA içinde "
+            "periyodik koşar. PC yalnızca PCS D-mem'den toplam tur ve test/kanal kalma sayaçlarını okur.", "muted", True))
+
+        prow = QHBoxLayout()
+        self.cb_pcs = QComboBox()
+        self.cb_pcs.addItem("PCS @ 0x00000000 (taranmadı)", 0x00000000)
+        self.cb_pcs.currentIndexChanged.connect(self._on_pcs_selected)
+        prow.addWidget(self.cb_pcs, 1)
+        self.btn_pcs_scan = look.button("Tara", None, self._scan_pcs, "AXIL Studio adres haritasındaki PCS (cmd_seq) bloklarını tara")
+        self.btn_pcs_export = look.button(".s Kaydet…", None, self._export_pcs_asm, "Üretilen PCS assembly (.s) dosyasını kaydet")
+        prow.addWidget(self.btn_pcs_scan)
+        prow.addWidget(self.btn_pcs_export)
+        l_pcs.addLayout(prow)
+
+        paddr = QHBoxLayout()
+        paddr.addWidget(look.label("PCS Taban Adresi:", "muted"))
+        self.ed_pcs_base = QLineEdit("0x00000000")
+        self.ed_pcs_base.setToolTip("PCS (cmd_seq) bloğunun 32-bit mutlak AXI taban adresi (hex)")
+        paddr.addWidget(self.ed_pcs_base, 1)
+        l_pcs.addLayout(paddr)
+
+        self.lbl_pcs_status = look.label("Projedeki PCS bloğunu bulmak için 'Tara' düğmesine basın.", "muted", True)
+        l_pcs.addWidget(self.lbl_pcs_status)
+        self.lbl_pcs_size = look.label("", "muted")
+        l_pcs.addWidget(self.lbl_pcs_size)
+
+        l_pcs.addWidget(look.label("TX'e bağlı RX kanalları (loopback)", "muted"))
+        self.pcs_rx_box = QWidget()
+        self.pcs_rx_grid = QGridLayout(self.pcs_rx_box)
+        self.pcs_rx_grid.setContentsMargins(0, 0, 0, 0)
+        self.pcs_rx_grid.setHorizontalSpacing(12)
+        l_pcs.addWidget(self.pcs_rx_box)
+
+        self.chk_pcs_tb = QCheckBox("TX BIT (TB) kanalını ve Word Checker'ı dahil et")
+        self.chk_pcs_tb.setChecked(True)
+        self.chk_pcs_tb.toggled.connect(self._update_pcs_size)
+        l_pcs.addWidget(self.chk_pcs_tb)
+
+        pg = QGridLayout()
+        pg.setHorizontalSpacing(8)
+        pg.setVerticalSpacing(4)
+        pg.addWidget(look.label("Tur aralığı (ms)", "muted"), 0, 0)
+        self.sp_pcs_gap = QSpinBox()
+        self.sp_pcs_gap.setRange(0, 600000)
+        self.sp_pcs_gap.setSingleStep(100)
+        self.sp_pcs_gap.setValue(500)
+        pg.addWidget(self.sp_pcs_gap, 0, 1)
+
+        pg.addWidget(look.label("Maks. tur (0 = sürekli)", "muted"), 1, 0)
+        self.sp_pcs_max = QSpinBox()
+        self.sp_pcs_max.setRange(0, 1_000_000)
+        self.sp_pcs_max.setValue(0)
+        pg.addWidget(self.sp_pcs_max, 1, 1)
+
+        pg.addWidget(look.label("Burst (HS / LS Word)", "muted"), 2, 0)
+        hb = QHBoxLayout()
+        hb.setContentsMargins(0, 0, 0, 0)
+        self.sp_pcs_burst_hs = QSpinBox()
+        self.sp_pcs_burst_hs.setRange(4, 128)
+        self.sp_pcs_burst_hs.setValue(24)
+        self.sp_pcs_burst_ls = QSpinBox()
+        self.sp_pcs_burst_ls.setRange(4, 64)
+        self.sp_pcs_burst_ls.setValue(6)
+        hb.addWidget(self.sp_pcs_burst_hs)
+        hb.addWidget(self.sp_pcs_burst_ls)
+        pg.addLayout(hb, 2, 1)
+        l_pcs.addLayout(pg)
+
+        self.chk_pcs_poll = QCheckBox("PCS sayaçlarını otomatik oku (1 s)")
+        self.chk_pcs_poll.setChecked(True)
+        self.chk_pcs_poll.toggled.connect(self._on_pcs_poll_toggled)
+        l_pcs.addWidget(self.chk_pcs_poll)
+        self.mode_stack.addWidget(pg_pcs)
+
+        # ---- Ortak ayarlar (Loopback & Ballard için; PCS modunda gizlenir)
+        self.common_box = QWidget()
+        l_com = QVBoxLayout(self.common_box)
+        l_com.setContentsMargins(0, 0, 0, 0)
+        l_com.setSpacing(6)
         sp = QHBoxLayout()
         sp.addWidget(look.label("Hızlar:", "muted"))
         self.chk_hs = QCheckBox("High Speed (100 kbps)")
@@ -155,7 +254,7 @@ class TestTab(QWidget):
         sp.addWidget(self.chk_hs)
         sp.addWidget(self.chk_ls)
         sp.addStretch(1)
-        left.lay.addLayout(sp)
+        l_com.addLayout(sp)
 
         g = QGridLayout()
         g.setHorizontalSpacing(8)
@@ -171,9 +270,10 @@ class TestTab(QWidget):
         self.sp_burst.setValue(40)
         self.sp_burst.setToolTip("Minimum gap (4 bit) ile art arda gönderilecek Word sayısı (LS'de 1/4'ü)")
         g.addWidget(self.sp_burst, 1, 1)
-        left.lay.addLayout(g)
+        l_com.addLayout(g)
         self.chk_stop_fail = QCheckBox("İlk başarısız testte dur")
-        left.lay.addWidget(self.chk_stop_fail)
+        l_com.addWidget(self.chk_stop_fail)
+        left.lay.addWidget(self.common_box)
 
         th = QHBoxLayout()
         th.addWidget(look.label("Testler", "muted"))
@@ -188,10 +288,16 @@ class TestTab(QWidget):
             [(t[0], t[1], t[2], t[3]) for t in busbox_test.CATALOG],
             busbox_test.ALWAYS,
         )
+        self.lst_pcs = self._build_test_list(
+            [(tid, title, None, False) for _idx, tid, title, _hint in pcs_test.TESTS],
+            (),
+        )
+        self.lst_pcs.itemChanged.connect(lambda _it: self._update_pcs_size())
         self.list_stack.addWidget(self.lst)
         self.list_stack.addWidget(self.lst_bb)
+        self.list_stack.addWidget(self.lst_pcs)
         left.lay.addWidget(self.list_stack, 1)
-        left.setMinimumWidth(360)
+        left.setMinimumWidth(370)
         split.addWidget(left)
 
         # ---------------------------------------------------------------- Sağ: sonuçlar
@@ -205,9 +311,14 @@ class TestTab(QWidget):
         hdr.addStretch(1)
         self.btn_run = look.button("▶ Testi Başlat", "primary", self._run)
         self.btn_stop = look.button("Durdur", None, app.do_stop)
+        self.btn_pcs_read = look.button("Oku / Bağlan", None, self._pcs_read_now,
+                                        "Çalışan PCS'nin D-mem sayaçlarını ARINC 429 IP'ye dokunmadan okur")
+        self.btn_pcs_stop = look.button("PCS Durdur", None, self._pcs_stop, "PCS'deki periyodik testi durdurur")
+        self.btn_pcs_clear = look.button("Sayaçları Sıfırla", None, self._pcs_clear,
+                                         "PCS toplam tur ve kalma sayaçlarını sıfırlar")
         self.btn_save = look.button("Raporu Kaydet…", None, self._save)
         self.btn_save.setEnabled(False)
-        for b in (self.btn_run, self.btn_stop, self.btn_save):
+        for b in (self.btn_run, self.btn_stop, self.btn_pcs_read, self.btn_pcs_stop, self.btn_pcs_clear, self.btn_save):
             hdr.addWidget(b)
         right.lay.addLayout(hdr)
         self.prog = QProgressBar()
@@ -233,7 +344,8 @@ class TestTab(QWidget):
         split.addWidget(right)
         split.setStretchFactor(0, 0)
         split.setStretchFactor(1, 1)
-        split.setSizes([400, 1000])
+        split.setSizes([410, 1000])
+        self._on_mode_changed()
 
     @staticmethod
     def _build_test_list(catalog, always) -> QListWidget:
@@ -260,10 +372,24 @@ class TestTab(QWidget):
             self.cb_mode.setCurrentIndex(idx)
 
     def _on_mode_changed(self):
-        is_bb = self.mode() == "ballard"
-        self.mode_stack.setCurrentIndex(1 if is_bb else 0)
-        self.list_stack.setCurrentIndex(1 if is_bb else 0)
-        self.lbl_note.setText(NOTE_BALLARD if is_bb else NOTE_LOOPBACK)
+        m = self.mode()
+        idx = {"loopback": 0, "ballard": 1, "pcs": 2}.get(m, 0)
+        self.mode_stack.setCurrentIndex(idx)
+        self.list_stack.setCurrentIndex(idx)
+        self.common_box.setVisible(m != "pcs")
+        self.btn_stop.setVisible(m != "pcs")
+        for b in (self.btn_pcs_read, self.btn_pcs_stop, self.btn_pcs_clear):
+            b.setVisible(m == "pcs")
+        self.btn_run.setText("▶ PCS'ye Yükle & Başlat" if m == "pcs" else "▶ Testi Başlat")
+        self.tree.setHeaderLabels(
+            ["Durum", "Test / Kanal", "Kalma", "Ayrıntı"] if m == "pcs"
+            else ["Sonuç", "Test / Kontrol", "Süre", "Ayrıntı"]
+        )
+        self.lbl_note.setText({"loopback": NOTE_LOOPBACK, "ballard": NOTE_BALLARD, "pcs": NOTE_PCS}[m])
+        if m != "pcs":
+            self.stop_pcs_poll()
+        else:
+            self._update_pcs_size()
         self._apply_run_state()
 
     def _sync_bb_enabled(self):
@@ -272,7 +398,7 @@ class TestTab(QWidget):
         self.bb_rx_box.setEnabled(self.chk_bb_rx.isChecked())
 
     def populate_channels(self, rm):
-        for box_map in (self._rx_boxes, self._bb_rx_boxes):
+        for box_map in (self._rx_boxes, self._bb_rx_boxes, self._pcs_rx_boxes):
             for cb in box_map.values():
                 cb.setParent(None)
             box_map.clear()
@@ -288,12 +414,19 @@ class TestTab(QWidget):
             self.bb_rx_grid.addWidget(cb2, i // 4, i % 4)
             self._bb_rx_boxes[ch] = cb2
 
-        has_tb = rm.is_loaded() and rm.has("TB_CTRL")
-        self.chk_tb.setEnabled(has_tb)
-        self.chk_tb.setChecked(has_tb)
-        self.chk_bb_tb.setEnabled(has_tb)
-        self.chk_bb_tb.setChecked(has_tb)
+            cb3 = QCheckBox(f"{ch}  ←  TX")
+            cb3.setChecked(ch == "RX0")
+            cb3.toggled.connect(self._update_pcs_size)
+            self.pcs_rx_grid.addWidget(cb3, i // 4, i % 4)
+            self._pcs_rx_boxes[ch] = cb3
 
+        has_tb = rm.is_loaded() and rm.has("TB_CTRL")
+        for cb in (self.chk_tb, self.chk_bb_tb, self.chk_pcs_tb):
+            cb.setEnabled(has_tb)
+            cb.setChecked(has_tb)
+        self._update_pcs_size()
+
+    # ---------------------------------------------------------------- Ballard tarama
     def _scan_ballard(self):
         if self._busy or self._bb_scanning:
             return
@@ -349,22 +482,286 @@ class TestTab(QWidget):
             if prev_tx in ci.tx_channels:
                 self.cb_bb_tx_ch.setCurrentIndex(self.cb_bb_tx_ch.findData(prev_tx))
 
+    # ---------------------------------------------------------------- PCS tarama & kontrol
+    def pcs_base_addr(self) -> int:
+        txt = self.ed_pcs_base.text().strip()
+        try:
+            return int(txt, 0) & 0xFFFFFFFF
+        except ValueError:
+            val = self.cb_pcs.currentData()
+            return int(val) & 0xFFFFFFFF if val is not None else 0
+
+    def _scan_pcs(self):
+        if self._busy or self._pcs_scanning:
+            return
+        self._pcs_scanning = True
+        self._apply_run_state()
+        self.lbl_pcs_status.setText("AXIL Studio projesi PCS (cmd_seq) blokları için taranıyor…")
+        self.app.do_probe_pcs()
+
+    def set_pcs_probe_result(self, pcs_list: list[PcsInfo], error: str = ""):
+        self._pcs_scanning = False
+        self._apply_run_state()
+        self._pcs_list = list(pcs_list)
+        self.cb_pcs.blockSignals(True)
+        self.cb_pcs.clear()
+        if error:
+            self.cb_pcs.addItem("PCS @ 0x00000000 (manuel)", 0)
+            self.lbl_pcs_status.setText(f"Uyarı: {error}")
+        elif not pcs_list:
+            self.cb_pcs.addItem("PCS bulunamadı (adresi elle girin)", 0)
+            self.lbl_pcs_status.setText("Adres haritasında cmd_seq bloğu bulunamadı; PCS taban adresini elle girebilirsiniz.")
+        else:
+            for pi in pcs_list:
+                self.cb_pcs.addItem(pi.display_label(), pi.base)
+            self.lbl_pcs_status.setText(f"{len(pcs_list)} PCS (cmd_seq) bloğu bulundu.")
+        self.cb_pcs.blockSignals(False)
+        self._on_pcs_selected()
+
+    def _on_pcs_selected(self):
+        idx = self.cb_pcs.currentIndex()
+        if 0 <= idx < len(self._pcs_list):
+            pi = self._pcs_list[idx]
+            self.ed_pcs_base.setText(f"0x{pi.base:08X}")
+            self._pcs_imem_aw = pi.imem_aw
+            self._pcs_dmem_aw = pi.dmem_aw
+            if pi.running_a429:
+                self.lbl_pcs_status.setText(
+                    f"{pi.name}: A429 periyodik testi zaten koşuyor — 'Oku / Bağlan' ile canlı izleyebilirsiniz."
+                )
+        self._update_pcs_size()
+
+    def _update_pcs_size(self):
+        cap = 1 << self._pcs_imem_aw
+        rx = [c for c, cb in self._pcs_rx_boxes.items() if cb.isChecked()]
+        tb = self.chk_pcs_tb.isChecked()
+        sel = [self.lst_pcs.item(i).data(Qt.ItemDataRole.UserRole) for i in range(self.lst_pcs.count())
+               if self.lst_pcs.item(i).checkState() == Qt.CheckState.Checked]
+        if not sel or (not rx and not tb):
+            self.lbl_pcs_size.setText(f"Program boyu: — / {cap} komut (kanal ve test seçin)")
+            return
+        try:
+            ip_base = self.app.rm.base if self.app.rm.is_loaded() else 0x00010000
+            clk_hz = int(round((self.app.ci.clk_mhz or 50.0) * 1e6))
+            comp = pcs_test.build_program(
+                ip_base, rx or ["RX0"], use_tb=tb, selected=sel, clk_hz=clk_hz,
+                imem_aw=max(self._pcs_imem_aw, 10), dmem_aw=self._pcs_dmem_aw,
+            )
+            over = comp.insn_count > cap
+            self.lbl_pcs_size.setText(
+                f"Program boyu: {comp.insn_count} / {cap} komut ({len(sel)} test)"
+                + (" — I-mem kapasitesini aşıyor, test azaltın!" if over else " ✓ sığar")
+            )
+        except Exception as e:  # noqa: BLE001
+            self.lbl_pcs_size.setText(f"Derleme uyarısı: {e}")
+
+    def _export_pcs_asm(self):
+        o = self.options()
+        if not o["rx"] and not o["tb"]:
+            look.confirm(self, "PCS Assembly", "En az bir RX kanalı veya TX BIT seçin.", "Tamam", "Kapat")
+            return
+        try:
+            ip_base = self.app.rm.base if self.app.rm.is_loaded() else 0x00010000
+            clk_hz = int(round((self.app.ci.clk_mhz or 50.0) * 1e6))
+            comp = pcs_test.build_program(
+                ip_base, o["rx"], use_tb=o["tb"], selected=o["selected"], clk_hz=clk_hz,
+                gap_ms=o["gap_ms"], max_rounds=o["max_rounds"],
+                burst_hs=o["burst_hs"], burst_ls=o["burst_ls"],
+                imem_aw=self._pcs_imem_aw, dmem_aw=self._pcs_dmem_aw,
+            )
+        except Exception as e:  # noqa: BLE001
+            look.confirm(self, "PCS Assembly", str(e), "Tamam", "Kapat")
+            return
+        d = self.app.rs.out_dir or os.path.expanduser("~")
+        p, _ = QFileDialog.getSaveFileName(
+            self, "PCS Assembly (.s) kaydet", os.path.join(d, "a429_pcs_loopback.s"), "PCS Assembly (*.s);;Tüm Dosyalar (*)"
+        )
+        if not p:
+            return
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write(comp.asm)
+        self.app.log(f"[PCS] Assembly kaydedildi ({comp.insn_count} komut, SUM 0x{comp.imem_sum:08X}): {p}")
+
+    def start_pcs_poll(self):
+        if self.chk_pcs_poll.isChecked() and self.mode() == "pcs":
+            self._pcs_poll_timer.start()
+
+    def stop_pcs_poll(self):
+        self._pcs_poll_timer.stop()
+
+    def _on_pcs_poll_toggled(self, on: bool):
+        if not on:
+            self.stop_pcs_poll()
+        elif self.mode() == "pcs" and self.report and self.report.get("mode") == "pcs" and self.report.get("pcs_busy"):
+            self.start_pcs_poll()
+
+    def _on_pcs_poll_tick(self):
+        if self.mode() != "pcs" or not self.app.connected or self._busy:
+            return
+        self.app.do_pcs_read(self.pcs_base_addr(), quiet=True)
+
+    def _pcs_read_now(self):
+        self.app.do_pcs_read(self.pcs_base_addr(), quiet=False)
+        self.start_pcs_poll()
+
+    def _pcs_stop(self):
+        self.stop_pcs_poll()
+        self.app.do_pcs_stop(self.pcs_base_addr())
+
+    def _pcs_clear(self):
+        self.app.do_pcs_clear(self.pcs_base_addr())
+
+    def set_pcs_telemetry(self, t: dict | None, error: str = ""):
+        if t is None:
+            self.pill.set("PCS Hata", "err")
+            self.lbl_time.setText(error)
+            return
+        self.report = t
+        self.btn_save.setEnabled(True)
+        self.tree.clear()
+
+        if t["pcs_err"]:
+            self.pill.set(f"PCS HATA ({t['pcs_err_text']})", "err")
+            self.stop_pcs_poll()
+        elif not t["recognized"]:
+            self.pill.set("A429 PCS Programı Yüklü Değil", "warn")
+        elif t["run_state"] == "TAMAMLANDI":
+            ok = t["fail_rounds"] == 0 and t["total_rounds"] > 0
+            self.pill.set(
+                f"TAMAMLANDI {'✓' if ok else '✗'} ({t['total_rounds']} tur, {t['fail_rounds']} hatalı)",
+                "ok" if ok else "err",
+            )
+            self.stop_pcs_poll()
+        elif t["pcs_busy"]:
+            if t["fail_rounds"] == 0:
+                self.pill.set(f"KOŞUYOR · {t['total_rounds']} tur (0 hata)", "ok" if t["total_rounds"] else "accent")
+            else:
+                self.pill.set(f"KOŞUYOR · {t['total_rounds']} tur ({t['fail_rounds']} hatalı)", "err")
+        else:
+            self.pill.set(f"DURDURULDU · {t['total_rounds']} tur ({t['fail_rounds']} hatalı)", "warn")
+            self.stop_pcs_poll()
+
+        self.lbl_time.setText(
+            f"Son tur: {t['last_dur_ms']} ms · Gürültü maks: {t['max_noise_clk']} clk · "
+            f"PCS: {t['pcs_state']} (PC={t['pcs_pc']}, {t['imem_cnt']}/{t['imem_size']} komut)"
+        )
+        if t["max_rounds"] > 0:
+            self.prog.setMaximum(t["max_rounds"])
+            self.prog.setValue(min(t["total_rounds"], t["max_rounds"]))
+            self.prog.setFormat(f"%v / %m tur  ·  {t['pass_rounds']} geçti, {t['fail_rounds']} kaldı")
+        else:
+            self.prog.setMaximum(100)
+            self.prog.setValue(100 if t["total_rounds"] else 0)
+            self.prog.setFormat(f"Sürekli  ·  {t['total_rounds']} tur ({t['pass_rounds']} geçti, {t['fail_rounds']} kaldı)")
+
+        # Ağaç satırları: 1) Özet, 2) Test bazlı kalma sayaçları, 3) Kanal bazlı, 4) İlk hata
+        summary_it = QTreeWidgetItem([
+            "ÖZET",
+            f"Toplam {t['total_rounds']} tur · Geçen {t['pass_rounds']} · Kalan {t['fail_rounds']}",
+            f"{t['fail_rounds']}/{t['total_rounds']}",
+            f"PCS 0x{t['pcs_base']:08X} → IP 0x{t['ip_base']:08X} · aralık {t['gap_ms']} ms · maks. gürültü {t['max_noise_clk']} clk",
+        ])
+        f = summary_it.font(0)
+        f.setBold(True)
+        summary_it.setFont(0, f)
+        self.tree.addTopLevelItem(summary_it)
+
+        for x in t["tests"]:
+            failed = x["fails"] > 0
+            st_txt = "KALDI" if failed else ("GEÇTİ" if t["total_rounds"] > 0 else "BEKLİYOR")
+            detail = ("Son turda KALDI · " if x["last_failed"] else "") + (x["hint"] if failed else "0 hata")
+            it = QTreeWidgetItem([st_txt, x["title"], f"{x['fails']} / {t['total_rounds']}", detail])
+            col = look.color("danger") if failed else (look.color("success") if t["total_rounds"] > 0 else look.color("muted"))
+            it.setForeground(0, QBrush(col))
+            if failed:
+                it.setForeground(2, QBrush(look.color("danger")))
+            ff = it.font(0)
+            ff.setBold(True)
+            it.setFont(0, ff)
+            self.tree.addTopLevelItem(it)
+
+        if t["channels"]:
+            ch_top = QTreeWidgetItem([
+                "KANAL",
+                "Kanal Bazlı Kalma Sayaçları",
+                f"{sum(c['fails'] for c in t['channels'])} hata",
+                ", ".join(f"{c['name']}: {c['fails']}" for c in t["channels"]),
+            ])
+            for c in t["channels"]:
+                cit = QTreeWidgetItem([
+                    "✗" if c["fails"] else "✓",
+                    c["name"],
+                    str(c["fails"]),
+                    "hata kaydedildi" if c["fails"] else "temiz",
+                ])
+                cit.setForeground(0, QBrush(look.color("danger" if c["fails"] else "success")))
+                ch_top.addChild(cit)
+            self.tree.addTopLevelItem(ch_top)
+            ch_top.setExpanded(any(c["fails"] for c in t["channels"]))
+
+        if t["first_fail"]:
+            ff = t["first_fail"]
+            fit = QTreeWidgetItem([
+                "İLK HATA",
+                f"Tur #{ff['round']} · {ff['test_title']} · {ff['channel']}",
+                f"Kod {ff['sub_code']}",
+                f"{ff['reason']} (beklenen 0x{ff['expected']:08X}, okunan 0x{ff['got']:08X})",
+            ])
+            fit.setForeground(0, QBrush(look.color("danger")))
+            fit.setForeground(1, QBrush(look.color("danger")))
+            self.tree.addTopLevelItem(fit)
+
+        if t["pcs_err"]:
+            eit = QTreeWidgetItem([
+                "PCS HATA",
+                t["pcs_err_text"],
+                f"PC={t['pcs_pc']}",
+                f"ERR_CODE={t['pcs_err_code']} ERR_PC={t['pcs_err_pc']} ERR_ADDR=0x{t['pcs_err_addr']:08X}",
+            ])
+            eit.setForeground(0, QBrush(look.color("danger")))
+            self.tree.addTopLevelItem(eit)
+
+    # ---------------------------------------------------------------- ortak liste & seçenekler
     def _active_list(self) -> QListWidget:
-        return self.lst_bb if self.mode() == "ballard" else self.lst
+        m = self.mode()
+        if m == "ballard":
+            return self.lst_bb
+        if m == "pcs":
+            return self.lst_pcs
+        return self.lst
 
     def _check_all(self, on: bool):
         lst = self._active_list()
+        lst.blockSignals(True)
         for i in range(lst.count()):
             it = lst.item(i)
             if it.flags() & Qt.ItemFlag.ItemIsEnabled:
                 it.setCheckState(Qt.CheckState.Checked if on else Qt.CheckState.Unchecked)
+        lst.blockSignals(False)
+        if self.mode() == "pcs":
+            self._update_pcs_size()
 
     def options(self) -> dict:
         lst = self._active_list()
         sel = [lst.item(i).data(Qt.ItemDataRole.UserRole) for i in range(lst.count())
                if lst.item(i).checkState() == Qt.CheckState.Checked]
         speeds = tuple(s for s, cb in (("HS", self.chk_hs), ("LS", self.chk_ls)) if cb.isChecked())
-        if self.mode() == "ballard":
+        m = self.mode()
+        if m == "pcs":
+            return {
+                "mode": "pcs",
+                "pcs_base": self.pcs_base_addr(),
+                "imem_aw": self._pcs_imem_aw,
+                "dmem_aw": self._pcs_dmem_aw,
+                "rx": [c for c, cb in self._pcs_rx_boxes.items() if cb.isChecked()],
+                "tb": self.chk_pcs_tb.isChecked(),
+                "selected": sel,
+                "gap_ms": self.sp_pcs_gap.value(),
+                "max_rounds": self.sp_pcs_max.value(),
+                "burst_hs": self.sp_pcs_burst_hs.value(),
+                "burst_ls": self.sp_pcs_burst_ls.value(),
+            }
+        if m == "ballard":
             card_num, core_num = self.cb_bb_card.currentData() or (0, 0)
             return {
                 "mode": "ballard",
@@ -401,21 +798,42 @@ class TestTab(QWidget):
         self._apply_run_state()
 
     def _apply_run_state(self):
+        m = self.mode()
         self.btn_run.setEnabled(self._can_run_base and not self._busy)
-        default_tip = (
-            "Seçili dış doğrulama testlerini Ballard BusBox / OmniBusBox üzerinden koşar"
-            if self.mode() == "ballard"
-            else "Seçili testleri TX → RX loopback üzerinden koşar"
-        )
+        default_tip = {
+            "ballard": "Seçili dış doğrulama testlerini Ballard BusBox / OmniBusBox üzerinden koşar",
+            "pcs": "Seçili IP 2.1.0 loopback testlerini PCS I-mem'e yükler ve FPGA içinde otonom başlatır",
+            "loopback": "Seçili testleri TX → RX loopback üzerinden koşar",
+        }[m]
         self.btn_run.setToolTip(self._tip_base or default_tip)
         self.btn_stop.setEnabled(self._busy)
         self.cb_mode.setEnabled(not self._busy)
         self.btn_bb_scan.setEnabled(not self._busy and not self._bb_scanning)
         self.btn_bb_dll.setEnabled(not self._busy and not self._bb_scanning)
+        pcs_ok = self._can_run_base and not self._busy
+        self.btn_pcs_scan.setEnabled(pcs_ok and not self._pcs_scanning)
+        self.btn_pcs_read.setEnabled(pcs_ok)
+        self.btn_pcs_stop.setEnabled(pcs_ok)
+        self.btn_pcs_clear.setEnabled(pcs_ok)
 
     # ---------------------------------------------------------------- koşum
     def _run(self):
         o = self.options()
+        if o["mode"] == "pcs":
+            if not o["rx"] and not o["tb"]:
+                look.confirm(self, "Otonom PCS Testi", "En az bir RX kanalı ya da TX BIT seçin.", "Tamam", "Kapat")
+                return
+            if not o["selected"]:
+                look.confirm(self, "Otonom PCS Testi", "En az bir test seçin.", "Tamam", "Kapat")
+                return
+            self.tree.clear()
+            self.report = None
+            self.btn_save.setEnabled(False)
+            self.pill.set("PCS'ye yükleniyor…", "accent")
+            self.lbl_time.setText("")
+            self.prog.setValue(0)
+            self.app.do_pcs_load_start(o)
+            return
         if o["mode"] == "ballard":
             if not o["test_tx"] and not o["test_rx"]:
                 look.confirm(self, "Dış Doğrulama Testi",
@@ -497,16 +915,19 @@ class TestTab(QWidget):
         if not self.report:
             return
         d = self.app.rs.out_dir or os.path.expanduser("~")
-        is_bb = self.report.get("mode") == "ballard"
-        prefix = "a429_ballard_test_" if is_bb else "a429_loopback_test_"
+        rmode = self.report.get("mode")
+        prefix = {"ballard": "a429_ballard_test_", "pcs": "a429_pcs_test_"}.get(rmode, "a429_loopback_test_")
         name = os.path.join(d, time.strftime(prefix + "%Y%m%d_%H%M%S.txt"))
         p, flt = QFileDialog.getSaveFileName(self, "Test raporunu kaydet", name, "Metin (*.txt);;JSON (*.json)")
         if not p:
             return
         if p.endswith(".json") or "JSON" in flt:
-            text = selftest.report_json(self.report)
+            text = pcs_test.report_json(self.report) if rmode == "pcs" else selftest.report_json(self.report)
         else:
-            text = busbox_test.report_text(self.report) if is_bb else selftest.report_text(self.report)
+            text = (
+                pcs_test.report_text(self.report) if rmode == "pcs"
+                else (busbox_test.report_text(self.report) if rmode == "ballard" else selftest.report_text(self.report))
+            )
         with open(p, "w", encoding="utf-8") as fh:
             fh.write(text)
         self.app.log(f"[Test] Rapor kaydedildi: {p}")

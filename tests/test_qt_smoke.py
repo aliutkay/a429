@@ -257,3 +257,51 @@ def test_test_tab_ballard_mode_ui():
     app.processEvents()
 
 
+def test_test_tab_pcs_mode_ui():
+    from a429.pcs_test import PcsInfo
+
+    app = _app()
+    win = MainWindow(SimClient(num_rx=2, has_tx=True, has_txbit=True))
+    win.show()
+    _wait(app, win)
+    tt = win.test_tab
+
+    tt.set_mode("pcs")
+    assert tt.mode() == "pcs"
+    assert tt.mode_stack.currentIndex() == 2
+    assert tt.list_stack.currentIndex() == 2
+    assert not tt.common_box.isVisibleTo(tt)
+
+    pi = PcsInfo(name="PCS_A429", base=0x00000000, is_ip_parent=True, pcs_id=0x5EC00200, imem_aw=9, dmem_aw=8)
+    tt.set_pcs_probe_result([pi])
+    assert "512" in tt.lbl_pcs_size.text()
+    opts = tt.options()
+    assert opts["mode"] == "pcs"
+    assert opts["pcs_base"] == 0
+    assert len(opts["selected"]) == 15
+
+    tt.set_pcs_telemetry({
+        "mode": "pcs", "timestamp": "2026-01-01 00:00:00", "pcs_base": 0, "pcs_id": 0x5EC00200,
+        "imem_size": 512, "dmem_size": 256, "imem_cnt": 510, "pcs_state": "RUNNING", "pcs_busy": True,
+        "pcs_err": False, "pcs_pc": 42, "pcs_err_code": 0, "pcs_err_text": "", "pcs_err_pc": 0,
+        "pcs_err_addr": 0, "recognized": True, "signature": 0xA4292101, "run_state": "KOŞUYOR",
+        "clk_hz": 50_000_000, "ip_base": 0x00010000, "gap_ms": 500.0, "max_rounds": 0,
+        "total_rounds": 10, "pass_rounds": 9, "fail_rounds": 1, "last_dur_ms": 12.5, "max_noise_clk": 0,
+        "tests": [{"idx": 0, "tid": "ident", "title": "IP kimliği", "hint": "", "fails": 0, "last_failed": False, "ever_failed": False}],
+        "channels": [{"idx": 0, "code": 0, "name": "RX0", "fails": 1}],
+        "first_fail": {"round": 4, "test_idx": 3, "test_id": "single_hs", "test_title": "HS Tek Word",
+                       "channel": "RX0", "channel_code": 0, "sub_code": 10, "reason": "LAST_WORD uyuşmadı",
+                       "expected": 0x12345678, "got": 0x12345679},
+        "passed": False,
+    })
+    assert tt.tree.topLevelItemCount() >= 4
+    assert "10 tur" in tt.pill.text()
+
+    tt.stop_pcs_poll()
+    win._closing = True
+    win.close()
+    win.bus.shutdown()
+    app.processEvents()
+
+
+

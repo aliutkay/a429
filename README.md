@@ -47,14 +47,14 @@ okumaları inceleme) çalışır.
 | **Config** | Sol panelde **Genel** (System Clock, ±ppm), **RX Config** (ARINC 429 profili, Receiver entegresi, FPGA giriş standardı, Glitch Filter ve limitler, test toleransı, örnek dalga formu / tek bit grafikleri) ve **TX Config** (ARINC 429 profili). Sağda **RX / TX** alt sekmeleri: kontroller, ara hesaplar (çift tık → formül), hesaplanan register değerleri, panoya kopyalama ve **Debug Bridge config listesine ekle**. |
 | **Kontrol** | Okunacak RX verileri (Word / Error / Bit Diagnostic: Tümü / Son N / Okunmasın), okuma ve yazma dosyası ayarları, IP/kanal harita durumu; sağda **RX İşlemleri** (**RX Config gönder**, **RX verilerini oku**, **Config + oku**), **TX İşlemleri** (**TX Config gönder**, **TX Canlı Kontrol…**), **IP Kontrol** (**IP reset**, **Durdur**), ilerleme çubuğu ve **İşlem Logu**. |
 | **RX Okunan Veriler** | Word Listesi, Word Dalga Formu, Bit Diagnostic, Error Listesi, İstatistik ve tutarlılık kontrolleri. PASS/FAIL hücre renklendirmesi (neden için üzerine gelin veya sağ tıklayın). Word satırına çift tık → dalga formu. |
-| **Test** | **Loopback Testi** (TX → RX) ve **Dış Doğrulama Modu (Ballard BusBox / OmniBusBox)** otomatik testleri (aşağıda **Test menüsü**). |
+| **Test** | **Loopback Testi** (TX → RX), **Dış Doğrulama Modu (Ballard BusBox / OmniBusBox)** ve **Otonom Periyodik Test (AXIL Studio PCS)** (aşağıda **Test menüsü**). |
 | **TX Gönderilen Veriler** | TX Canlı Kontrol gönderim geçmişi (filtreleme, CSV dışa aktarma, projeyle kayıt) ve **TX Built-In Test (TX BIT · Wraparound Checker)** canlı sayaçları (`TX_WORD_CNT`, `TB_WORD_CNT`, `CHK_OK_CNT`, `CHK_ERR_CNT`, FIFO), Checker kontrolü ve tek tıkla `TB_` okuması. |
 
 Üst başlık çubuğundan hedef kanal (`RX0`…`RXn`, `TX BIT`) seçilir.
 
 ## Test menüsü
 
-**Test** sekmesinde iki otomatik test modu bulunur:
+**Test** sekmesinde üç otomatik test modu bulunur:
 
 1. **Loopback Testi (TX → RX):** Kartın ARINC **TX** çıkışını dışarıdan test edilecek **RX** girişlerine bağlayın
    ve bu RX'leri işaretleyin; **TX BIT** kanalı TX hattını kart üzerindeki kendi alıcısıyla dinler ve Word Checker
@@ -65,6 +65,12 @@ okumaları inceleme) çalışır.
    (`Ballard TX → Kart RX`) birbirinden bağımsız test eder. Loopback'in gizleyebileceği FPGA saat / PLL kaymasını
    (Ballard 1 µs donanım timestamp'iyle), ARINC 429 bit/label sırasını, arıza yönünü (TX mi RX mi?) ve alıcı
    entegresinin gerçek gecikme asimetrisini ayrı ayrı raporlar.
+3. **Otonom Periyodik Test (AXIL Studio PCS):** IP 2.1.0 loopback testlerinin tamamını (15 test: IP kimliği,
+   hat boşta/polarite, HS/LS tek Word + Word Builder, HS/LS veri bütünlüğü + `xorshift32`, HS/LS `TX_SCHED_COUNT`
+   burst, HS↔LS geçişi, parity hatası, hız uyuşmazlığı, 2-bit gap ihlali, 32-bit Bit Diagnostic zamanlama/gürültü
+   ve logger `ENABLE`/`FREEZE`/`GLOBAL_FREEZE`) tek bir `cmd_seq` v2.0 bloğunun 512 komutluk I-mem'ine (510 komut)
+   bir kez yükler ve FPGA içinde periyodik koşturur. PC'den ARINC 429 IP'ye test komutu gönderilmez; **Oku / Bağlan**
+   veya 1 s otomatik okuma ile yalnızca PCS D-mem sayaçları okunur.
 
 ### Loopback testleri
 
@@ -94,6 +100,12 @@ okumaları inceleme) çalışır.
 | BusBox TX → Kart RX *(HS / LS)* | Tek Word + bit/label sırası, veri bütünlüğü deseni, **alıcı entegre bit zamanlaması (referans 5 / 40 µs'ye göre asimetri)**, burst, parity hatası enjeksiyonu, hız uyuşmazlığı, HS ↔ LS geçişi |
 | Çift yönlü stres *(HS / LS)* | Eşzamanlı Kart TX → BusBox RX ve BusBox TX → Kart RX tam çift yönlü doğrulama |
 | Custom config | Config sekmesindeki HS/LS uyumlu Custom TX/RX ayarlarının Ballard referansıyla doğrulanması |
+
+### Otonom Periyodik PCS testleri (AXIL Studio `cmd_seq` · IP 2.1.0)
+
+- **Tek sequencer, 15 test (510 / 512 komut):** `address_map()` ile bağlı ARINC 429 IP'nin üstündeki `cmd_seq` bloğunu bulur, seçili testleri 64-bit makine koduna derler, `IMEM_CNT`/`IMEM_SUM` doğrulamasıyla yükleyip başlatır.
+- **Sıfır PC komutu & sonradan bağlanma:** Test FPGA içinde periyodik döner; PC kapatılıp yeniden bağlansa bile **Oku / Bağlan** ile `D[255]` imzası (`0xA4292101`) tanınır ve yalnızca PCS D-mem'den toplam tur, geçen/kalan tur, test ve kanal bazlı kalma sayaçları, maksimum hat gürültüsü ve ilk hatanın özeti (tur, test, kanal, neden, beklenen/okunan) okunur.
+- **Assembly dışa aktarma:** **.s Kaydet…** ile üretilen PCS assembly dosyası AXIL Studio PCS aracında incelenebilir.
 
 Başarısız kontrollerde olası neden yazılır (logger kapalı, hat `11`, A/B ters, tüm bitler ters, hatta sinyal yok,
 son hata kodları). Sonuçlar ağaçta test → kontrol → ölçüm olarak listelenir, **Raporu Kaydet…** ile `.txt` / `.json`

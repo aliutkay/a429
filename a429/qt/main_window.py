@@ -1051,6 +1051,135 @@ class MainWindow(QWidget):
 
         self.bus.run(job, ok=ok, err=err)
 
+    def do_probe_pcs(self):
+        from .. import pcs_test
+        if not self.connected or not self.client:
+            self.test_tab.set_pcs_probe_result([], error="Debug Bridge bağlı değil.")
+            return
+        ip_base = self.rm.base if self.rm.is_loaded() else None
+
+        def job():
+            return pcs_test.discover_pcs(self.client, ip_base=ip_base)
+
+        def ok(pcs_list):
+            self.test_tab.set_pcs_probe_result(pcs_list)
+            self.log(f"[PCS] Tarama tamamlandı: {len(pcs_list)} cmd_seq bloğu bulundu.")
+
+        def err(e):
+            self.test_tab.set_pcs_probe_result([], error=str(e))
+            self.log(f"[PCS] Tarama hatası: {e}")
+
+        self.bus.run(job, ok=ok, err=err)
+
+    def do_pcs_load_start(self, opts: dict):
+        from .. import pcs_test
+        if not self.connected or self.busy or not self.client:
+            return
+        rm = self.rm
+        ip_base = rm.base if rm.is_loaded() else 0x00010000
+        clk_hz = int(round((self.ci.clk_mhz or 50.0) * 1e6))
+        pcs_base = int(opts["pcs_base"]) & 0xFFFFFFFF
+
+        def job():
+            info = pcs_test.probe_pcs_at(self.client, pcs_base)
+            # IP'nin gerçek CLK_HZ, ERR_DEPTH ve BITDIAG_WORDS değerlerini (varsa) kullan
+            real_clk = clk_hz
+            err_depth, bit_words = 256, 8
+            if rm.has("CLK_HZ"):
+                v = self.client.read(rm.offset("CLK_HZ"), quiet=True)
+                if v:
+                    real_clk = v
+            if rm.has("CAPS_MEM"):
+                cm = self.client.read(rm.offset("CAPS_MEM"), quiet=True)
+                ed = (cm >> 8) & 0xFF
+                bw = (cm >> 16) & 0xFF
+                if 1 <= ed <= 12:
+                    err_depth = 1 << ed
+                if 1 <= bw <= 8:
+                    bit_words = 1 << bw
+            comp = pcs_test.build_program(
+                ip_base, opts["rx"],
+                use_tb=opts["tb"],
+                selected=opts["selected"],
+                clk_hz=real_clk,
+                gap_ms=opts["gap_ms"],
+                max_rounds=opts["max_rounds"],
+                burst_hs=opts["burst_hs"],
+                burst_ls=opts["burst_ls"],
+                bitdiag_words=bit_words,
+                err_depth=err_depth,
+                imem_aw=info.imem_aw,
+                dmem_aw=info.dmem_aw,
+            )
+            pcs_test.load_and_start(self.client, pcs_base, comp, log=self.log)
+            return pcs_test.read_telemetry(self.client, pcs_base)
+
+        def ok(telem):
+            self.test_tab.set_pcs_telemetry(telem)
+            self.test_tab.start_pcs_poll()
+
+        def finished(ok_flag):
+            if not ok_flag:
+                self.test_tab.set_pcs_telemetry(None, "PCS yüklenemedi (İşlem Logu'na bakın)")
+
+        self._run_job("PCS otonom test yükleniyor", job, on_ok=ok, on_done=finished)
+
+    def do_pcs_read(self, pcs_base: int, quiet: bool = False):
+        from .. import pcs_test
+        if not self.connected or self.busy or not self.client:
+            return
+        if getattr(self, "_pcs_reading", False):
+            return
+        self._pcs_reading = True
+
+        def job():
+            return pcs_test.read_telemetry(self.client, pcs_base)
+
+        def ok(telem):
+            self._pcs_reading = False
+            self.test_tab.set_pcs_telemetry(telem)
+            if not quiet:
+                self.log(f"[PCS] Okundu (0x{pcs_base:08X}): {telem['total_rounds']} tur, "
+                         f"{telem['fail_rounds']} hatalı ({telem['pcs_state']})")
+
+        def err(e):
+            self._pcs_reading = False
+            if not quiet:
+                self.test_tab.set_pcs_telemetry(None, str(e))
+                self.log(f"[PCS] Okuma hatası: {e}")
+
+        self.bus.run(job, ok=ok, err=err)
+
+    def do_pcs_stop(self, pcs_base: int):
+        from .. import pcs_test
+        if not self.connected or self.busy or not self.client:
+            return
+
+        def job():
+            pcs_test.stop_pcs(self.client, pcs_base)
+            return pcs_test.read_telemetry(self.client, pcs_base)
+
+        self._run_job(
+            "PCS durduruluyor",
+            job,
+            on_ok=lambda t: (self.test_tab.set_pcs_telemetry(t), self.log(f"[PCS] Durduruldu (0x{pcs_base:08X}).")),
+        )
+
+    def do_pcs_clear(self, pcs_base: int):
+        from .. import pcs_test
+        if not self.connected or self.busy or not self.client:
+            return
+
+        def job():
+            pcs_test.clear_stats(self.client, pcs_base)
+            return pcs_test.read_telemetry(self.client, pcs_base)
+
+        self._run_job(
+            "PCS sayaçları sıfırlanıyor",
+            job,
+            on_ok=lambda t: (self.test_tab.set_pcs_telemetry(t), self.log(f"[PCS] Sayaçlar sıfırlandı (0x{pcs_base:08X}).")),
+        )
+
     def do_run_selftest(self, opts: dict):
         from .. import busbox_test, selftest
         if not self.connected or self.busy:
@@ -1367,6 +1496,7 @@ class MainWindow(QWidget):
                 ev.ignore()
                 return
         self._stop_flag.set()
+        self.test_tab.stop_pcs_poll()
         self.control_tab.close_floating()
         if self.client is not None:
             self.client.on_event = lambda _: None
