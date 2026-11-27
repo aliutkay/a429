@@ -19,7 +19,7 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
                                     │ S_AXI_*
                   ┌─────────────────▼─────────────────┐
                   │  arinc429_axil.v (AXIL Studio)    │  <- vhdl/axil/arinc429_axil.regspec.json
-                  │  easyaxil tabanlı AXI4-Lite slave │     (93 register, 64 KB pencere)
+                  │  easyaxil tabanlı AXI4-Lite slave │     (94 register, 64 KB pencere)
                   │  RW / RO / PULSE / CONST / rd_stb │
                   └─────────────────┬─────────────────┘
                      o_* / i_*      │      (arinc429_ip.vhd bağlar)
@@ -54,7 +54,7 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
 | `vhdl/rtl/a429_timestamp.vhd` | 64-bit zaman damgası; `o_ts_lsb_rd` ile 1-clk gecikmeli `msb_d1` atomik latch |
 | `vhdl/rtl/a429_sdp_ram.vhd` | Generic Simple Dual-Port BRAM (Word 144b, Error 128b, Bit Diag 64b) |
 | `vhdl/rtl/a429_cdc_sync.vhd` | `G_SYNC_STAGES` kademeli `ASYNC_REG` giriş senkronizatörü |
-| `vhdl/rtl/a429_glitch_filter.vhd` | 2-bit tek sembol süre-koruyan glitch filtresi + doyumlu sayaçlar |
+| `vhdl/rtl/a429_glitch_filter.vhd` | 2-bit tek sembol süre-koruyan glitch filtresi + doyumlu sayaçlar (pencere sayacı: kararlı durum penceresindeki glitch clk toplamı) |
 | `vhdl/rtl/a429_rx_decoder.vhd` | ARINC 429 bit/Word çözücü, bit-31 null tahmini, 8 fiziksel hata bayrağı |
 | `vhdl/rtl/a429_rx_core.vhd` | `cdc_sync` → `glitch_filter` → `rx_decoder` ön ucu |
 | `vhdl/rtl/a429_rx_cfg_sel.vhd` | RX Preset (HS/LS) / Custom seçici (`CFG_APPLY` → 1 clk aktifleşme, `ACT_CFG`) |
@@ -63,7 +63,7 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
 | `vhdl/rtl/a429_rx_channel.vhd` | Tek alıcı kanalı (`cfg_sel` + `rx_core` + `rx_logger` + 3× `sdp_ram` + `wr/rd_strobe` otomatik artan RADDR pointer + ops. `word_checker`) |
 | `vhdl/rtl/a429_tx_cfg_sel.vhd` | TX Preset (HS/LS) / Custom seçici (`tx_busy = 0`'da anında, meşgulken Word sınırında uygular) |
 | `vhdl/rtl/a429_tx_word_builder.vhd` | Label/SDI/Data/SSM + Odd/Even Parity kombinasyonel Word oluşturucu (MUX 1 kaynağı) |
-| `vhdl/rtl/a429_tx_scheduler.vhd` | `INITIAL_DELAY` + `INTER_WORD_GAP` periyodik Message Scheduler FSM (MUX 2 kaynağı) |
+| `vhdl/rtl/a429_tx_scheduler.vhd` | `INITIAL_DELAY` + `INTER_WORD_GAP` periyodik Message Scheduler FSM (MUX 2 kaynağı); `SCHED_COUNT` = N ise N Word sonra `SC_DONE` (0 = sınırsız) |
 | `vhdl/rtl/a429_tx_transmitter.vhd` | 32-bit RZ bipolar seri Word Transmitter FSM (MUX 3 kaynağı) |
 | `vhdl/rtl/a429_tx_core.vhd` | 3 alt blok + 3 MUX (`builder_en`, `msg_sched_en`, `transmitter_en` + Override/HIGH-Z) |
 | `vhdl/rtl/a429_tx_word_evt.vhd` | `tx_busy` kenarından `word_start` / `word_done` darbesi |
@@ -81,7 +81,7 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
 | Sayfa | Offset Aralığı | İçerik |
 |---|---|---|
 | Global | `0x0000 – 0x0030` | `IP_ID`, `IP_VERSION`, `CAPS`, `CAPS_MEM`, `CLK_HZ`, `SOFT_RESET`, `GLOBAL_FREEZE`, `TS_CTRL`, `TS_LSB` (`rd_strobe`), `TS_MSB` |
-| TX | `0x0400 – 0x0484` | `TX_CTRL`, `TX_WORD [LABEL_VAL, SDI, DATA, SSM, PARITY_TYPE]`, `TX_SEND_CMD`, `TX_EXT_DATA`, `TX_EXT_LINE`, `TX_INITIAL_DELAY`, `TX_INTER_WORD_GAP`, `TX_CFG [SEL, APPLY]`, `TX_CUST_TIMING`, `TX_CUST_GAP_DUR`, `TX_CUST_SLP`, `TX_ACT_*`, `TX_STATUS [BUSY, SCHED_ACTIVE, ACT_CFG]`, `TX_WORD_CNT` |
+| TX | `0x0400 – 0x0484` | `TX_CTRL`, `TX_WORD [LABEL_VAL, SDI, DATA, SSM, PARITY_TYPE]`, `TX_SEND_CMD`, `TX_EXT_DATA`, `TX_EXT_LINE`, `TX_INITIAL_DELAY`, `TX_INTER_WORD_GAP`, `TX_SCHED_COUNT`, `TX_CFG [SEL, APPLY]`, `TX_CUST_TIMING`, `TX_CUST_GAP_DUR`, `TX_CUST_SLP`, `TX_ACT_*`, `TX_STATUS [BUSY, SCHED_ACTIVE, ACT_CFG, SCHED_DONE]`, `TX_WORD_CNT` |
 | TX BIT (`TB_`) | `0x0800 – 0x09D0` | RX kanal sayfası + `TB_CHK_CTRL`, `TB_CHK_TIMEOUT`, `TB_CHK_OK_CNT`, `TB_CHK_ERR_CNT`, `TB_CHK_STATUS` |
 | RX *n* (`RX{n}_`) | `0x4000 + n×0x400` | `CTRL`, `STATUS [FROZEN, WORD_WRAP, ERR_WRAP, ACT_CFG, LINE_HIGH, LINE_LOW, SYNC_WAIT]`, `CFG [SEL, APPLY]`, `CUST_PULSE/BIT/NOISE/FILTER [MIN\|MAX …]`, `CUST_PARITY`, `ACT_*` (aynı düzen), sayaçlar, Word / Error (`ERR_RD_INFO [CODE\|ADDR]`) / Bit (`BIT_RD_PULSE/NULL [DUR\|ERR]`) RAM portları |
 

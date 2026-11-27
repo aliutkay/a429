@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 
 from ..txlive import (
     OVERRIDE_LINES, TIME_UNITS, TRIGGER, build_word, fmt_binary, override_writes,
-    parse_bin_word, parse_builder, parse_hex_word, parity_bit, sched_values as calc_sched,
+    parse_bin_word, parse_builder, parse_hex_word, parity_bit, sched_count_value, sched_values as calc_sched,
     to_clk, word_fields_text,
 )
 from . import look
@@ -185,6 +185,7 @@ class TxLivePanel(QWidget):
             "gap_unit": self.cb_gap_u.currentText(),
             "manual_period": self.ed_mper.text(),
             "manual_unit": self.cb_mper_u.currentText(),
+            "sched_count": self.ed_count.text(),
         }
 
     def current_word(self) -> int:
@@ -294,6 +295,15 @@ class TxLivePanel(QWidget):
         sg.addWidget(self.lbl_gap, 0, 5, 1, 2)
         sg.addWidget(self.ed_gap, 1, 5)
         sg.addWidget(self.cb_gap_u, 1, 6)
+
+        # TX_SCHED_COUNT: 0 = sınırsız, N = N Word gönderip durur (IP >= 2.1)
+        sg.addWidget(look.label("Word sayısı", "muted"), 0, 7)
+        self.ed_count = QLineEdit()
+        self.ed_count.setMinimumWidth(60)
+        self.ed_count.setToolTip("TX_SCHED_COUNT: 0 = sınırsız; N = Scheduler N Word gönderip durur "
+                                 "(TX_STATUS.SCHED_DONE). Yeniden göndermek için ⏸ ardından ▶.")
+        self.ed_count.textChanged.connect(self._changed)
+        sg.addWidget(self.ed_count, 1, 7)
         sl.addLayout(sg)
 
         self.lbl_sched_info = QLabel("")
@@ -334,7 +344,15 @@ class TxLivePanel(QWidget):
 
     def sched_writes(self) -> list[tuple[str, int]]:
         delay, gap, _ = self.sched_values()
-        return [("TX_INITIAL_DELAY", delay), ("TX_INTER_WORD_GAP", gap)]
+        writes = [("TX_INITIAL_DELAY", delay), ("TX_INTER_WORD_GAP", gap)]
+        count = sched_count_value(self._cfg_dict())
+        rm = getattr(self.app, "rm", None)
+        if rm is not None and rm.has("TX_SCHED_COUNT"):
+            writes.append(("TX_SCHED_COUNT", count))
+        elif count:
+            raise ValueError("Bu IP haritasında TX_SCHED_COUNT yok (IP 2.1 ve üstü gerekli); "
+                             "Word sayısını 0 (sınırsız) yapın.")
+        return writes
 
     def write_scheduler(self):
         try:
@@ -371,6 +389,9 @@ class TxLivePanel(QWidget):
                     detail = self.lbl_sched_info.text()
                     if cnt is not None:
                         detail += f" · Başlangıç TX_WORD_CNT={cnt:,}"
+                    n = dict(writes).get("TX_SCHED_COUNT", 0)
+                    if n:
+                        detail += f" · {n:,} Word sonra durur (SCHED_DONE)"
                 else:
                     start = self._sched_start_cnt
                     self._sched_start_cnt = None
@@ -578,6 +599,7 @@ class TxLivePanel(QWidget):
         self.cb_gap_u.setCurrentText(cfg.get("gap_unit", "µs"))
         self.ed_mper.setText(cfg.get("manual_period", "100"))
         self.cb_mper_u.setCurrentText(cfg.get("manual_unit", "ms"))
+        self.ed_count.setText(str(cfg.get("sched_count", "0")))
 
         ov = getattr(self.app, "tx_override", "Kapalı")
         if ov in self._ov_btns:
@@ -630,9 +652,11 @@ class TxLivePanel(QWidget):
 
         try:
             delay_clk, gap_clk, _ = self.sched_values()
+            count = sched_count_value(self._cfg_dict())
             mhz = self.app.ci.clk_mhz
             self.lbl_sched_info.setText(
                 f"Inter-word gap: {gap_clk / mhz:g} µs ({gap_clk:,} clk)  ·  Initial delay: {delay_clk / mhz:g} µs ({delay_clk:,} clk)"
+                f"  ·  Word sayısı: {'sınırsız' if count == 0 else f'{count:,} (sonra durur)'}"
             )
             self.lbl_sched_info.setStyleSheet(f"color: {look.tokens()['muted' if self.override_on() else 'success']};")
         except ValueError as e:

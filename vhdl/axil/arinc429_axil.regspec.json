@@ -4,7 +4,7 @@
   "module": "arinc429_axil",
   "desc": "ARINC 429 IP (1 RX, TX=Var, TX BIT=Var, 50 MHz)",
   "packed": true,
-  "ip_version": "2.0.0",
+  "ip_version": "2.1.0",
   "panel": "arinc429",
   "registers": [
     {
@@ -25,15 +25,15 @@
     {
       "name": "IP_VERSION",
       "offset": "0x0004",
-      "desc": "IP s\u00fcr\u00fcm\u00fc (2.0.0; [23:16] major, [15:8] minor, [7:0] patch)",
+      "desc": "IP s\u00fcr\u00fcm\u00fc (2.1.0; [23:16] major, [15:8] minor, [7:0] patch)",
       "fields": [
         {
           "name": "IP_VERSION",
           "lsb": 0,
           "width": 32,
           "kind": "CONST",
-          "reset": "0x20000",
-          "desc": "IP s\u00fcr\u00fcm\u00fc (2.0.0; [23:16] major, [15:8] minor, [7:0] patch)"
+          "reset": "0x20100",
+          "desc": "IP s\u00fcr\u00fcm\u00fc (2.1.0; [23:16] major, [15:8] minor, [7:0] patch)"
         }
       ]
     },
@@ -408,6 +408,21 @@
       ]
     },
     {
+      "name": "TX_SCHED_COUNT",
+      "offset": "0x0428",
+      "desc": "Scheduler g\u00f6nderilecek Word say\u0131s\u0131 (0: s\u0131n\u0131rs\u0131z; N: N Word sonra durur, SCHED_EN 0->1 ile yeniden)",
+      "fields": [
+        {
+          "name": "TX_SCHED_COUNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RW",
+          "reset": "0x0",
+          "desc": "Scheduler g\u00f6nderilecek Word say\u0131s\u0131 (0: s\u0131n\u0131rs\u0131z; N: N Word sonra durur, SCHED_EN 0->1 ile yeniden)"
+        }
+      ]
+    },
+    {
       "name": "TX_CFG",
       "offset": "0x0440",
       "desc": "TX config se\u00e7imi ve uygulama",
@@ -564,6 +579,14 @@
           "kind": "RO",
           "reset": "0x0",
           "desc": "Aktif TX config modu (0:HS, 1:LS, 2:Custom)"
+        },
+        {
+          "name": "SCHED_DONE",
+          "lsb": 4,
+          "width": 1,
+          "kind": "RO",
+          "reset": "0x0",
+          "desc": "Scheduler TX_SCHED_COUNT Word'\u00fc g\u00f6nderip durdu"
         }
       ]
     },
@@ -756,7 +779,7 @@
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
-          "desc": "Custom Max Pulse Glitch Error"
+          "desc": "Custom Max Pulse Glitch Error (pencerede glitch clk)"
         },
         {
           "name": "NULL_ERR",
@@ -764,7 +787,7 @@
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
-          "desc": "Custom Max Null Glitch Error"
+          "desc": "Custom Max Null Glitch Error (pencerede glitch clk)"
         }
       ]
     },
@@ -787,7 +810,7 @@
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
-          "desc": "Custom Max Gap Glitch Error"
+          "desc": "Custom Max Gap Glitch Error (pencerede glitch clk)"
         }
       ]
     },
@@ -863,7 +886,7 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Aktif Max Pulse Glitch Error"
+          "desc": "Aktif Max Pulse Glitch Error (pencerede glitch clk)"
         },
         {
           "name": "NULL_ERR",
@@ -871,7 +894,7 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Aktif Max Null Glitch Error"
+          "desc": "Aktif Max Null Glitch Error (pencerede glitch clk)"
         }
       ]
     },
@@ -894,7 +917,7 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Aktif Max Gap Glitch Error"
+          "desc": "Aktif Max Gap Glitch Error (pencerede glitch clk)"
         }
       ]
     },
@@ -1052,7 +1075,7 @@
     {
       "name": "TB_WORD_RD_GAP_ERR",
       "offset": "0x0914",
-      "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)",
+      "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fcs\u00fc, glitch clk (okununca pointer +1)",
       "fields": [
         {
           "name": "TB_WORD_RD_GAP_ERR",
@@ -1060,7 +1083,7 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)"
+          "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fcs\u00fc, glitch clk (okununca pointer +1)"
         }
       ],
       "rd_strobe": true
@@ -1193,7 +1216,7 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Bit Pulse g\u00fcr\u00fclt\u00fc say\u0131s\u0131"
+          "desc": "Bit Pulse g\u00fcr\u00fclt\u00fcs\u00fc (glitch clk)"
         }
       ]
     },
@@ -1216,7 +1239,7 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131"
+          "desc": "Bit Null g\u00fcr\u00fclt\u00fcs\u00fc (glitch clk)"
         }
       ],
       "rd_strobe": true
@@ -1486,7 +1509,7 @@
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
-          "desc": "Custom Max Pulse Glitch Error"
+          "desc": "Custom Max Pulse Glitch Error (pencerede glitch clk)"
         },
         {
           "name": "NULL_ERR",
@@ -1494,7 +1517,7 @@
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
-          "desc": "Custom Max Null Glitch Error"
+          "desc": "Custom Max Null Glitch Error (pencerede glitch clk)"
         }
       ]
     },
@@ -1517,7 +1540,7 @@
           "width": 16,
           "kind": "RW",
           "reset": "0x0",
-          "desc": "Custom Max Gap Glitch Error"
+          "desc": "Custom Max Gap Glitch Error (pencerede glitch clk)"
         }
       ]
     },
@@ -1593,7 +1616,7 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Aktif Max Pulse Glitch Error"
+          "desc": "Aktif Max Pulse Glitch Error (pencerede glitch clk)"
         },
         {
           "name": "NULL_ERR",
@@ -1601,7 +1624,7 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Aktif Max Null Glitch Error"
+          "desc": "Aktif Max Null Glitch Error (pencerede glitch clk)"
         }
       ]
     },
@@ -1624,7 +1647,7 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Aktif Max Gap Glitch Error"
+          "desc": "Aktif Max Gap Glitch Error (pencerede glitch clk)"
         }
       ]
     },
@@ -1782,7 +1805,7 @@
     {
       "name": "RX0_WORD_RD_GAP_ERR",
       "offset": "0x4114",
-      "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)",
+      "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fcs\u00fc, glitch clk (okununca pointer +1)",
       "fields": [
         {
           "name": "RX0_WORD_RD_GAP_ERR",
@@ -1790,7 +1813,7 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fc say\u0131s\u0131 (okununca pointer +1)"
+          "desc": "Word kayd\u0131 Gap g\u00fcr\u00fclt\u00fcs\u00fc, glitch clk (okununca pointer +1)"
         }
       ],
       "rd_strobe": true
@@ -1923,7 +1946,7 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Bit Pulse g\u00fcr\u00fclt\u00fc say\u0131s\u0131"
+          "desc": "Bit Pulse g\u00fcr\u00fclt\u00fcs\u00fc (glitch clk)"
         }
       ]
     },
@@ -1946,7 +1969,7 @@
           "width": 16,
           "kind": "RO",
           "reset": "0x0",
-          "desc": "Bit Null g\u00fcr\u00fclt\u00fc say\u0131s\u0131"
+          "desc": "Bit Null g\u00fcr\u00fclt\u00fcs\u00fc (glitch clk)"
         }
       ],
       "rd_strobe": true

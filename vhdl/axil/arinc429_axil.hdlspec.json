@@ -32,7 +32,7 @@
           "lsb": 0,
           "width": 32,
           "kind": "CONST",
-          "reset": "0x20000",
+          "reset": "0x20100",
           "irq": false,
           "sync": false
         }
@@ -456,6 +456,23 @@
       ]
     },
     {
+      "name": "TX_SCHED_COUNT",
+      "offset": "0x428",
+      "wr_strobe": false,
+      "rd_strobe": false,
+      "fields": [
+        {
+          "name": "TX_SCHED_COUNT",
+          "lsb": 0,
+          "width": 32,
+          "kind": "RW",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        }
+      ]
+    },
+    {
       "name": "TX_CFG",
       "offset": "0x440",
       "wr_strobe": false,
@@ -629,6 +646,15 @@
           "name": "ACT_CFG",
           "lsb": 2,
           "width": 2,
+          "kind": "RO",
+          "reset": "0x0",
+          "irq": false,
+          "sync": false
+        },
+        {
+          "name": "SCHED_DONE",
+          "lsb": 4,
+          "width": 1,
           "kind": "RO",
           "reset": "0x0",
           "irq": false,

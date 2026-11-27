@@ -14,11 +14,15 @@
 --   REQ-2 : Yeni bir aday hat durumu kesintisiz en az (glitch_size + 1) clk
 --           boyunca sabit kalırsa stable_state çıkışına kabul edilir. Bütün
 --           geçişler eşit gecikmeyle aktarıldığından darbe/null süreleri korunur.
---   REQ-3 : Aday durum stable olamadan değişirse 1 clk'lik glitch_tick üretilir;
---           glitch_total_cnt (toplam) ve glitch_win_cnt (mevcut stable durum
---           penceresi) doyumlu olarak +1 artar (taşma/sarma yapmaz).
---   REQ-4 : Yeni bir stable durum kabul edildiğinde glitch_win_cnt sıfırlanır
---           (decoder her fazın gürültüsünü bağımsız ölçer).
+--   REQ-3 : Aday durum stable olamadan değişirse 1 clk'lik glitch_tick üretilir
+--           ve glitch_total_cnt (toplam glitch OLAYI sayısı) doyumlu +1 artar.
+--   REQ-4 : glitch_win_cnt, mevcut stable durum penceresinde hattın glitch'li
+--           (stable durumdan farklı, kabul edilmeyen aday durumda) kaldığı
+--           toplam CLK SAYISIDIR: her glitch bittiğinde o glitch'in süresi
+--           (aday durumun kaldığı clk sayısı, 1..glitch_size) doyumlu eklenir.
+--           Yeni bir stable durum kabul edildiğinde glitch_win_cnt sıfırlanır
+--           (decoder her fazın gürültüsünü bağımsız ölçer; Max Pulse / Null /
+--           Gap Glitch Error limitleri clk cinsindendir).
 --   REQ-5 : soft_rst = '1' veya rst_n = '0' durumunda çıkış NULL ("00"), tüm
 --           sayaçlar ve zamanlayıcı sıfırlanır.
 --------------------------------------------------------------------------------
@@ -94,8 +98,12 @@ begin
                         if total_cnt /= C_CNT_MAX then
                             total_cnt <= total_cnt + 1;
                         end if;
-                        if win_cnt /= C_CNT_MAX then
-                            win_cnt <= win_cnt + 1;
+                        -- Pencereye glitch süresi (timer = aday durumun kaldığı clk) eklenir
+                        if resize(timer, G_CNT_W + G_SIZE_W) >=
+                           resize(C_CNT_MAX - win_cnt, G_CNT_W + G_SIZE_W) then
+                            win_cnt <= C_CNT_MAX;
+                        else
+                            win_cnt <= win_cnt + resize(timer, G_CNT_W);
                         end if;
                     end if;
                     last_state <= cur_state;

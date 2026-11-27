@@ -24,11 +24,16 @@ module tb_ip_pk;
   initial begin
     repeat(5) @(posedge clk); rstn=1; repeat(20) @(posedge clk);
     rd(32'h0, d); $display("IP_ID      = %h", d); if (d!==32'h41343239) errs=errs+1;
-    rd(32'h4, d); $display("IP_VERSION = %h", d); if (d!==32'h00020000) errs=errs+1;
+    rd(32'h4, d); $display("IP_VERSION = %h", d); if (d!==32'h00020100) errs=errs+1;
     rd(32'h8, d); $display("CAPS       = %h", d); if (d[4:0]!==5'd1) errs=errs+1;
     wr(32'h24, 32'h1); rd(32'h24, d); $display("GLOBAL_FREEZE = %h", d); if (d!==32'h1) errs=errs+1;
     if (dut.u_axil.o_global_freeze !== 1'b1) errs=errs+1;
     wr(32'h24, 32'h0); rd(32'h24, d); if (d!==32'h0) errs=errs+1;
+    // IP 2.1: TX_SCHED_COUNT (0x428) reset 0, RW ve scheduler'a bağlı
+    rd(32'h428, d); $display("TX_SCHED_COUNT = %h", d); if (d!==32'h0) errs=errs+1;
+    wr(32'h428, 32'd7); rd(32'h428, d); if (d!==32'd7) errs=errs+1;
+    if (dut.u_axil.o_tx_sched_count !== 32'd7) errs=errs+1;
+    wr(32'h428, 32'h0);
     if (errs==0) $display("PASS: arinc429_ip (HDL Designer pk) AXI okuma/yazma"); else $display("FAIL errs=%0d", errs);
     $finish;
   end

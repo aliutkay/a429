@@ -2,6 +2,7 @@
 -- tb_a429_tx_scheduler — a429_tx_scheduler birim testi (VHDL-93 / VHDL-2008)
 --   * initial_delay = 0 ve > 0, inter_word_gap = 1 ve > 1
 --   * enable = 0 ile temiz durdurma ve sched_active kontrolü
+--   * sched_count = N: tam N tetik, son Word bitince sched_done; 0 = sınırsız
 --------------------------------------------------------------------------------
 library ieee;
 use ieee.std_logic_1164.all;
@@ -17,7 +18,8 @@ architecture sim of tb_a429_tx_scheduler is
     signal sim_done : boolean := false;
     signal init_dly : std_logic_vector(31 downto 0) := (others => '0');
     signal iw_gap   : std_logic_vector(31 downto 0) := u32(1);
-    signal trig, act: std_logic;
+    signal s_count  : std_logic_vector(31 downto 0) := (others => '0');
+    signal trig, act, done : std_logic;
     signal busy_cnt : natural := 0;
     signal trig_cnt : natural := 0;
     signal errors   : natural := 0;
@@ -28,8 +30,8 @@ begin
         port map (
             clk => clk, rst_n => rst_n, soft_rst => soft_rst,
             enable => en, tx_busy => tx_busy,
-            initial_delay => init_dly, inter_word_gap => iw_gap,
-            sched_trig => trig, sched_active => act
+            initial_delay => init_dly, inter_word_gap => iw_gap, sched_count => s_count,
+            sched_trig => trig, sched_active => act, sched_done => done
         );
 
     -- Basit sahte Transmitter modeli: her trig'de tam 10 clk tx_busy='1'
@@ -93,6 +95,40 @@ begin
         chk(trig = '1', "initial_delay=0 iken 1. clk'de trig='1' olmali");
         tick(25);
         chk(trig_cnt >= c0 + 3, "inter_word_gap=1 ile ardisik tetikler gelmeli");
+        en <= '0'; tick(2);
+        chk(done = '0', "sched_count=0 (sinirsiz) iken sched_done hic 1 olmamali");
+
+        -- 5) sched_count = 3, initial_delay = 0, inter_word_gap = 1 -> tam 3 tetik, sonra SC_DONE
+        s_count <= u32(3); init_dly <= u32(0); iw_gap <= u32(1);
+        tick(12);                                   -- önceki Word'ün tx_busy'si bitsin
+        c0 := trig_cnt;
+        en <= '1';
+        tick(1);
+        chk(trig = '1' and done = '0' and act = '1', "sched_count=3: ilk tetik hemen gelmeli");
+        tick(60);
+        chk(trig_cnt = c0 + 3, "sched_count=3: tam 3 tetik uretilmeli");
+        chk(done = '1' and act = '0', "sched_count=3: son Word bitince sched_done=1, sched_active=0");
+        tick(40);
+        chk(trig_cnt = c0 + 3 and done = '1', "SC_DONE: enable=1 kalsa da yeni tetik olmamali");
+
+        -- 6) Yeniden başlatma: enable 0 -> 1, sched_count = 1 ve initial_delay > 0
+        en <= '0'; tick(1);
+        chk(done = '0', "enable=0: sched_done temizlenmeli");
+        s_count <= u32(1); init_dly <= u32(4); iw_gap <= u32(3);
+        c0 := trig_cnt;
+        en <= '1';
+        tick(40);
+        chk(trig_cnt = c0 + 1 and done = '1', "sched_count=1 + initial_delay: tek tetik, sonra done");
+
+        -- 7) Sayım sırasında sched_count değişse bile başlangıç değeri geçerli (iç kopya)
+        en <= '0'; tick(1);
+        s_count <= u32(2); init_dly <= u32(0); iw_gap <= u32(5);
+        c0 := trig_cnt;
+        en <= '1';
+        tick(2);
+        s_count <= u32(0);                          -- çalışırken sınırsıza çevir: etkisiz olmalı
+        tick(60);
+        chk(trig_cnt = c0 + 2 and done = '1', "sched_count calisirken degisse de 2 tetikte durmali");
         en <= '0'; tick(2);
 
         if errors = 0 then

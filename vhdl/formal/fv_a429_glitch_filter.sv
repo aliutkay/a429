@@ -1,4 +1,4 @@
-// Formal doğrulama: a429_glitch_filter (doyum güvenliği, win<=total, stable geçişte win=0, soft_rst)
+// Formal doğrulama: a429_glitch_filter (doyum güvenliği, win = pencerede glitch clk toplamı, stable geçişte win=0, soft_rst)
 `default_nettype none
 module fv_a429_glitch_filter (
     input wire        clk,
@@ -42,8 +42,15 @@ module fv_a429_glitch_filter (
             assume(!rst_n);
 
         if (f_past_valid && rst_n) begin
-            // P1: Pencere sayacı asla toplam sayacı aşamaz
-            assert(glitch_win_cnt <= glitch_total_cnt);
+            // P1: Pencerede glitch yoksa ve stable durum değişmediyse win_cnt sabit kalır;
+            //     glitch bittiğinde win_cnt glitch süresi (>= 1 clk) kadar artar, doyumda 0'a sarmaz.
+            //     (Reset / soft_rst ertesi clk P2 ile ayrıca kontrol edilir.)
+            if (p_rst_n && !p_soft_rst && {rx_high_out, rx_low_out} == {p_hi_out, p_lo_out}) begin
+                if (!glitch_tick)
+                    assert(glitch_win_cnt == p_win);
+                else
+                    assert(glitch_win_cnt == 16'hFFFF || glitch_win_cnt > p_win);
+            end
 
             if (!p_rst_n || p_soft_rst) begin
                 // P2: Reset / soft_rst sonrası NULL çıkış ve sıfır sayaçlar

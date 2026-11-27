@@ -14,7 +14,7 @@ Gruplama kuralı: aynı işleve ait küçük alanlar tek 32-bit register'da duru
 """
 from __future__ import annotations
 
-IP_VERSION = (2, 0, 0)
+IP_VERSION = (2, 1, 0)
 IP_VERSION_STR = "%d.%d.%d" % IP_VERSION
 IP_VERSION_WORD = (IP_VERSION[0] << 16) | (IP_VERSION[1] << 8) | IP_VERSION[2]
 IP_ID_WORD = 0x41343239  # 'A429'
@@ -194,6 +194,9 @@ def _build(num_rx=1, has_tx=True, has_txbit=True, has_bitdiag=True, clk_hz=50_00
         B.sreg("TX_INITIAL_DELAY", t + 0x20, 32, "RW", 0, "Scheduler başlangıç gecikmesi (clk)", f"{i}.initial_delay")
         B.sreg("TX_INTER_WORD_GAP", t + 0x24, 32, "RW", 1, "Scheduler Word arası ekstra bekleme (clk, >=1)",
                f"{i}.inter_word_gap")
+        B.sreg("TX_SCHED_COUNT", t + 0x28, 32, "RW", 0,
+               "Scheduler gönderilecek Word sayısı (0: sınırsız; N: N Word sonra durur, SCHED_EN 0->1 ile yeniden)",
+               f"{i}.sched_count")
         B.reg("TX_CFG", t + 0x40, [
             f("SEL", 0, 2, "RW", 0, "Config seçimi (0: HS Preset, 1: LS Preset, 2: Custom)", f"{i}.cfg_sel"),
             f("APPLY", 4, 1, "PULSE", 0, "Seçili TX config'i etkinleştir", f"{i}.cfg_apply"),
@@ -214,6 +217,7 @@ def _build(num_rx=1, has_tx=True, has_txbit=True, has_bitdiag=True, clk_hz=50_00
             f("BUSY", 0, 1, "RO", 0, "TX gönderim yapıyor", f"{o}.busy"),
             f("SCHED_ACTIVE", 1, 1, "RO", 0, "Scheduler aktif", f"{o}.sched_active"),
             f("ACT_CFG", 2, 2, "RO", 0, "Aktif TX config modu (0:HS, 1:LS, 2:Custom)", f"{o}.act_cfg"),
+            f("SCHED_DONE", 4, 1, "RO", 0, "Scheduler TX_SCHED_COUNT Word'ü gönderip durdu", f"{o}.sched_done"),
         ], "TX durum register'ı")
         B.sreg("TX_WORD_CNT", t + 0x84, 32, "RO", 0, "Gönderilen toplam Word sayısı", f"{o}.word_cnt")
 
@@ -252,12 +256,12 @@ def _build(num_rx=1, has_tx=True, has_txbit=True, has_bitdiag=True, clk_hz=50_00
                 f("MAX", 16, 16, acc, 0, f"{what} Max Bit (clk)", f"{side}.max_bit"),
             ], f"{what} bit süre sınırları")
             B.reg(P + kind + "_NOISE", base + off + 0x08, [
-                f("PULSE_ERR", 0, 16, acc, 0, f"{what} Max Pulse Glitch Error", f"{side}.max_pulse_err"),
-                f("NULL_ERR", 16, 16, acc, 0, f"{what} Max Null Glitch Error", f"{side}.max_null_err"),
+                f("PULSE_ERR", 0, 16, acc, 0, f"{what} Max Pulse Glitch Error (pencerede glitch clk)", f"{side}.max_pulse_err"),
+                f("NULL_ERR", 16, 16, acc, 0, f"{what} Max Null Glitch Error (pencerede glitch clk)", f"{side}.max_null_err"),
             ], f"{what} pulse/null gürültü (glitch) limitleri")
             B.reg(P + kind + "_FILTER", base + off + 0x0C, [
                 f("GLITCH_SIZE", 0, 16, acc, 0, f"{what} Glitch Filter boyu (clk)", f"{side}.glitch_filter_size"),
-                f("GAP_ERR", 16, 16, acc, 0, f"{what} Max Gap Glitch Error", f"{side}.max_gap_err"),
+                f("GAP_ERR", 16, 16, acc, 0, f"{what} Max Gap Glitch Error (pencerede glitch clk)", f"{side}.max_gap_err"),
             ], f"{what} glitch filtresi ve gap gürültü limiti")
             B.sreg(P + kind + "_PARITY", base + off + 0x10, 2, acc, 1 if kind == "CUST" else 0,
                    f"{what} Parity modu (0:Kapalı, 1:Odd, 2:Even)", f"{side}.parity_mode")
@@ -274,7 +278,7 @@ def _build(num_rx=1, has_tx=True, has_txbit=True, has_bitdiag=True, clk_hz=50_00
         B.sreg(P + "WORD_RD_DATA", base + 0x10C, 32, "RO", 0, "Word kaydı 32-bit veri", f"{rout}.word_rd_data")
         B.sreg(P + "WORD_RD_GAP", base + 0x110, 32, "RO", 0, "Word kaydı önceki Gap süresi (clk)", f"{rout}.word_rd_gap")
         B.sreg(P + "WORD_RD_GAP_ERR", base + 0x114, 16, "RO", 0,
-               "Word kaydı Gap gürültü sayısı (okununca pointer +1)", f"{rout}.word_rd_gap_err",
+               "Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1)", f"{rout}.word_rd_gap_err",
                rd=f"{rin}.word_rd_last")
         # Error kaydı
         B.sreg(P + "ERR_RADDR", base + 0x120, edepth_log2, "RW", 0,
@@ -296,11 +300,11 @@ def _build(num_rx=1, has_tx=True, has_txbit=True, has_bitdiag=True, clk_hz=50_00
         ], "Bit Diagnostic RAM başlangıç okuma adresi (yazınca pointer yüklenir)", wr=f"{rin}.bit_raddr_wr")
         B.reg(P + "BIT_RD_PULSE", base + 0x144, [
             f("DUR", 0, 16, "RO", 0, "Bit Pulse süresi (clk)", f"{rout}.bit_rd_pulse"),
-            f("ERR", 16, 16, "RO", 0, "Bit Pulse gürültü sayısı", f"{rout}.bit_rd_pulse_err"),
+            f("ERR", 16, 16, "RO", 0, "Bit Pulse gürültüsü (glitch clk)", f"{rout}.bit_rd_pulse_err"),
         ], "Bit Pulse süresi ve gürültüsü")
         B.reg(P + "BIT_RD_NULL", base + 0x148, [
             f("DUR", 0, 16, "RO", 0, "Bit Null süresi (clk)", f"{rout}.bit_rd_null"),
-            f("ERR", 16, 16, "RO", 0, "Bit Null gürültü sayısı", f"{rout}.bit_rd_null_err"),
+            f("ERR", 16, 16, "RO", 0, "Bit Null gürültüsü (glitch clk)", f"{rout}.bit_rd_null_err"),
         ], "Bit Null süresi ve gürültüsü (okununca pointer +1)", rd=f"{rin}.bit_rd_last")
         if checker:
             B.reg(P + "CHK_CTRL", base + 0x1C0, [

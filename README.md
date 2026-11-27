@@ -15,7 +15,7 @@ okumaları inceleme) çalışır.
    pip install -r requirements.txt
    ```
 2. **IP kütüphanesi (önerilen):** AXIL Studio → **IP Library** → *Kütüphaneler* → bu reponun kökündeki
-   `arinc429.axlib.json` dosyasını açın. Kütüphanede `ARINC429` IP'si (sürüm `2.0.0`, 93 register,
+   `arinc429.axlib.json` dosyasını açın. Kütüphanede `ARINC429` IP'si (sürüm `2.1.0`, 94 register,
    *IP arayüzü* `arinc429`, Wrapper için tam `regspec`) bulunur; *Projeye al* / *Adres haritasına ekle* ile
    projeye yerleştirin. Kütüphane `axil-interface.json` ile aynı klasörde olduğundan Debug Bridge arayüzü
    ek ayar olmadan bulur.
@@ -65,7 +65,7 @@ işaretleyin; **TX BIT** kanalı TX hattını kart üzerindeki kendi alıcısıy
 | Hat polaritesi | TX override HIGH / LOW / NULL → her alıcıda `10` / `01` / `00`: **A/B ters bağlantı**, kopuk kablo, ters alıcı çıkışı; HIGH-Z davranışı (bilgi) |
 | Tek Word *(HS / LS)* | Word Builder (Label/SDI/Data/SSM + IP parity) → TX, TB, RX sayaçları, `LAST_WORD`, Checker |
 | Veri bütünlüğü deseni *(HS / LS)* | 0x00.., 0x7F.., 0x55.., 0x2A.., walking-1 Word'leri; Word RAM sırası ve içeriği birebir |
-| Bit zamanlaması *(HS / LS)* | Bit Diagnostic: hattaki pulse / null / bit süreleri RX kabul aralığında mı; TX'e göre pulse farkı (sürücü + alıcı gecikme asimetrisi), gürültü sayısı |
+| Bit zamanlaması *(HS / LS)* | Bit Diagnostic: hattaki pulse / null / bit süreleri RX kabul aralığında mı; TX'e göre pulse farkı (sürücü + alıcı gecikme asimetrisi), gürültü (glitch clk) |
 | Scheduler periyodu ve gap ölçümü *(HS / LS)* | Timestamp farkları = 32 bit + gap + inter-word gap; RX'in ölçtüğü gap |
 | Art arda gönderim *(HS / LS)* | Minimum gap (4 bit) ile kesintisiz akış: kayıpsız, hatasız, Checker FIFO taşmadan |
 | HS ↔ LS art arda geçiş | 3 tur hız değişimi, her turda alım |
@@ -84,30 +84,39 @@ yoksa Icarus) bağlar; TX RTL içinde RX0'a ve TX BIT'e loopback bağlıdır, Te
 (`tests/test_selftest.py` aynı testleri RTL'de çalıştırır ve A/B ters / ters alıcı / kopuk hat tanılarını doğrular).
 `--sim` (dahili simülatör) ARINC hattını modellemediği için Test menüsü orada kapalıdır.
 
-## Register Haritası (`arinc429_ip`, IP 2.0.0)
+## Register Haritası (`arinc429_ip`, IP 2.1.0)
 
 Register haritasının **tek kaynağı** `a429/ipmap.py`'dir: `vhdl/scripts/gen_axil_spec.py` buradan AXIL Studio
 spec'ini (`.regspec.json` / `.axproj.json` / `arinc429.axlib.json`), AXIL Studio `axilgen` ile `arinc429_axil*.v`
 dosyalarını ve top VHDL port bağlantılarını üretir; uygulama ve `--sim` simülatörü aynı haritayı kullanır.
 
-İlgili küçük alanlar tek 32-bit register'da gruplanmıştır (IP 1.x'teki 128 register → 93):
+İlgili küçük alanlar tek 32-bit register'da gruplanmıştır (IP 1.x'teki 128 register → 93; IP 2.1'de `TX_SCHED_COUNT` ile 94):
 
 | Register | Alanlar |
 |---|---|
 | `TX_CTRL` | `TRANSMITTER_EN[0]`, `MSG_SCHED_EN[1]`, `BUILDER_EN[2]`, `SCHED_EN[3]` |
 | `TX_WORD` | ARINC Word düzeninde: `LABEL_VAL[7:0]`, `SDI[9:8]`, `DATA[28:10]`, `SSM[30:29]`, `PARITY_TYPE[31]` |
 | `TX_EXT_LINE` | `HIGH[0]`, `LOW[1]` (hat override) |
+| `TX_SCHED_COUNT` *(IP 2.1)* | Scheduler'ın göndereceği Word sayısı: `0` = sınırsız (SCHED_EN=0 olana kadar), `N` = tam N Word gönderip durur. Sayı başlangıçta iç kopyaya alınır; yeniden göndermek için `SCHED_EN` 0 → 1 |
+| `TX_STATUS` | `BUSY[0]`, `SCHED_ACTIVE[1]`, `ACT_CFG[3:2]`, **`SCHED_DONE[4]`** *(IP 2.1: `TX_SCHED_COUNT` Word gönderildi, Scheduler durdu)* |
 | `TX_CFG` / `{p}CFG` | `SEL[1:0]`, `APPLY[4]` (darbe) |
 | `TX_CUST_TIMING` / `TX_ACT_TIMING` | `PULSE_DUR[15:0]`, `NULL_DUR[31:16]` |
 | `{p}CUST_PULSE` / `{p}ACT_PULSE` | `MIN[15:0]`, `MAX[31:16]` |
 | `{p}CUST_BIT` / `{p}ACT_BIT` | `MIN[15:0]`, `MAX[31:16]` |
-| `{p}CUST_NOISE` / `{p}ACT_NOISE` | `PULSE_ERR[15:0]`, `NULL_ERR[31:16]` |
-| `{p}CUST_FILTER` / `{p}ACT_FILTER` | `GLITCH_SIZE[15:0]`, `GAP_ERR[31:16]` |
+| `{p}CUST_NOISE` / `{p}ACT_NOISE` | `PULSE_ERR[15:0]`, `NULL_ERR[31:16]` (clk) |
+| `{p}CUST_FILTER` / `{p}ACT_FILTER` | `GLITCH_SIZE[15:0]`, `GAP_ERR[31:16]` (clk) |
 | `{p}STATUS` | `FROZEN[4]`, `WORD_WRAP[5]`, `ERR_WRAP[6]`, `ACT_CFG[9:8]`, **`LINE_HIGH[12]`, `LINE_LOW[13]`, `SYNC_WAIT[14]`** (hat teşhisi) |
 | `{p}ERR_RD_INFO` | `CODE[15:0]`, `ADDR[31:16]` |
 | `{p}BIT_RD_PULSE` / `{p}BIT_RD_NULL` | `DUR[15:0]`, `ERR[31:16]` (`BIT_RD_NULL` okununca pointer +1) |
 
 `{p}` = `TB_` (TX BIT) veya `RX{n}_`. Tam liste: `vhdl/axil/arinc429_axil_regs.md`.
+
+**Glitch penceresi (IP 2.1):** glitch filtresinin pencere sayacı (`glitch_win_cnt`) artık glitch *olayı* değil,
+mevcut kararlı hat durumunda (pulse, null veya gap fazı) hattın glitch'li kaldığı **toplam clk sayısını** tutar:
+kabul edilmeyen her aday durum bittiğinde süresi (1 … `GLITCH_SIZE` clk) eklenir, yeni kararlı durumda sıfırlanır.
+Böylece `PULSE_ERR` / `NULL_ERR` / `GAP_ERR` limitleri (Config sekmesinde referans sürenin %'si olarak clk cinsinden
+hesaplanır) ve Word / Bit Diagnostic kayıtlarındaki `GAP_ERR`, `BIT_RD_PULSE.ERR`, `BIT_RD_NULL.ERR` değerleri clk'tir.
+Toplam sayaç (`glitch_total_cnt`) olay sayısı olarak kalır.
 
 Uygulama içte eski **mantıksal adları** (`TX_LABEL`, `RX0_CUST_MIN_PULSE`, `TB_ERR_RD_CODE` …) kullanır;
 `RegMap.resolve` bunları gruplanmış register'daki alana (IP 2.x) ya da aynı adlı register'a (IP 1.x) çözer.

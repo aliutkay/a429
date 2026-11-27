@@ -143,6 +143,7 @@ package a429_pkg is
         sched_en       : std_logic;
         initial_delay  : std_logic_vector(31 downto 0);
         inter_word_gap : std_logic_vector(31 downto 0);
+        sched_count    : std_logic_vector(31 downto 0);   -- 0: sınırsız, N: N Word sonra dur
         send_cmd       : std_logic;
         ext_data       : std_logic_vector(31 downto 0);
         ext_high       : std_logic;
@@ -157,6 +158,7 @@ package a429_pkg is
         act          : t_tx_cfg;
         busy         : std_logic;
         sched_active : std_logic;
+        sched_done   : std_logic;
         act_cfg      : std_logic_vector(1 downto 0);
         word_cnt     : std_logic_vector(31 downto 0);
     end record;
@@ -214,6 +216,7 @@ package a429_pkg is
         sched_en       => '0',
         initial_delay  => (others => '0'),
         inter_word_gap => std_logic_vector(to_unsigned(1, 32)),
+        sched_count    => (others => '0'),
         send_cmd       => '0',
         ext_data       => (others => '0'),
         ext_high       => '0',

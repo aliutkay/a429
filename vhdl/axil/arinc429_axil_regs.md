@@ -1,6 +1,6 @@
 # arinc429_axil
 
-IP version: `2.0.0`
+IP version: `2.1.0`
 
 ARINC 429 IP (1 RX, TX=Var, TX BIT=Var, 50 MHz)
 
@@ -12,7 +12,7 @@ Decoded address bits: `[14:2]` (block repeats every 0x8000 bytes)
 | Offset | Register | Access | Reset | Description |
 |---|---|---|---|---|
 | 0x00 | IP_ID | RO | 0x41343239 | ARINC 429 IP kimliği ('A429') |
-| 0x04 | IP_VERSION | RO | 0x00020000 | IP sürümü (2.0.0; [23:16] major, [15:8] minor, [7:0] patch) |
+| 0x04 | IP_VERSION | RO | 0x00020100 | IP sürümü (2.1.0; [23:16] major, [15:8] minor, [7:0] patch) |
 | 0x08 | CAPS | RO | 0x00000B01 | Donanım yetenekleri |
 | 0x0C | CAPS_MEM | RO | 0x00030808 | RAM derinlikleri |
 | 0x10 | CLK_HZ | RO | 0x02FAF080 | IP sistem saati (Hz) |
@@ -28,6 +28,7 @@ Decoded address bits: `[14:2]` (block repeats every 0x8000 bytes)
 | 0x410 | TX_EXT_LINE | RW | 0x00000000 | Hat override (TRANSMITTER_EN=0): 10 HIGH, 01 LOW, 00 NULL, 11 HIGH-Z |
 | 0x420 | TX_INITIAL_DELAY | RW | 0x00000000 | Scheduler başlangıç gecikmesi (clk) |
 | 0x424 | TX_INTER_WORD_GAP | RW | 0x00000001 | Scheduler Word arası ekstra bekleme (clk, >=1) |
+| 0x428 | TX_SCHED_COUNT | RW | 0x00000000 | Scheduler gönderilecek Word sayısı (0: sınırsız; N: N Word sonra durur, SCHED_EN 0->1 ile yeniden) |
 | 0x440 | TX_CFG | RW | 0x00000000 | TX config seçimi ve uygulama |
 | 0x444 | TX_CUST_TIMING | RW | 0x00000000 | Custom bit zamanlaması |
 | 0x448 | TX_CUST_GAP_DUR | RW | 0x00000000 | Custom Word Gap süresi (clk) |
@@ -59,7 +60,7 @@ Decoded address bits: `[14:2]` (block repeats every 0x8000 bytes)
 | 0x908 | TB_WORD_RD_TS_LSB | RO | 0x00000000 | Word kaydı Timestamp LSB |
 | 0x90C | TB_WORD_RD_DATA | RO | 0x00000000 | Word kaydı 32-bit veri |
 | 0x910 | TB_WORD_RD_GAP | RO | 0x00000000 | Word kaydı önceki Gap süresi (clk) |
-| 0x914 | TB_WORD_RD_GAP_ERR | RO | 0x00000000 | Word kaydı Gap gürültü sayısı (okununca pointer +1) |
+| 0x914 | TB_WORD_RD_GAP_ERR | RO | 0x00000000 | Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1) |
 | 0x920 | TB_ERR_RADDR | RW | 0x00000000 | Error RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
 | 0x924 | TB_ERR_RD_TS_MSB | RO | 0x00000000 | Error kaydı Timestamp MSB |
 | 0x928 | TB_ERR_RD_TS_LSB | RO | 0x00000000 | Error kaydı Timestamp LSB |
@@ -95,7 +96,7 @@ Decoded address bits: `[14:2]` (block repeats every 0x8000 bytes)
 | 0x4108 | RX0_WORD_RD_TS_LSB | RO | 0x00000000 | Word kaydı Timestamp LSB |
 | 0x410C | RX0_WORD_RD_DATA | RO | 0x00000000 | Word kaydı 32-bit veri |
 | 0x4110 | RX0_WORD_RD_GAP | RO | 0x00000000 | Word kaydı önceki Gap süresi (clk) |
-| 0x4114 | RX0_WORD_RD_GAP_ERR | RO | 0x00000000 | Word kaydı Gap gürültü sayısı (okununca pointer +1) |
+| 0x4114 | RX0_WORD_RD_GAP_ERR | RO | 0x00000000 | Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1) |
 | 0x4120 | RX0_ERR_RADDR | RW | 0x00000000 | Error RAM başlangıç okuma adresi (yazınca pointer yüklenir) |
 | 0x4124 | RX0_ERR_RD_TS_MSB | RO | 0x00000000 | Error kaydı Timestamp MSB |
 | 0x4128 | RX0_ERR_RD_TS_LSB | RO | 0x00000000 | Error kaydı Timestamp LSB |
@@ -115,11 +116,11 @@ ARINC 429 IP kimliği ('A429')
 
 ### 0x04 IP_VERSION
 
-IP sürümü (2.0.0; [23:16] major, [15:8] minor, [7:0] patch)
+IP sürümü (2.1.0; [23:16] major, [15:8] minor, [7:0] patch)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:0] | IP_VERSION | CONST | 0x20000 | `—` | IP sürümü (2.0.0; [23:16] major, [15:8] minor, [7:0] patch) |
+| [31:0] | IP_VERSION | CONST | 0x20100 | `—` | IP sürümü (2.1.0; [23:16] major, [15:8] minor, [7:0] patch) |
 
 ### 0x08 CAPS
 
@@ -261,6 +262,14 @@ Scheduler Word arası ekstra bekleme (clk, >=1)
 |---|---|---|---|---|---|
 | [31:0] | TX_INTER_WORD_GAP | RW | 0x1 | `o_tx_inter_word_gap` | Scheduler Word arası ekstra bekleme (clk, >=1) |
 
+### 0x428 TX_SCHED_COUNT
+
+Scheduler gönderilecek Word sayısı (0: sınırsız; N: N Word sonra durur, SCHED_EN 0->1 ile yeniden)
+
+| Bits | Field | Kind | Reset | Port | Description |
+|---|---|---|---|---|---|
+| [31:0] | TX_SCHED_COUNT | RW | 0x0 | `o_tx_sched_count` | Scheduler gönderilecek Word sayısı (0: sınırsız; N: N Word sonra durur, SCHED_EN 0->1 ile yeniden) |
+
 ### 0x440 TX_CFG
 
 TX config seçimi ve uygulama
@@ -326,6 +335,7 @@ TX durum register'ı
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
+| [4] | SCHED_DONE | RO | 0 | `i_tx_status_sched_done` | Scheduler TX_SCHED_COUNT Word'ü gönderip durdu |
 | [3:2] | ACT_CFG | RO | 0 | `i_tx_status_act_cfg` | Aktif TX config modu (0:HS, 1:LS, 2:Custom) |
 | [1] | SCHED_ACTIVE | RO | 0 | `i_tx_status_sched_active` | Scheduler aktif |
 | [0] | BUSY | RO | 0 | `i_tx_status_busy` | TX gönderim yapıyor |
@@ -395,8 +405,8 @@ Custom pulse/null gürültü (glitch) limitleri
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:16] | NULL_ERR | RW | 0x0 | `o_tb_cust_noise_null_err` | Custom Max Null Glitch Error |
-| [15:0] | PULSE_ERR | RW | 0x0 | `o_tb_cust_noise_pulse_err` | Custom Max Pulse Glitch Error |
+| [31:16] | NULL_ERR | RW | 0x0 | `o_tb_cust_noise_null_err` | Custom Max Null Glitch Error (pencerede glitch clk) |
+| [15:0] | PULSE_ERR | RW | 0x0 | `o_tb_cust_noise_pulse_err` | Custom Max Pulse Glitch Error (pencerede glitch clk) |
 
 ### 0x84C TB_CUST_FILTER
 
@@ -404,7 +414,7 @@ Custom glitch filtresi ve gap gürültü limiti
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:16] | GAP_ERR | RW | 0x0 | `o_tb_cust_filter_gap_err` | Custom Max Gap Glitch Error |
+| [31:16] | GAP_ERR | RW | 0x0 | `o_tb_cust_filter_gap_err` | Custom Max Gap Glitch Error (pencerede glitch clk) |
 | [15:0] | GLITCH_SIZE | RW | 0x0 | `o_tb_cust_filter_glitch_size` | Custom Glitch Filter boyu (clk) |
 
 ### 0x850 TB_CUST_PARITY
@@ -439,8 +449,8 @@ Aktif pulse/null gürültü (glitch) limitleri
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:16] | NULL_ERR | RO | 0 | `i_tb_act_noise_null_err` | Aktif Max Null Glitch Error |
-| [15:0] | PULSE_ERR | RO | 0 | `i_tb_act_noise_pulse_err` | Aktif Max Pulse Glitch Error |
+| [31:16] | NULL_ERR | RO | 0 | `i_tb_act_noise_null_err` | Aktif Max Null Glitch Error (pencerede glitch clk) |
+| [15:0] | PULSE_ERR | RO | 0 | `i_tb_act_noise_pulse_err` | Aktif Max Pulse Glitch Error (pencerede glitch clk) |
 
 ### 0x86C TB_ACT_FILTER
 
@@ -448,7 +458,7 @@ Aktif glitch filtresi ve gap gürültü limiti
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:16] | GAP_ERR | RO | 0 | `i_tb_act_filter_gap_err` | Aktif Max Gap Glitch Error |
+| [31:16] | GAP_ERR | RO | 0 | `i_tb_act_filter_gap_err` | Aktif Max Gap Glitch Error (pencerede glitch clk) |
 | [15:0] | GLITCH_SIZE | RO | 0 | `i_tb_act_filter_glitch_size` | Aktif Glitch Filter boyu (clk) |
 
 ### 0x870 TB_ACT_PARITY
@@ -535,11 +545,11 @@ Word kaydı önceki Gap süresi (clk)
 
 ### 0x914 TB_WORD_RD_GAP_ERR
 
-Word kaydı Gap gürültü sayısı (okununca pointer +1)
+Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [15:0] | TB_WORD_RD_GAP_ERR | RO | 0 | `i_tb_word_rd_gap_err` | Word kaydı Gap gürültü sayısı (okununca pointer +1) |
+| [15:0] | TB_WORD_RD_GAP_ERR | RO | 0 | `i_tb_word_rd_gap_err` | Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1) |
 
 Strobes: `o_tb_word_rd_gap_err_rd`
 
@@ -605,7 +615,7 @@ Bit Pulse süresi ve gürültüsü
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:16] | ERR | RO | 0 | `i_tb_bit_rd_pulse_err` | Bit Pulse gürültü sayısı |
+| [31:16] | ERR | RO | 0 | `i_tb_bit_rd_pulse_err` | Bit Pulse gürültüsü (glitch clk) |
 | [15:0] | DUR | RO | 0 | `i_tb_bit_rd_pulse_dur` | Bit Pulse süresi (clk) |
 
 ### 0x948 TB_BIT_RD_NULL
@@ -614,7 +624,7 @@ Bit Null süresi ve gürültüsü (okununca pointer +1)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:16] | ERR | RO | 0 | `i_tb_bit_rd_null_err` | Bit Null gürültü sayısı |
+| [31:16] | ERR | RO | 0 | `i_tb_bit_rd_null_err` | Bit Null gürültüsü (glitch clk) |
 | [15:0] | DUR | RO | 0 | `i_tb_bit_rd_null_dur` | Bit Null süresi (clk) |
 
 Strobes: `o_tb_bit_rd_null_rd`
@@ -718,8 +728,8 @@ Custom pulse/null gürültü (glitch) limitleri
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:16] | NULL_ERR | RW | 0x0 | `o_rx0_cust_noise_null_err` | Custom Max Null Glitch Error |
-| [15:0] | PULSE_ERR | RW | 0x0 | `o_rx0_cust_noise_pulse_err` | Custom Max Pulse Glitch Error |
+| [31:16] | NULL_ERR | RW | 0x0 | `o_rx0_cust_noise_null_err` | Custom Max Null Glitch Error (pencerede glitch clk) |
+| [15:0] | PULSE_ERR | RW | 0x0 | `o_rx0_cust_noise_pulse_err` | Custom Max Pulse Glitch Error (pencerede glitch clk) |
 
 ### 0x404C RX0_CUST_FILTER
 
@@ -727,7 +737,7 @@ Custom glitch filtresi ve gap gürültü limiti
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:16] | GAP_ERR | RW | 0x0 | `o_rx0_cust_filter_gap_err` | Custom Max Gap Glitch Error |
+| [31:16] | GAP_ERR | RW | 0x0 | `o_rx0_cust_filter_gap_err` | Custom Max Gap Glitch Error (pencerede glitch clk) |
 | [15:0] | GLITCH_SIZE | RW | 0x0 | `o_rx0_cust_filter_glitch_size` | Custom Glitch Filter boyu (clk) |
 
 ### 0x4050 RX0_CUST_PARITY
@@ -762,8 +772,8 @@ Aktif pulse/null gürültü (glitch) limitleri
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:16] | NULL_ERR | RO | 0 | `i_rx0_act_noise_null_err` | Aktif Max Null Glitch Error |
-| [15:0] | PULSE_ERR | RO | 0 | `i_rx0_act_noise_pulse_err` | Aktif Max Pulse Glitch Error |
+| [31:16] | NULL_ERR | RO | 0 | `i_rx0_act_noise_null_err` | Aktif Max Null Glitch Error (pencerede glitch clk) |
+| [15:0] | PULSE_ERR | RO | 0 | `i_rx0_act_noise_pulse_err` | Aktif Max Pulse Glitch Error (pencerede glitch clk) |
 
 ### 0x406C RX0_ACT_FILTER
 
@@ -771,7 +781,7 @@ Aktif glitch filtresi ve gap gürültü limiti
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:16] | GAP_ERR | RO | 0 | `i_rx0_act_filter_gap_err` | Aktif Max Gap Glitch Error |
+| [31:16] | GAP_ERR | RO | 0 | `i_rx0_act_filter_gap_err` | Aktif Max Gap Glitch Error (pencerede glitch clk) |
 | [15:0] | GLITCH_SIZE | RO | 0 | `i_rx0_act_filter_glitch_size` | Aktif Glitch Filter boyu (clk) |
 
 ### 0x4070 RX0_ACT_PARITY
@@ -858,11 +868,11 @@ Word kaydı önceki Gap süresi (clk)
 
 ### 0x4114 RX0_WORD_RD_GAP_ERR
 
-Word kaydı Gap gürültü sayısı (okununca pointer +1)
+Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [15:0] | RX0_WORD_RD_GAP_ERR | RO | 0 | `i_rx0_word_rd_gap_err` | Word kaydı Gap gürültü sayısı (okununca pointer +1) |
+| [15:0] | RX0_WORD_RD_GAP_ERR | RO | 0 | `i_rx0_word_rd_gap_err` | Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1) |
 
 Strobes: `o_rx0_word_rd_gap_err_rd`
 
@@ -928,7 +938,7 @@ Bit Pulse süresi ve gürültüsü
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:16] | ERR | RO | 0 | `i_rx0_bit_rd_pulse_err` | Bit Pulse gürültü sayısı |
+| [31:16] | ERR | RO | 0 | `i_rx0_bit_rd_pulse_err` | Bit Pulse gürültüsü (glitch clk) |
 | [15:0] | DUR | RO | 0 | `i_rx0_bit_rd_pulse_dur` | Bit Pulse süresi (clk) |
 
 ### 0x4148 RX0_BIT_RD_NULL
@@ -937,7 +947,7 @@ Bit Null süresi ve gürültüsü (okununca pointer +1)
 
 | Bits | Field | Kind | Reset | Port | Description |
 |---|---|---|---|---|---|
-| [31:16] | ERR | RO | 0 | `i_rx0_bit_rd_null_err` | Bit Null gürültü sayısı |
+| [31:16] | ERR | RO | 0 | `i_rx0_bit_rd_null_err` | Bit Null gürültüsü (glitch clk) |
 | [15:0] | DUR | RO | 0 | `i_rx0_bit_rd_null_dur` | Bit Null süresi (clk) |
 
 Strobes: `o_rx0_bit_rd_null_rd`

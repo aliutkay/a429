@@ -8,7 +8,7 @@
       "ip": {
         "name": "ARINC429",
         "desc": "ARINC 429 IP (1 RX, TX=Var, TX BIT=Var, 50 MHz)",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "panel": "arinc429",
         "registers": [
           {
@@ -31,14 +31,14 @@
             "name": "IP_VERSION",
             "offset": "0x00000004",
             "access": "RO",
-            "reset": "0x00020000",
-            "desc": "IP sürümü (2.0.0; [23:16] major, [15:8] minor, [7:0] patch)",
+            "reset": "0x00020100",
+            "desc": "IP sürümü (2.1.0; [23:16] major, [15:8] minor, [7:0] patch)",
             "fields": [
               {
                 "name": "IP_VERSION",
                 "lsb": 0,
                 "width": 32,
-                "desc": "IP sürümü (2.0.0; [23:16] major, [15:8] minor, [7:0] patch)",
+                "desc": "IP sürümü (2.1.0; [23:16] major, [15:8] minor, [7:0] patch)",
                 "kind": "CONST"
               }
             ]
@@ -410,6 +410,22 @@
             ]
           },
           {
+            "name": "TX_SCHED_COUNT",
+            "offset": "0x00000428",
+            "access": "RW",
+            "reset": "0x00000000",
+            "desc": "Scheduler gönderilecek Word sayısı (0: sınırsız; N: N Word sonra durur, SCHED_EN 0->1 ile yeniden)",
+            "fields": [
+              {
+                "name": "TX_SCHED_COUNT",
+                "lsb": 0,
+                "width": 32,
+                "desc": "Scheduler gönderilecek Word sayısı (0: sınırsız; N: N Word sonra durur, SCHED_EN 0->1 ile yeniden)",
+                "kind": "RW"
+              }
+            ]
+          },
+          {
             "name": "TX_CFG",
             "offset": "0x00000440",
             "access": "RW",
@@ -568,6 +584,13 @@
                 "lsb": 2,
                 "width": 2,
                 "desc": "Aktif TX config modu (0:HS, 1:LS, 2:Custom)",
+                "kind": "RO"
+              },
+              {
+                "name": "SCHED_DONE",
+                "lsb": 4,
+                "width": 1,
+                "desc": "Scheduler TX_SCHED_COUNT Word'ü gönderip durdu",
                 "kind": "RO"
               }
             ]
@@ -756,14 +779,14 @@
                 "name": "PULSE_ERR",
                 "lsb": 0,
                 "width": 16,
-                "desc": "Custom Max Pulse Glitch Error",
+                "desc": "Custom Max Pulse Glitch Error (pencerede glitch clk)",
                 "kind": "RW"
               },
               {
                 "name": "NULL_ERR",
                 "lsb": 16,
                 "width": 16,
-                "desc": "Custom Max Null Glitch Error",
+                "desc": "Custom Max Null Glitch Error (pencerede glitch clk)",
                 "kind": "RW"
               }
             ]
@@ -786,7 +809,7 @@
                 "name": "GAP_ERR",
                 "lsb": 16,
                 "width": 16,
-                "desc": "Custom Max Gap Glitch Error",
+                "desc": "Custom Max Gap Glitch Error (pencerede glitch clk)",
                 "kind": "RW"
               }
             ]
@@ -864,14 +887,14 @@
                 "name": "PULSE_ERR",
                 "lsb": 0,
                 "width": 16,
-                "desc": "Aktif Max Pulse Glitch Error",
+                "desc": "Aktif Max Pulse Glitch Error (pencerede glitch clk)",
                 "kind": "RO"
               },
               {
                 "name": "NULL_ERR",
                 "lsb": 16,
                 "width": 16,
-                "desc": "Aktif Max Null Glitch Error",
+                "desc": "Aktif Max Null Glitch Error (pencerede glitch clk)",
                 "kind": "RO"
               }
             ]
@@ -894,7 +917,7 @@
                 "name": "GAP_ERR",
                 "lsb": 16,
                 "width": 16,
-                "desc": "Aktif Max Gap Glitch Error",
+                "desc": "Aktif Max Gap Glitch Error (pencerede glitch clk)",
                 "kind": "RO"
               }
             ]
@@ -1064,13 +1087,13 @@
             "offset": "0x00000914",
             "access": "RO",
             "reset": "0x00000000",
-            "desc": "Word kaydı Gap gürültü sayısı (okununca pointer +1)",
+            "desc": "Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1)",
             "fields": [
               {
                 "name": "TB_WORD_RD_GAP_ERR",
                 "lsb": 0,
                 "width": 16,
-                "desc": "Word kaydı Gap gürültü sayısı (okununca pointer +1)",
+                "desc": "Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1)",
                 "kind": "RO"
               }
             ]
@@ -1203,7 +1226,7 @@
                 "name": "ERR",
                 "lsb": 16,
                 "width": 16,
-                "desc": "Bit Pulse gürültü sayısı",
+                "desc": "Bit Pulse gürültüsü (glitch clk)",
                 "kind": "RO"
               }
             ]
@@ -1226,7 +1249,7 @@
                 "name": "ERR",
                 "lsb": 16,
                 "width": 16,
-                "desc": "Bit Null gürültü sayısı",
+                "desc": "Bit Null gürültüsü (glitch clk)",
                 "kind": "RO"
               }
             ]
@@ -1493,14 +1516,14 @@
                 "name": "PULSE_ERR",
                 "lsb": 0,
                 "width": 16,
-                "desc": "Custom Max Pulse Glitch Error",
+                "desc": "Custom Max Pulse Glitch Error (pencerede glitch clk)",
                 "kind": "RW"
               },
               {
                 "name": "NULL_ERR",
                 "lsb": 16,
                 "width": 16,
-                "desc": "Custom Max Null Glitch Error",
+                "desc": "Custom Max Null Glitch Error (pencerede glitch clk)",
                 "kind": "RW"
               }
             ]
@@ -1523,7 +1546,7 @@
                 "name": "GAP_ERR",
                 "lsb": 16,
                 "width": 16,
-                "desc": "Custom Max Gap Glitch Error",
+                "desc": "Custom Max Gap Glitch Error (pencerede glitch clk)",
                 "kind": "RW"
               }
             ]
@@ -1601,14 +1624,14 @@
                 "name": "PULSE_ERR",
                 "lsb": 0,
                 "width": 16,
-                "desc": "Aktif Max Pulse Glitch Error",
+                "desc": "Aktif Max Pulse Glitch Error (pencerede glitch clk)",
                 "kind": "RO"
               },
               {
                 "name": "NULL_ERR",
                 "lsb": 16,
                 "width": 16,
-                "desc": "Aktif Max Null Glitch Error",
+                "desc": "Aktif Max Null Glitch Error (pencerede glitch clk)",
                 "kind": "RO"
               }
             ]
@@ -1631,7 +1654,7 @@
                 "name": "GAP_ERR",
                 "lsb": 16,
                 "width": 16,
-                "desc": "Aktif Max Gap Glitch Error",
+                "desc": "Aktif Max Gap Glitch Error (pencerede glitch clk)",
                 "kind": "RO"
               }
             ]
@@ -1801,13 +1824,13 @@
             "offset": "0x00004114",
             "access": "RO",
             "reset": "0x00000000",
-            "desc": "Word kaydı Gap gürültü sayısı (okununca pointer +1)",
+            "desc": "Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1)",
             "fields": [
               {
                 "name": "RX0_WORD_RD_GAP_ERR",
                 "lsb": 0,
                 "width": 16,
-                "desc": "Word kaydı Gap gürültü sayısı (okununca pointer +1)",
+                "desc": "Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1)",
                 "kind": "RO"
               }
             ]
@@ -1940,7 +1963,7 @@
                 "name": "ERR",
                 "lsb": 16,
                 "width": 16,
-                "desc": "Bit Pulse gürültü sayısı",
+                "desc": "Bit Pulse gürültüsü (glitch clk)",
                 "kind": "RO"
               }
             ]
@@ -1963,21 +1986,21 @@
                 "name": "ERR",
                 "lsb": 16,
                 "width": 16,
-                "desc": "Bit Null gürültü sayısı",
+                "desc": "Bit Null gürültüsü (glitch clk)",
                 "kind": "RO"
               }
             ]
           }
         ]
       },
-      "updated": "2026-11-26",
+      "updated": "2026-11-27",
       "regspec": {
         "format": "axil-regspec",
         "version": 1,
         "module": "arinc429_axil",
         "desc": "ARINC 429 IP (1 RX, TX=Var, TX BIT=Var, 50 MHz)",
         "packed": true,
-        "ip_version": "2.0.0",
+        "ip_version": "2.1.0",
         "panel": "arinc429",
         "registers": [
           {
@@ -1998,15 +2021,15 @@
           {
             "name": "IP_VERSION",
             "offset": "0x0004",
-            "desc": "IP sürümü (2.0.0; [23:16] major, [15:8] minor, [7:0] patch)",
+            "desc": "IP sürümü (2.1.0; [23:16] major, [15:8] minor, [7:0] patch)",
             "fields": [
               {
                 "name": "IP_VERSION",
                 "lsb": 0,
                 "width": 32,
                 "kind": "CONST",
-                "reset": "0x20000",
-                "desc": "IP sürümü (2.0.0; [23:16] major, [15:8] minor, [7:0] patch)"
+                "reset": "0x20100",
+                "desc": "IP sürümü (2.1.0; [23:16] major, [15:8] minor, [7:0] patch)"
               }
             ]
           },
@@ -2381,6 +2404,21 @@
             ]
           },
           {
+            "name": "TX_SCHED_COUNT",
+            "offset": "0x0428",
+            "desc": "Scheduler gönderilecek Word sayısı (0: sınırsız; N: N Word sonra durur, SCHED_EN 0->1 ile yeniden)",
+            "fields": [
+              {
+                "name": "TX_SCHED_COUNT",
+                "lsb": 0,
+                "width": 32,
+                "kind": "RW",
+                "reset": "0x0",
+                "desc": "Scheduler gönderilecek Word sayısı (0: sınırsız; N: N Word sonra durur, SCHED_EN 0->1 ile yeniden)"
+              }
+            ]
+          },
+          {
             "name": "TX_CFG",
             "offset": "0x0440",
             "desc": "TX config seçimi ve uygulama",
@@ -2537,6 +2575,14 @@
                 "kind": "RO",
                 "reset": "0x0",
                 "desc": "Aktif TX config modu (0:HS, 1:LS, 2:Custom)"
+              },
+              {
+                "name": "SCHED_DONE",
+                "lsb": 4,
+                "width": 1,
+                "kind": "RO",
+                "reset": "0x0",
+                "desc": "Scheduler TX_SCHED_COUNT Word'ü gönderip durdu"
               }
             ]
           },
@@ -2729,7 +2775,7 @@
                 "width": 16,
                 "kind": "RW",
                 "reset": "0x0",
-                "desc": "Custom Max Pulse Glitch Error"
+                "desc": "Custom Max Pulse Glitch Error (pencerede glitch clk)"
               },
               {
                 "name": "NULL_ERR",
@@ -2737,7 +2783,7 @@
                 "width": 16,
                 "kind": "RW",
                 "reset": "0x0",
-                "desc": "Custom Max Null Glitch Error"
+                "desc": "Custom Max Null Glitch Error (pencerede glitch clk)"
               }
             ]
           },
@@ -2760,7 +2806,7 @@
                 "width": 16,
                 "kind": "RW",
                 "reset": "0x0",
-                "desc": "Custom Max Gap Glitch Error"
+                "desc": "Custom Max Gap Glitch Error (pencerede glitch clk)"
               }
             ]
           },
@@ -2836,7 +2882,7 @@
                 "width": 16,
                 "kind": "RO",
                 "reset": "0x0",
-                "desc": "Aktif Max Pulse Glitch Error"
+                "desc": "Aktif Max Pulse Glitch Error (pencerede glitch clk)"
               },
               {
                 "name": "NULL_ERR",
@@ -2844,7 +2890,7 @@
                 "width": 16,
                 "kind": "RO",
                 "reset": "0x0",
-                "desc": "Aktif Max Null Glitch Error"
+                "desc": "Aktif Max Null Glitch Error (pencerede glitch clk)"
               }
             ]
           },
@@ -2867,7 +2913,7 @@
                 "width": 16,
                 "kind": "RO",
                 "reset": "0x0",
-                "desc": "Aktif Max Gap Glitch Error"
+                "desc": "Aktif Max Gap Glitch Error (pencerede glitch clk)"
               }
             ]
           },
@@ -3025,7 +3071,7 @@
           {
             "name": "TB_WORD_RD_GAP_ERR",
             "offset": "0x0914",
-            "desc": "Word kaydı Gap gürültü sayısı (okununca pointer +1)",
+            "desc": "Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1)",
             "fields": [
               {
                 "name": "TB_WORD_RD_GAP_ERR",
@@ -3033,7 +3079,7 @@
                 "width": 16,
                 "kind": "RO",
                 "reset": "0x0",
-                "desc": "Word kaydı Gap gürültü sayısı (okununca pointer +1)"
+                "desc": "Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1)"
               }
             ],
             "rd_strobe": true
@@ -3166,7 +3212,7 @@
                 "width": 16,
                 "kind": "RO",
                 "reset": "0x0",
-                "desc": "Bit Pulse gürültü sayısı"
+                "desc": "Bit Pulse gürültüsü (glitch clk)"
               }
             ]
           },
@@ -3189,7 +3235,7 @@
                 "width": 16,
                 "kind": "RO",
                 "reset": "0x0",
-                "desc": "Bit Null gürültü sayısı"
+                "desc": "Bit Null gürültüsü (glitch clk)"
               }
             ],
             "rd_strobe": true
@@ -3459,7 +3505,7 @@
                 "width": 16,
                 "kind": "RW",
                 "reset": "0x0",
-                "desc": "Custom Max Pulse Glitch Error"
+                "desc": "Custom Max Pulse Glitch Error (pencerede glitch clk)"
               },
               {
                 "name": "NULL_ERR",
@@ -3467,7 +3513,7 @@
                 "width": 16,
                 "kind": "RW",
                 "reset": "0x0",
-                "desc": "Custom Max Null Glitch Error"
+                "desc": "Custom Max Null Glitch Error (pencerede glitch clk)"
               }
             ]
           },
@@ -3490,7 +3536,7 @@
                 "width": 16,
                 "kind": "RW",
                 "reset": "0x0",
-                "desc": "Custom Max Gap Glitch Error"
+                "desc": "Custom Max Gap Glitch Error (pencerede glitch clk)"
               }
             ]
           },
@@ -3566,7 +3612,7 @@
                 "width": 16,
                 "kind": "RO",
                 "reset": "0x0",
-                "desc": "Aktif Max Pulse Glitch Error"
+                "desc": "Aktif Max Pulse Glitch Error (pencerede glitch clk)"
               },
               {
                 "name": "NULL_ERR",
@@ -3574,7 +3620,7 @@
                 "width": 16,
                 "kind": "RO",
                 "reset": "0x0",
-                "desc": "Aktif Max Null Glitch Error"
+                "desc": "Aktif Max Null Glitch Error (pencerede glitch clk)"
               }
             ]
           },
@@ -3597,7 +3643,7 @@
                 "width": 16,
                 "kind": "RO",
                 "reset": "0x0",
-                "desc": "Aktif Max Gap Glitch Error"
+                "desc": "Aktif Max Gap Glitch Error (pencerede glitch clk)"
               }
             ]
           },
@@ -3755,7 +3801,7 @@
           {
             "name": "RX0_WORD_RD_GAP_ERR",
             "offset": "0x4114",
-            "desc": "Word kaydı Gap gürültü sayısı (okununca pointer +1)",
+            "desc": "Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1)",
             "fields": [
               {
                 "name": "RX0_WORD_RD_GAP_ERR",
@@ -3763,7 +3809,7 @@
                 "width": 16,
                 "kind": "RO",
                 "reset": "0x0",
-                "desc": "Word kaydı Gap gürültü sayısı (okununca pointer +1)"
+                "desc": "Word kaydı Gap gürültüsü, glitch clk (okununca pointer +1)"
               }
             ],
             "rd_strobe": true
@@ -3896,7 +3942,7 @@
                 "width": 16,
                 "kind": "RO",
                 "reset": "0x0",
-                "desc": "Bit Pulse gürültü sayısı"
+                "desc": "Bit Pulse gürültüsü (glitch clk)"
               }
             ]
           },
@@ -3919,7 +3965,7 @@
                 "width": 16,
                 "kind": "RO",
                 "reset": "0x0",
-                "desc": "Bit Null gürültü sayısı"
+                "desc": "Bit Null gürültüsü (glitch clk)"
               }
             ],
             "rd_strobe": true

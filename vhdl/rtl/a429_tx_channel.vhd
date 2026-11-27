@@ -48,6 +48,7 @@ architecture rtl of a429_tx_channel is
     signal act_mode      : std_logic_vector(1 downto 0);
     signal busy_i        : std_logic;
     signal sched_act_i   : std_logic;
+    signal sched_done_i  : std_logic;
     signal word_start_i  : std_logic;
     signal word_done_i   : std_logic;
     signal word_tx_i     : std_logic_vector(31 downto 0);
@@ -84,6 +85,7 @@ begin
             sched_en       => reg_in.sched_en,
             initial_delay  => reg_in.initial_delay,
             inter_word_gap => reg_in.inter_word_gap,
+            sched_count    => reg_in.sched_count,
             send_cmd       => reg_in.send_cmd,
             ext_data       => reg_in.ext_data,
             ext_high       => reg_in.ext_high,
@@ -93,6 +95,7 @@ begin
             tx_slp         => tx_slp,
             tx_busy        => busy_i,
             tx_sched_act   => sched_act_i,
+            tx_sched_done  => sched_done_i,
             tx_word_tx     => word_tx_i
         );
 
@@ -127,6 +130,7 @@ begin
     reg_out.act          <= act_cfg;
     reg_out.busy         <= busy_i;
     reg_out.sched_active <= sched_act_i;
+    reg_out.sched_done   <= sched_done_i;
     reg_out.act_cfg      <= act_mode;
     reg_out.word_cnt     <= std_logic_vector(r_word_cnt);
 

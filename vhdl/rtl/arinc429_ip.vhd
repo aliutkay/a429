@@ -79,6 +79,7 @@ architecture rtl of arinc429_ip is
             o_tx_ext_line_low              : out std_logic;
             o_tx_initial_delay             : out std_logic_vector(31 downto 0);
             o_tx_inter_word_gap            : out std_logic_vector(31 downto 0);
+            o_tx_sched_count               : out std_logic_vector(31 downto 0);
             o_tx_cfg_sel                   : out std_logic_vector(1 downto 0);
             o_tx_cfg_apply                 : out std_logic;
             o_tx_cust_timing_pulse_dur     : out std_logic_vector(15 downto 0);
@@ -92,6 +93,7 @@ architecture rtl of arinc429_ip is
             i_tx_status_busy               : in  std_logic;
             i_tx_status_sched_active       : in  std_logic;
             i_tx_status_act_cfg            : in  std_logic_vector(1 downto 0);
+            i_tx_status_sched_done         : in  std_logic;
             i_tx_word_cnt                  : in  std_logic_vector(31 downto 0);
             o_tb_ctrl_enable               : out std_logic;
             o_tb_ctrl_freeze               : out std_logic;
@@ -283,6 +285,7 @@ begin
             o_tx_ext_line_low              => tx_reg_in.ext_low,
             o_tx_initial_delay             => tx_reg_in.initial_delay,
             o_tx_inter_word_gap            => tx_reg_in.inter_word_gap,
+            o_tx_sched_count               => tx_reg_in.sched_count,
             o_tx_cfg_sel                   => tx_reg_in.cfg_sel,
             o_tx_cfg_apply                 => tx_reg_in.cfg_apply,
             o_tx_cust_timing_pulse_dur     => tx_reg_in.cust.pulse_dur,
@@ -296,6 +299,7 @@ begin
             i_tx_status_busy               => tx_reg_out.busy,
             i_tx_status_sched_active       => tx_reg_out.sched_active,
             i_tx_status_act_cfg            => tx_reg_out.act_cfg,
+            i_tx_status_sched_done         => tx_reg_out.sched_done,
             i_tx_word_cnt                  => tx_reg_out.word_cnt,
             o_tb_ctrl_enable               => tb_reg_in.ctrl_enable,
             o_tb_ctrl_freeze               => tb_reg_in.ctrl_freeze,

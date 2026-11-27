@@ -58,6 +58,7 @@ entity a429_tx_core is
         sched_en       : in  std_logic;
         initial_delay  : in  std_logic_vector(31 downto 0);
         inter_word_gap : in  std_logic_vector(31 downto 0);
+        sched_count    : in  std_logic_vector(31 downto 0) := (others => '0');  -- 0: sınırsız
         send_cmd       : in  std_logic;
         ext_data       : in  std_logic_vector(31 downto 0);
         ext_high       : in  std_logic;
@@ -69,6 +70,7 @@ entity a429_tx_core is
         tx_slp         : out std_logic;
         tx_busy        : out std_logic;
         tx_sched_act   : out std_logic;
+        tx_sched_done  : out std_logic;
         tx_word_tx     : out std_logic_vector(31 downto 0)
     );
 end entity a429_tx_core;
@@ -113,8 +115,10 @@ begin
             tx_busy        => busy_i,
             initial_delay  => initial_delay,
             inter_word_gap => inter_word_gap,
+            sched_count    => sched_count,
             sched_trig     => sched_trig,
-            sched_active   => tx_sched_act
+            sched_active   => tx_sched_act,
+            sched_done     => tx_sched_done
         );
 
     -- MUX 2: Gönderim tetik seçimi (Message Scheduler vs SEND_CMD)

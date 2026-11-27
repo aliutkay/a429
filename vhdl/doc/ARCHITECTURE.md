@@ -188,7 +188,7 @@ Sentezlenmemiş modüle veya tanımsız Register'a erişim: `pslverr = 1`, okuma
 
 ### 5.4 Kanal sayfası (RX0–RX15 ve TX BIT ortak)
 
-> **Güncel harita (IP 2.0.0):** AXIL Studio register'larında ilgili 16-bit alanlar tek register'da gruplanmıştır
+> **Güncel harita (IP 2.1.0):** AXIL Studio register'larında ilgili 16-bit alanlar tek register'da gruplanmıştır
 > (`CUST_PULSE [MIN|MAX]`, `ERR_RD_INFO [CODE|ADDR]`, `BIT_RD_PULSE/NULL [DUR|ERR]` …) ve `STATUS`'a
 > `LINE_HIGH/LINE_LOW/SYNC_WAIT` hat teşhis bitleri eklenmiştir. Kesin offset/bit düzeni için
 > `vhdl/axil/arinc429_axil_regs.md` ve tek kaynak `a429/ipmap.py` geçerlidir; aşağıdaki tablo mimari açıklamadır.

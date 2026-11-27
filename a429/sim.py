@@ -230,6 +230,8 @@ class SimClient:
                 self._sched_t0 = time.monotonic()
             elif was_on and not now_on and self._sched_t0 is not None:
                 sent = max(1, min(10000, round((time.monotonic() - self._sched_t0) * 1000)))
+                if "TX_SCHED_COUNT" in self._off_by_name and self._get("TX_SCHED_COUNT"):
+                    sent = min(sent, self._get("TX_SCHED_COUNT"))     # 0: sınırsız, N: en fazla N Word
                 self._sched_t0 = None
                 self._set("TX_WORD_CNT", self._get("TX_WORD_CNT") + sent)
                 if self._get("TB_CHK_CTRL") & 1:

@@ -27,6 +27,7 @@ arinc429_axil_pk u_arinc429_axil_pk (
     .o_tx_ext_line_low   (),  // output
     .o_tx_initial_delay  (),  // output [31:0]
     .o_tx_inter_word_gap (),  // output [31:0]
+    .o_tx_sched_count    (),  // output [31:0]
     .o_tx_cfg_sel        (),  // output [1:0]
     .o_tx_cfg_apply      (),  // output
     .o_tx_cust_timing_pulse_dur(),  // output [15:0]
@@ -40,6 +41,7 @@ arinc429_axil_pk u_arinc429_axil_pk (
     .i_tx_status_busy    (),  // input
     .i_tx_status_sched_active(),  // input
     .i_tx_status_act_cfg (),  // input [1:0]
+    .i_tx_status_sched_done(),  // input
     .i_tx_word_cnt       (),  // input [31:0]
     .o_tb_ctrl_enable    (),  // output
     .o_tb_ctrl_freeze    (),  // output

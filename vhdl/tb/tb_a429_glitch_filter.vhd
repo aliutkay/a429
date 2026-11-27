@@ -1,6 +1,6 @@
 --------------------------------------------------------------------------------
 -- tb_a429_glitch_filter — a429_glitch_filter birim testi (VHDL-93 / VHDL-2008)
---   * kısa glitch bastırma, glitch_tick, total_cnt, win_cnt
+--   * kısa glitch bastırma, glitch_tick, total_cnt (olay), win_cnt (glitch clk toplamı)
 --   * glitch_size+1 clk sonra yeni stable durum kabulü ve win_cnt sıfırlama
 --   * darbe süresi koruma ve soft_rst kontrolü
 --------------------------------------------------------------------------------
@@ -67,14 +67,27 @@ begin
         hi_in <= '0'; lo_in <= '0';
         tick(1);
         chk(hi_out = '0' and lo_out = '0', "Kisa glitch cikisa yansimamali");
-        chk(gtick = '1' and unsigned(gtot) = 1 and unsigned(gwin) = 1, "Glitch sayaclari 1 olmali");
+        chk(gtick = '1' and unsigned(gtot) = 1 and unsigned(gwin) = 3,
+            "3 clk glitch: total_cnt=1 (olay), win_cnt=3 (clk) olmali");
 
-        -- 2) Bir glitch daha ("11" 2 clk) -> gtot=2, gwin=2
+        -- 2) Bir glitch daha ("11" 2 clk) -> gtot=2, gwin=3+2=5
         hi_in <= '1'; lo_in <= '1';
         tick(2);
         hi_in <= '0'; lo_in <= '0';
         tick(1);
-        chk(unsigned(gtot) = 2 and unsigned(gwin) = 2, "Ikinci glitch sayilmali");
+        chk(unsigned(gtot) = 2 and unsigned(gwin) = 5, "Ikinci glitch: total=2, win=5 clk olmali");
+
+        -- 2b) Zincir glitch: HIGH 1 clk -> LOW 4 clk -> NULL: iki olay, 1 + 4 clk
+        hi_in <= '1'; lo_in <= '0';
+        tick(1);
+        hi_in <= '0'; lo_in <= '1';
+        tick(1);
+        chk(unsigned(gtot) = 3 and unsigned(gwin) = 6, "Zincir glitch 1. parca: total=3, win=6 olmali");
+        tick(3);
+        hi_in <= '0'; lo_in <= '0';
+        tick(1);
+        chk(hi_out = '0' and lo_out = '0', "4 clk LOW (< 5) stable olmamali");
+        chk(unsigned(gtot) = 4 and unsigned(gwin) = 10, "Zincir glitch 2. parca: total=4, win=10 olmali");
 
         -- 3) 20 clk'lik gerçek HIGH darbesi -> 5 clk gecikmeyle çıkmalı, toplam 20 clk sürmeli ve gwin=0 olmalı
         hi_in <= '1'; lo_in <= '0';

@@ -158,7 +158,7 @@ class Ctx:
         """TX: Word Transmitter, tek gönderim (SEND_CMD), EXT_DATA kaynağı, override kapalı."""
         self.w([("TX_EXT_HIGH", 0), ("TX_EXT_LOW", 0), ("TX_SCHED_EN", 0), ("TX_MSG_SCHED_EN", 0),
                 ("TX_TRANSMITTER_EN", 1), ("TX_BUILDER_EN", 0), ("TX_INITIAL_DELAY", 0), ("TX_INTER_WORD_GAP", 1),
-                ("GLOBAL_FREEZE", 0)])
+                ("GLOBAL_FREEZE", 0)] + ([("TX_SCHED_COUNT", 0)] if self.rm.has("TX_SCHED_COUNT") else []))
         for ch in self.chans:
             self.w([(channel_prefix(ch) + "CTRL", 1)])                 # ENABLE=1, FREEZE=0
         self.chk_clear()
@@ -497,17 +497,44 @@ def t_bittime(c: Ctx, R: TestResult, speed: str):
               f"{c.us(win['max_bit']):.2f} µs", win["min_bit"] <= min(bitl) and max(bitl) <= win["max_bit"])
         R.add(f"{lab}: ortalama pulse {c.us(mp):.3f} µs (TX {c.us(tim['pulse']):.3f} µs, fark "
               f"{c.us(mp - tim['pulse']):+.3f} µs: sürücü/alıcı gecikme asimetrisi)", None)
-        R.add(f"{lab}: hat gürültüsü (glitch sayısı) = {noise}", None,
+        R.add(f"{lab}: hat gürültüsü (glitch clk toplamı) = {noise}", None,
               "" if noise == 0 else "gürültü var: kablo / topraklama / sonlandırma kontrol edilmeli")
 
 
 def _scheduler_run(c: Ctx, n_words: int, iwg: int, tim: dict):
+    """Scheduler ile n_words Word gönderir.
+
+    IP TX_SCHED_COUNT destekliyorsa (IP >= 2.1) Word sayısı donanımda sınırlanır: tam n_words Word
+    gönderilir ve TX_STATUS.SCHED_DONE beklenir (bus gecikmesinden bağımsız). Eski IP'de süreye göre durdurulur.
+    """
     period = tim["word"] + iwg
-    c.w([("TX_INITIAL_DELAY", 0), ("TX_INTER_WORD_GAP", iwg), ("TX_MSG_SCHED_EN", 1), ("TX_SCHED_EN", 1)])
-    c.wait_us(c.us(period * (n_words - 0.5)))
+    hw_count = c.rm.has("TX_SCHED_COUNT") and c.rm.field("TX_STATUS", "SCHED_DONE") is not None
+    c.w([("TX_SCHED_EN", 0), ("TX_INITIAL_DELAY", 0), ("TX_INTER_WORD_GAP", iwg)]
+        + ([("TX_SCHED_COUNT", n_words)] if hw_count else []) + [("TX_MSG_SCHED_EN", 1), ("TX_SCHED_EN", 1)])
+    if hw_count:
+        done = c.rm.field("TX_STATUS", "SCHED_DONE")
+        off = c.rm.offset("TX_STATUS")
+        budget_us = c.us(period * (n_words + 2)) + 5000
+        step = max(20.0, c.us(period))
+        t0 = time.monotonic()
+        while True:
+            c.check_stop()
+            if done.extract(c.bus.read(off, quiet=True)):
+                break
+            if c.sim:
+                if budget_us <= 0:
+                    break
+                c.bus.advance_us(step)
+                budget_us -= step
+            elif (time.monotonic() - t0) * 1e6 > budget_us:
+                break
+            else:
+                time.sleep(0.0005)
+    else:
+        c.wait_us(c.us(period * (n_words - 0.5)))
     c.w([("TX_SCHED_EN", 0)])
     c.wait_tx_idle(c.us(tim["word"]) * 3 + 2000)
-    c.w([("TX_MSG_SCHED_EN", 0)])
+    c.w([("TX_MSG_SCHED_EN", 0)] + ([("TX_SCHED_COUNT", 0)] if hw_count else []))
     c.settle()
     return period
 

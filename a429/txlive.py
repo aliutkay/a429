@@ -16,7 +16,7 @@ def override_writes(name):
 def default_tx_live():
     return dict(source="builder", label="310", sdi="0", data="00000", ssm="0", parity="Odd", word="00000000",
                 send_mode="scheduler", delay_us="0", delay_unit="µs", gap_mode="period", period_us="1000", period_unit="µs",
-                gap_us="100", gap_unit="µs", manual_period="100", manual_unit="ms")
+                gap_us="100", gap_unit="µs", manual_period="100", manual_unit="ms", sched_count="0")
 
 
 TIME_UNITS = ["clk", "ns", "µs", "ms"]
@@ -117,6 +117,18 @@ def sched_values(cfg, mhz, tbit_us, profile_name):
             raise ValueError("Inter word gap en az 1 clk olmalı (0 olamaz).")
         text = f"Inter word gap: {gap_clk / mhz:g} µs = {gap_clk:,} clk"
     return delay_clk, gap_clk, f"{text}\nInitial delay: {delay_clk / mhz:g} µs = {delay_clk:,} clk"
+
+
+def sched_count_value(cfg) -> int:
+    """Scheduler Word sayısı (TX_SCHED_COUNT): 0 = sınırsız, N = N Word gönderip durur."""
+    text = str(cfg.get("sched_count", "0")).strip() or "0"
+    try:
+        n = int(text, 0)
+    except ValueError:
+        raise ValueError("Word sayısı tam sayı olmalı (0: sınırsız).") from None
+    if not 0 <= n <= 0xFFFFFFFF:
+        raise ValueError("Word sayısı 0 … 4294967295 aralığında olmalı (0: sınırsız).")
+    return n
 
 
 def gap_from_period(period_us, tbit_us):

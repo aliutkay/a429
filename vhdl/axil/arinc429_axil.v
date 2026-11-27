@@ -69,6 +69,8 @@
 //          [31:0]   TX_INITIAL_DELAY RW
 //   0x424  TX_INTER_WORD_GAP RW
 //          [31:0]   TX_INTER_WORD_GAP RW
+//   0x428  TX_SCHED_COUNT   RW
+//          [31:0]   TX_SCHED_COUNT   RW
 //   0x440  TX_CFG           RW
 //          [4]      APPLY            PULSE
 //          [1:0]    SEL              RW
@@ -87,6 +89,7 @@
 //   0x468  TX_ACT_SLP       RO
 //          [0]      TX_ACT_SLP       RO
 //   0x480  TX_STATUS        RO
+//          [4]      SCHED_DONE       RO
 //          [3:2]    ACT_CFG          RO
 //          [1]      SCHED_ACTIVE     RO
 //          [0]      BUSY             RO
@@ -381,6 +384,7 @@ module	arinc429_axil #(
 		output	wire	            	o_tx_ext_line_low,	// TX_EXT_LINE.LOW RW
 		output	wire	[31:0]      	o_tx_initial_delay,	// TX_INITIAL_DELAY.TX_INITIAL_DELAY RW
 		output	wire	[31:0]      	o_tx_inter_word_gap,	// TX_INTER_WORD_GAP.TX_INTER_WORD_GAP RW
+		output	wire	[31:0]      	o_tx_sched_count,	// TX_SCHED_COUNT.TX_SCHED_COUNT RW
 		output	wire	[1:0]       	o_tx_cfg_sel,	// TX_CFG.SEL RW
 		output	wire	            	o_tx_cfg_apply,	// TX_CFG.APPLY PULSE
 		output	wire	[15:0]      	o_tx_cust_timing_pulse_dur,	// TX_CUST_TIMING.PULSE_DUR RW
@@ -394,6 +398,7 @@ module	arinc429_axil #(
 		input	wire	            	i_tx_status_busy,	// TX_STATUS.BUSY RO
 		input	wire	            	i_tx_status_sched_active,	// TX_STATUS.SCHED_ACTIVE RO
 		input	wire	[1:0]       	i_tx_status_act_cfg,	// TX_STATUS.ACT_CFG RO
+		input	wire	            	i_tx_status_sched_done,	// TX_STATUS.SCHED_DONE RO
 		input	wire	[31:0]      	i_tx_word_cnt,	// TX_WORD_CNT.TX_WORD_CNT RO
 		output	wire	            	o_tb_ctrl_enable,	// TB_CTRL.ENABLE RW
 		output	wire	            	o_tb_ctrl_freeze,	// TB_CTRL.FREEZE RW
@@ -545,8 +550,8 @@ module	arinc429_axil #(
 
 	localparam	REG_AW = 13;	// word address bits decoded
 
-	reg	[31:0]	r_global_freeze, r_ts_ctrl, r_tx_ctrl, r_tx_word, r_tx_ext_data, r_tx_ext_line, r_tx_initial_delay, r_tx_inter_word_gap, r_tx_cfg, r_tx_cust_timing, r_tx_cust_gap_dur, r_tx_cust_slp, r_tb_ctrl, r_tb_cfg, r_tb_cust_pulse, r_tb_cust_bit, r_tb_cust_noise, r_tb_cust_filter, r_tb_cust_parity, r_tb_word_raddr, r_tb_err_raddr, r_tb_bit_raddr, r_tb_chk_ctrl, r_tb_chk_timeout, r_rx0_ctrl, r_rx0_cfg, r_rx0_cust_pulse, r_rx0_cust_bit, r_rx0_cust_noise, r_rx0_cust_filter, r_rx0_cust_parity, r_rx0_word_raddr, r_rx0_err_raddr, r_rx0_bit_raddr;	// RW fields
-	wire	[31:0]	wskd_r_global_freeze, wskd_r_ts_ctrl, wskd_r_tx_ctrl, wskd_r_tx_word, wskd_r_tx_ext_data, wskd_r_tx_ext_line, wskd_r_tx_initial_delay, wskd_r_tx_inter_word_gap, wskd_r_tx_cfg, wskd_r_tx_cust_timing, wskd_r_tx_cust_gap_dur, wskd_r_tx_cust_slp, wskd_r_tb_ctrl, wskd_r_tb_cfg, wskd_r_tb_cust_pulse, wskd_r_tb_cust_bit, wskd_r_tb_cust_noise, wskd_r_tb_cust_filter, wskd_r_tb_cust_parity, wskd_r_tb_word_raddr, wskd_r_tb_err_raddr, wskd_r_tb_bit_raddr, wskd_r_tb_chk_ctrl, wskd_r_tb_chk_timeout, wskd_r_rx0_ctrl, wskd_r_rx0_cfg, wskd_r_rx0_cust_pulse, wskd_r_rx0_cust_bit, wskd_r_rx0_cust_noise, wskd_r_rx0_cust_filter, wskd_r_rx0_cust_parity, wskd_r_rx0_word_raddr, wskd_r_rx0_err_raddr, wskd_r_rx0_bit_raddr;
+	reg	[31:0]	r_global_freeze, r_ts_ctrl, r_tx_ctrl, r_tx_word, r_tx_ext_data, r_tx_ext_line, r_tx_initial_delay, r_tx_inter_word_gap, r_tx_sched_count, r_tx_cfg, r_tx_cust_timing, r_tx_cust_gap_dur, r_tx_cust_slp, r_tb_ctrl, r_tb_cfg, r_tb_cust_pulse, r_tb_cust_bit, r_tb_cust_noise, r_tb_cust_filter, r_tb_cust_parity, r_tb_word_raddr, r_tb_err_raddr, r_tb_bit_raddr, r_tb_chk_ctrl, r_tb_chk_timeout, r_rx0_ctrl, r_rx0_cfg, r_rx0_cust_pulse, r_rx0_cust_bit, r_rx0_cust_noise, r_rx0_cust_filter, r_rx0_cust_parity, r_rx0_word_raddr, r_rx0_err_raddr, r_rx0_bit_raddr;	// RW fields
+	wire	[31:0]	wskd_r_global_freeze, wskd_r_ts_ctrl, wskd_r_tx_ctrl, wskd_r_tx_word, wskd_r_tx_ext_data, wskd_r_tx_ext_line, wskd_r_tx_initial_delay, wskd_r_tx_inter_word_gap, wskd_r_tx_sched_count, wskd_r_tx_cfg, wskd_r_tx_cust_timing, wskd_r_tx_cust_gap_dur, wskd_r_tx_cust_slp, wskd_r_tb_ctrl, wskd_r_tb_cfg, wskd_r_tb_cust_pulse, wskd_r_tb_cust_bit, wskd_r_tb_cust_noise, wskd_r_tb_cust_filter, wskd_r_tb_cust_parity, wskd_r_tb_word_raddr, wskd_r_tb_err_raddr, wskd_r_tb_bit_raddr, wskd_r_tb_chk_ctrl, wskd_r_tb_chk_timeout, wskd_r_rx0_ctrl, wskd_r_rx0_cfg, wskd_r_rx0_cust_pulse, wskd_r_rx0_cust_bit, wskd_r_rx0_cust_noise, wskd_r_rx0_cust_filter, wskd_r_rx0_cust_parity, wskd_r_rx0_word_raddr, wskd_r_rx0_err_raddr, wskd_r_rx0_bit_raddr;
 	reg	[31:0]	p_soft_reset, p_ts_ctrl, p_tx_send_cmd, p_tx_cfg, p_tb_ctrl, p_tb_cfg, p_tb_chk_ctrl, p_rx0_ctrl, p_rx0_cfg;	// PULSE fields
 	// }}}
 	////////////////////////////////////////////////////////////////////////
@@ -696,6 +701,7 @@ module	arinc429_axil #(
 	assign	wskd_r_tx_ext_line = apply_wstrb(r_tx_ext_line, wskd_data, wskd_strb);
 	assign	wskd_r_tx_initial_delay = apply_wstrb(r_tx_initial_delay, wskd_data, wskd_strb);
 	assign	wskd_r_tx_inter_word_gap = apply_wstrb(r_tx_inter_word_gap, wskd_data, wskd_strb);
+	assign	wskd_r_tx_sched_count = apply_wstrb(r_tx_sched_count, wskd_data, wskd_strb);
 	assign	wskd_r_tx_cfg = apply_wstrb(r_tx_cfg, wskd_data, wskd_strb);
 	assign	wskd_r_tx_cust_timing = apply_wstrb(r_tx_cust_timing, wskd_data, wskd_strb);
 	assign	wskd_r_tx_cust_gap_dur = apply_wstrb(r_tx_cust_gap_dur, wskd_data, wskd_strb);
@@ -731,6 +737,7 @@ module	arinc429_axil #(
 	initial	r_tx_ext_line = 32'h0;
 	initial	r_tx_initial_delay = 32'h0;
 	initial	r_tx_inter_word_gap = 32'h1;
+	initial	r_tx_sched_count = 32'h0;
 	initial	r_tx_cfg = 32'h0;
 	initial	r_tx_cust_timing = 32'h0;
 	initial	r_tx_cust_gap_dur = 32'h0;
@@ -768,6 +775,7 @@ module	arinc429_axil #(
 		r_tx_ext_line <= 32'h0;
 		r_tx_initial_delay <= 32'h0;
 		r_tx_inter_word_gap <= 32'h1;
+		r_tx_sched_count <= 32'h0;
 		r_tx_cfg <= 32'h0;
 		r_tx_cust_timing <= 32'h0;
 		r_tx_cust_gap_dur <= 32'h0;
@@ -805,6 +813,7 @@ module	arinc429_axil #(
 		13'd260:	r_tx_ext_line <= wskd_r_tx_ext_line & 32'h3;
 		13'd264:	r_tx_initial_delay <= wskd_r_tx_initial_delay & 32'hFFFFFFFF;
 		13'd265:	r_tx_inter_word_gap <= wskd_r_tx_inter_word_gap & 32'hFFFFFFFF;
+		13'd266:	r_tx_sched_count <= wskd_r_tx_sched_count & 32'hFFFFFFFF;
 		13'd272:	r_tx_cfg <= wskd_r_tx_cfg & 32'h3;
 		13'd273:	r_tx_cust_timing <= wskd_r_tx_cust_timing & 32'hFFFFFFFF;
 		13'd274:	r_tx_cust_gap_dur <= wskd_r_tx_cust_gap_dur & 32'hFFFFFFFF;
@@ -1009,6 +1018,7 @@ module	arinc429_axil #(
 	assign	o_tx_ext_line_low = r_tx_ext_line[1];
 	assign	o_tx_initial_delay = r_tx_initial_delay[31:0];
 	assign	o_tx_inter_word_gap = r_tx_inter_word_gap[31:0];
+	assign	o_tx_sched_count = r_tx_sched_count[31:0];
 	assign	o_tx_cfg_sel = r_tx_cfg[1:0];
 	assign	o_tx_cfg_apply = p_tx_cfg[4];
 	assign	o_tx_cust_timing_pulse_dur = r_tx_cust_timing[15:0];
@@ -1063,7 +1073,7 @@ module	arinc429_axil #(
 	begin
 		case(arskd_addr[REG_AW-1:0])
 		13'd0:	axil_read_data	<= { 32'h41343239 };
-		13'd1:	axil_read_data	<= { 32'h20000 };
+		13'd1:	axil_read_data	<= { 32'h20100 };
 		13'd2:	axil_read_data	<= { 20'h0, 1'h1, 1'h0, 1'h1, 1'h1, 3'h0, 5'h1 };
 		13'd3:	axil_read_data	<= { 8'h0, 8'h3, 8'h8, 8'h8 };
 		13'd4:	axil_read_data	<= { 32'h2FAF080 };
@@ -1079,6 +1089,7 @@ module	arinc429_axil #(
 		13'd260:	axil_read_data	<= { 30'h0, r_tx_ext_line[1], r_tx_ext_line[0] };
 		13'd264:	axil_read_data	<= { r_tx_initial_delay[31:0] };
 		13'd265:	axil_read_data	<= { r_tx_inter_word_gap[31:0] };
+		13'd266:	axil_read_data	<= { r_tx_sched_count[31:0] };
 		13'd272:	axil_read_data	<= { 27'h0, 1'h0, 2'h0, r_tx_cfg[1:0] };
 		13'd273:	axil_read_data	<= { r_tx_cust_timing[31:16], r_tx_cust_timing[15:0] };
 		13'd274:	axil_read_data	<= { r_tx_cust_gap_dur[31:0] };
@@ -1086,7 +1097,7 @@ module	arinc429_axil #(
 		13'd280:	axil_read_data	<= { i_tx_act_timing_null_dur, i_tx_act_timing_pulse_dur };
 		13'd281:	axil_read_data	<= { i_tx_act_gap_dur };
 		13'd282:	axil_read_data	<= { 31'h0, i_tx_act_slp };
-		13'd288:	axil_read_data	<= { 28'h0, i_tx_status_act_cfg, i_tx_status_sched_active, i_tx_status_busy };
+		13'd288:	axil_read_data	<= { 27'h0, i_tx_status_sched_done, i_tx_status_act_cfg, i_tx_status_sched_active, i_tx_status_busy };
 		13'd289:	axil_read_data	<= { i_tx_word_cnt };
 		13'd512:	axil_read_data	<= { 29'h0, 1'h0, r_tb_ctrl[1], r_tb_ctrl[0] };
 		13'd513:	axil_read_data	<= { 17'h0, i_tb_status_sync_wait, i_tb_status_line_low, i_tb_status_line_high, 2'h0, i_tb_status_act_cfg, 1'h0, i_tb_status_err_wrap, i_tb_status_word_wrap, i_tb_status_frozen, 4'h0 };

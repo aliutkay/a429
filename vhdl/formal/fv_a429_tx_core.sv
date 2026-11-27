@@ -19,12 +19,13 @@ module fv_a429_tx_core (
     input wire        sched_en,
     input wire [31:0] initial_delay,
     input wire [31:0] inter_word_gap,
+    input wire [31:0] sched_count,
     input wire        send_cmd,
     input wire [31:0] ext_data,
     input wire        ext_high,
     input wire        ext_low
 );
-    wire        tx_high, tx_low, tx_slp, tx_busy, tx_sched_act;
+    wire        tx_high, tx_low, tx_slp, tx_busy, tx_sched_act, tx_sched_done;
     wire [31:0] tx_word_tx;
 
     a429_tx_core dut (
@@ -46,6 +47,7 @@ module fv_a429_tx_core (
         .sched_en            (sched_en),
         .initial_delay       (initial_delay),
         .inter_word_gap      (inter_word_gap),
+        .sched_count         (sched_count),
         .send_cmd            (send_cmd),
         .ext_data            (ext_data),
         .ext_high            (ext_high),
@@ -55,6 +57,7 @@ module fv_a429_tx_core (
         .tx_slp              (tx_slp),
         .tx_busy             (tx_busy),
         .tx_sched_act        (tx_sched_act),
+        .tx_sched_done       (tx_sched_done),
         .tx_word_tx          (tx_word_tx)
     );
 

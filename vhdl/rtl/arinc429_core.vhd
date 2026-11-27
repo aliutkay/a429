@@ -134,6 +134,7 @@ begin
             act          => C_TX_CFG_ZERO,
             busy         => '0',
             sched_active => '0',
+            sched_done   => '0',
             act_cfg      => C_CFG_HS,
             word_cnt     => (others => '0')
         );
