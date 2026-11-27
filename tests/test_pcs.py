@@ -834,4 +834,180 @@ def test_pcs_midrun_cable_unplug_catches_bittime_and_identifies_line():
     assert pcs_test.diff_fail_events(t2, t3) == []
 
 
+def test_1024_imem_full_mode_build_and_consec_pass():
+    ip = FakeIp21(num_rx=2, has_txbit=True)
+    sys_pcs = FakePcsSystem(ip, imem_aw=10)
+    comp = pcs_test.build_program(ip.base, ["RX0", "RX1"], use_tb=True, max_rounds=3, gap_ms=5, imem_aw=10)
+    assert 512 < comp.insn_count < 1024
+    pcs_test.load_and_start(sys_pcs, 0, comp)
+    sys_pcs.run_until_rounds(3)
+    for _ in range(30):
+        sys_pcs.step()
+    t = pcs_test.read_telemetry(sys_pcs, 0)
+    assert t["passed"] and t["total_rounds"] == 3
+    assert t["consec_pass"] == 3 and t["pass_rate_pct"] == 100.0
+    assert t["run_state"] == "TAMAMLANDI"
+    assert t["imem_size"] == 1024
+
+
+def test_pcs_stop_on_fail_halts_immediately_preserves_ram_and_resumes():
+    """İlk hatada durdur (M_STOP_ON_FAIL=1):
+    - single_hs kaldığı anda sonraki testler (single_ls, pattern_hs, ..., logger) koşmadan durur,
+    - M_STATE == 3 ('HATA İLE DURDU'), RX RAM verisi bozulmadan kalır,
+    - Hata giderilip start_pcs() çağrılınca sayaçları sıfırlamadan devam eder ve yeşil toparlanma logu üretir."""
+    ip = FakeIp21(num_rx=2, has_txbit=True)
+    ip.fault_bitflip.add("RX1")
+    sys_pcs = FakePcsSystem(ip, imem_aw=10)
+    comp = pcs_test.build_program(
+        ip.base, ["RX0", "RX1"], use_tb=True, max_rounds=0, gap_ms=1, stop_on_fail=True, imem_aw=10,
+    )
+    pcs_test.load_and_start(sys_pcs, 0, comp)
+
+    # Tur 1'de single_hs kalınca durmalı
+    sys_pcs.run_until_rounds(1)
+    for _ in range(40):
+        sys_pcs.step()
+    t1 = pcs_test.read_telemetry(sys_pcs, 0)
+    assert t1["halted_on_fail"] is True
+    assert t1["run_state"] == "HATA İLE DURDU"
+    assert t1["stop_on_fail"] is True
+    assert t1["total_rounds"] == 1 and t1["fail_rounds"] == 1 and t1["consec_pass"] == 0
+    by1 = {x["tid"]: x for x in t1["tests"]}
+    assert by1["single_hs"]["last_failed"] is True and by1["single_hs"]["fail_channels"] == ["RX1"]
+    # Sonraki testlerin hiçbiri koşmamış olmalı (RX RAM korunuyor!)
+    for later_tid in ("single_ls", "pattern_hs", "burst_hs", "parity", "gapviol", "bittime", "logger"):
+        assert by1[later_tid]["fails"] == 0 and by1[later_tid]["last_failed"] is False
+    # RX1 Error RAM tek-bit bozulmuş single_hs Word'ünü, RX0 LAST_WORD ise temiz single_hs Word'ünü hâlâ tutmalı
+    assert ip._err_ram["RX1"] == [(pcs_test.ERR_PARITY, pcs_test.SINGLE_EXP_WORD ^ 0x00000100)]
+    assert ip._regs[ip.rm.offset("RX0_LAST_WORD")] == pcs_test.SINGLE_EXP_WORD
+
+    ev1 = pcs_test.diff_log_events(None, t1)
+    assert any(lvl == "err" and "RX1" in msg for lvl, msg in ev1)
+    assert any(lvl == "warn" and "HATA İLE DURDU" in msg for lvl, msg in ev1)
+
+    # Hata giderildi -> start_pcs() ile I-mem yeniden yüklemeden ve sayaçları silmeden devam et
+    ip.fault_bitflip.clear()
+    writes_before = sys_pcs.imem_data_writes
+    action = pcs_test.start_pcs(sys_pcs, 0)
+    assert action == "resumed"
+    assert sys_pcs.imem_data_writes == writes_before
+
+    sys_pcs.run_until_rounds(2)
+    t2 = pcs_test.read_telemetry(sys_pcs, 0)
+    assert t2["halted_on_fail"] is False
+    assert t2["run_state"] == "KOŞUYOR"
+    assert t2["total_rounds"] == 2 and t2["pass_rounds"] == 1 and t2["fail_rounds"] == 1
+    assert t2["consec_pass"] == 1
+    assert t2["last_round_failed"] is False
+
+    ev2 = pcs_test.diff_log_events(t1, t2)
+    assert any(lvl == "ok" and "toparlandı" in msg for lvl, msg in ev2)
+
+
+def test_pcs_start_without_reload_from_stopped_and_live_stop_on_fail():
+    ip = FakeIp21(num_rx=1, has_txbit=True)
+    sys_pcs = FakePcsSystem(ip, imem_aw=10)
+    comp = pcs_test.build_program(ip.base, ["RX0"], use_tb=True, max_rounds=0, gap_ms=1, stop_on_fail=False, imem_aw=10)
+    pcs_test.load_and_start(sys_pcs, 0, comp)
+    writes_after_load = sys_pcs.imem_data_writes
+    sys_pcs.run_until_rounds(1)
+
+    pcs_test.stop_pcs(sys_pcs, 0)
+    t_stop = pcs_test.read_telemetry(sys_pcs, 0)
+    assert not t_stop["pcs_busy"]
+
+    # Canlı stop_on_fail aç ve I-mem yeniden yüklemeden başlat
+    pcs_test.update_stop_on_fail(sys_pcs, 0, True)
+    action = pcs_test.start_pcs(sys_pcs, 0)
+    assert action == "started"
+    assert sys_pcs.imem_data_writes == writes_after_load
+    sys_pcs.run_until_rounds(1)
+    t_run = pcs_test.read_telemetry(sys_pcs, 0)
+    assert t_run["passed"] and t_run["stop_on_fail"] is True
+
+
+def test_pcs_multi_rx_4ch_fault_isolation():
+    """Birden fazla RX (RX0..RX3 + TB = 5 kanal) ile yalnızca RX2'deki hata izole edilir."""
+    ip = FakeIp21(num_rx=4, has_txbit=True)
+    ip.fault_open.add("RX2")
+    sys_pcs = FakePcsSystem(ip, imem_aw=10)
+    comp = pcs_test.build_program(ip.base, ["RX0", "RX1", "RX2", "RX3"], use_tb=True, max_rounds=1, gap_ms=1, imem_aw=10)
+    pcs_test.load_and_start(sys_pcs, 0, comp)
+    sys_pcs.run_until_rounds(1)
+    t = pcs_test.read_telemetry(sys_pcs, 0)
+    assert len(t["channels"]) == 5
+    ch_fails = {c["name"]: c["fails"] for c in t["channels"]}
+    assert ch_fails["RX2"] > 0
+    for ok_ch in ("RX0", "RX1", "RX3", "TX BIT"):
+        assert ch_fails[ok_ch] == 0
+    by = {x["tid"]: x for x in t["tests"]}
+    assert by["bittime"]["fail_channels"] == ["RX2"]
+
+
+def test_studio_sync_and_test_docs_and_html_reports(tmp_path):
+    from a429 import busbox_test, selftest, test_docs
+
+    # Tüm test modlarındaki her test ID için test_docs kaydı bulunmalı
+    for tid, _t, _f, _s in selftest.CATALOG:
+        assert tid in test_docs.TEST_DOCS, f"selftest {tid} eksik"
+    for tid, _t, _f, _s, _d in busbox_test.CATALOG:
+        assert tid in test_docs.TEST_DOCS, f"busbox {tid} eksik"
+    for _idx, tid, _t, _h in pcs_test.TESTS:
+        assert tid in test_docs.TEST_DOCS, f"pcs {tid} eksik"
+
+    # save_active_asm + sync_pcs_program_to_studio
+    comp = pcs_test.build_program(0x00010000, ["RX0"], use_tb=True, imem_aw=10)
+    asm_path = pcs_test.save_active_asm(str(tmp_path), comp)
+    assert asm_path.endswith("a429_pcs_active.s")
+    with open(asm_path, encoding="utf-8") as fh:
+        assert "round_end:" in fh.read()
+
+    recorded = {}
+
+    class _StubClient:
+        def set_settings(self, ip=None, **values):
+            recorded["ip"] = ip
+            recorded["values"] = values
+
+    assert pcs_test.sync_pcs_program_to_studio(_StubClient(), "PCS_A429", asm_path) is True
+    assert recorded == {"ip": "PCS_A429", "values": {"program": asm_path}}
+
+    # HTML rapor üretimi: PCS + Loopback + Ballard
+    ip = FakeIp21(num_rx=1, has_txbit=True)
+    sys_pcs = FakePcsSystem(ip, imem_aw=10)
+    pcs_test.load_and_start(sys_pcs, 0, comp)
+    sys_pcs.run_until_rounds(1)
+    t = pcs_test.read_telemetry(sys_pcs, 0)
+    html_pcs = pcs_test.report_html(t, log_entries=[("ok", "[12:00:00] Temiz tur")])
+    assert "Otonom Periyodik Test Raporu" in html_pcs and "Temiz tur" in html_pcs
+    assert "Ne test eder" in pcs_test.report_text(t)
+
+    lb_rep = {
+        "results": [selftest.TestResult("single", "Tek Word", "HS", "PASS", [selftest.Check("RX0 OK", True, "1/1")], duration_s=0.12)],
+        "counts": {"PASS": 1, "FAIL": 0, "ERROR": 0, "SKIP": 0},
+        "passed": True,
+        "aborted": False,
+        "duration_s": 0.12,
+        "setup": {"rx": ["RX0", "RX1"], "tb": True, "speeds": ["HS"]},
+        "started": "2026-11-27 12:00:00",
+    }
+    html_lb = test_docs.build_html_report(lb_rep)
+    assert "Loopback Test Raporu" in html_lb and "RX0, RX1, TB" in html_lb and "Tek Word" in html_lb
+
+    bb_rep = {
+        "mode": "ballard",
+        "timestamp": "2026-11-27 12:00:00",
+        "duration_s": 1.2,
+        "aborted": False,
+        "passed": False,
+        "counts": {"PASS": 0, "FAIL": 1, "ERROR": 0, "SKIP": 0},
+        "channels": ["RX0"],
+        "ballard": {"card": 0, "core": 0, "product": "BB1120", "rx_chan": 0, "tx_chan": 4},
+        "results": [selftest.TestResult("tx_single", "Kart TX → BusBox RX", "HS", "FAIL", [selftest.Check("RX0", False, "sinyal yok")], duration_s=0.5)],
+    }
+    html_bb = test_docs.build_html_report(bb_rep)
+    assert "Ballard Dış Doğrulama" in html_bb and "Olası neden:" in html_bb
+
+
+
 

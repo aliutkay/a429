@@ -228,11 +228,13 @@ def test_test_tab_ballard_mode_ui():
     assert tt.mode() == "loopback"
     assert tt.mode_stack.currentIndex() == 0
     assert tt.list_stack.currentIndex() == 0
+    assert tt.result_stack.currentIndex() == 0
 
     tt.set_mode("ballard")
     assert tt.mode() == "ballard"
     assert tt.mode_stack.currentIndex() == 1
     assert tt.list_stack.currentIndex() == 1
+    assert tt.result_stack.currentIndex() == 1
 
     card = CardInfo(
         card_num=0, core_num=0, product="BUSBox BB1120", card_type="BUSBOX",
@@ -250,6 +252,7 @@ def test_test_tab_ballard_mode_ui():
 
     tt.set_mode("loopback")
     assert tt.options()["mode"] == "loopback"
+    assert tt.result_stack.currentIndex() == 0
 
     win._closing = True
     win.close()
@@ -270,25 +273,31 @@ def test_test_tab_pcs_mode_ui():
     assert tt.mode() == "pcs"
     assert tt.mode_stack.currentIndex() == 2
     assert tt.list_stack.currentIndex() == 2
+    assert tt.result_stack.currentIndex() == 2
     assert not tt.common_box.isVisibleTo(tt)
+    assert tt.btn_pcs_start.isVisibleTo(tt)
+    assert tt.btn_pcs_inspect.isVisibleTo(tt)
 
-    pi = PcsInfo(name="PCS_A429", base=0x00000000, is_ip_parent=True, pcs_id=0x5EC00200, imem_aw=9, dmem_aw=8)
+    pi = PcsInfo(name="PCS_A429", base=0x00000000, is_ip_parent=True, pcs_id=0x5EC00200, imem_aw=10, dmem_aw=8)
     tt.set_pcs_probe_result([pi])
-    assert "512" in tt.lbl_pcs_size.text()
+    assert "1024" in tt.lbl_pcs_size.text()
     opts = tt.options()
     assert opts["mode"] == "pcs"
     assert opts["pcs_base"] == 0
+    assert opts["pcs_name"] == "PCS_A429"
+    assert opts["stop_on_fail"] is False
     assert len(opts["selected"]) == 15
 
-    tt.set_pcs_telemetry({
+    telem = {
         "mode": "pcs", "timestamp": "2026-01-01 00:00:00", "pcs_base": 0, "pcs_id": 0x5EC00200,
-        "imem_size": 512, "dmem_size": 256, "imem_cnt": 510, "pcs_state": "RUNNING", "pcs_busy": True,
+        "imem_size": 1024, "dmem_size": 256, "imem_cnt": 562, "pcs_state": "RUNNING", "pcs_busy": True,
         "pcs_err": False, "pcs_pc": 42, "pcs_err_code": 0, "pcs_err_text": "", "pcs_err_pc": 0,
         "pcs_err_addr": 0, "recognized": True, "signature": 0xA4292101, "run_state": "KOŞUYOR",
+        "halted_on_fail": False, "stop_on_fail": False,
         "clk_hz": 50_000_000, "ip_base": 0x00010000, "gap_ms": 500.0, "max_rounds": 0,
-        "total_rounds": 10, "pass_rounds": 9, "fail_rounds": 1, "last_round_failed": False,
-        "last_dur_ms": 12.5, "max_noise_clk": 0,
-        "tests": [{"idx": 0, "tid": "ident", "title": "IP kimliği", "hint": "", "fails": 1, "last_failed": False, "ever_failed": True}],
+        "total_rounds": 10, "pass_rounds": 9, "fail_rounds": 1, "pass_rate_pct": 90.0, "consec_pass": 6,
+        "last_round_failed": False, "last_dur_ms": 12.5, "max_noise_clk": 0,
+        "tests": [{"idx": 0, "tid": "ident", "title": "IP kimliği", "hint": "", "fails": 1, "last_failed": False, "ever_failed": True, "fail_channels": ["RX0"]}],
         "channels": [{"idx": 0, "code": 0, "name": "RX0", "fails": 1}],
         "first_fail": {"round": 4, "test_idx": 3, "test_id": "single_hs", "test_title": "HS Tek Word",
                        "channel": "RX0", "channel_code": 0, "sub_code": 10, "reason": "LAST_WORD uyuşmadı",
@@ -297,14 +306,20 @@ def test_test_tab_pcs_mode_ui():
                       "channel": "RX0", "channel_code": 0, "sub_code": 10, "reason": "LAST_WORD uyuşmadı",
                       "expected": 0x12345678, "got": 0x12345679},
         "passed": False,
-    })
-    assert tt.tree.topLevelItemCount() >= 4
+    }
+    tt.set_pcs_telemetry(telem)
+    win._sync_pcs_control_state(telem)
+    assert tt.pcs_tree.topLevelItemCount() == 1
+    assert tt.pcs_tree.topLevelItem(0).text(0) == "GEÇTİ"
+    assert tt.pcs_ch_tree.topLevelItemCount() == 1
     assert "10 tur" in tt.pill.text()
     assert tt.pill.property("state") == "ok"
-    assert tt.tree.topLevelItem(1).text(0) == "GEÇTİ"
     assert "9" in tt.pill_pcs_pass.text()
     assert "1" in tt.pill_pcs_fail.text()
+    assert "90.0%" in tt.pill_pcs_rate.text()
+    assert "6" in tt.pill_pcs_streak.text()
     assert "Tur #4" in tt.txt_pcs_log.toPlainText()
+    assert win.control_tab.outdated_bar.isVisibleTo(win.control_tab)
 
     tt.stop_pcs_poll()
     win._closing = True

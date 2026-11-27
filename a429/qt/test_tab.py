@@ -6,21 +6,26 @@ import os
 import time
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QBrush
+from PySide6.QtGui import QBrush, QFont, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
-    QAbstractItemView, QCheckBox, QComboBox, QFileDialog, QGridLayout, QHBoxLayout, QHeaderView,
-    QLineEdit, QListWidget, QListWidgetItem, QPlainTextEdit, QProgressBar, QSpinBox, QSplitter,
-    QStackedWidget, QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
+    QAbstractItemView, QCheckBox, QComboBox, QDialog, QFileDialog, QFrame, QGridLayout,
+    QHBoxLayout, QHeaderView, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPlainTextEdit,
+    QProgressBar, QSpinBox, QSplitter, QStackedWidget, QTextBrowser, QToolButton, QTreeWidget,
+    QTreeWidgetItem, QVBoxLayout, QWidget,
 )
 
-from .. import busbox_test, pcs_test, selftest
+from .. import busbox_test, pcs_test, selftest, test_docs
 from ..ballard import CardInfo
 from ..pcs_test import PcsInfo
 from ..regs import channel_label
 from . import look
 
-STATUS_STYLE = {"PASS": ("GEÇTİ", "success"), "FAIL": ("KALDI", "danger"), "ERROR": ("HATA", "danger"),
-                "SKIP": ("ATLANDI", "muted")}
+STATUS_STYLE = {
+    "PASS": ("GEÇTİ", "success"),
+    "FAIL": ("KALDI", "danger"),
+    "ERROR": ("HATA", "danger"),
+    "SKIP": ("ATLANDI", "muted"),
+}
 
 NOTE_LOOPBACK = (
     "Loopback modu: TX ve RX config'ini değiştirir (HS / LS / Custom), hat override ve scheduler kullanır; "
@@ -32,30 +37,80 @@ NOTE_BALLARD = (
 )
 NOTE_PCS = (
     "Otonom PCS modu (AXIL Studio cmd_seq · IP 2.1.0): Test programı PCS I-mem'ine bir kez yüklenir ve "
-    "FPGA içinde periyodik koşar. PC'den ARINC 429 IP'ye test komutu gönderilmez; yalnızca PCS D-mem sayaçları okunur."
+    "FPGA içinde periyodik koşar. PC yalnızca PCS D-mem sayaçlarını okur; 'İlk hatada durdur' açıkken RX RAM "
+    "inceleme için korunur."
 )
+
+
+class TestInfoDialog(QDialog):
+    """Seçili testin ne yaptığını, neyi kontrol ettiğini ve olası kök nedenlerini gösteren bilgi penceresi."""
+
+    def __init__(self, parent, doc: test_docs.TestDoc, fail_detail: str = ""):
+        super().__init__(parent)
+        self.setWindowTitle(f"Test Bilgisi — {doc.title}")
+        self.resize(580, 380)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(14, 14, 14, 14)
+        lay.setSpacing(10)
+        view = QTextBrowser()
+        view.setOpenExternalLinks(False)
+        view.setHtml(test_docs.format_test_info_html(doc, fail_detail=fail_detail))
+        lay.addWidget(view, 1)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        btn = look.button("Kapat", "primary", self.accept)
+        row.addWidget(btn)
+        lay.addLayout(row)
+
+
+def _info_btn(callback, tip: str = "Bu testin açıklamasını ve olası hata nedenlerini göster") -> QToolButton:
+    b = QToolButton()
+    b.setText("ⓘ")
+    b.setToolTip(tip)
+    b.setAutoRaise(True)
+    b.setCursor(Qt.CursorShape.PointingHandCursor)
+    b.setFixedSize(24, 22)
+    b.clicked.connect(callback)
+    return b
+
+
+def _fmt_duration(secs: float) -> str:
+    s = max(0, int(secs))
+    h, rem = divmod(s, 3600)
+    m, sec = divmod(rem, 60)
+    if h:
+        return f"{h:02d}:{m:02d}:{sec:02d}"
+    return f"{m:02d}:{sec:02d}"
 
 
 class TestTab(QWidget):
     def __init__(self, app):
         super().__init__(app)
         self.app = app
-        self.report: dict | None = None
+        self._reports: dict[str, dict | None] = {"loopback": None, "ballard": None, "pcs": None}
+        self._pill_state: dict[str, tuple[str, str, str]] = {
+            "loopback": ("Koşulmadı", "", ""),
+            "ballard": ("Koşulmadı", "", ""),
+            "pcs": ("Koşulmadı", "", ""),
+        }
         self._rx_boxes: dict[str, QCheckBox] = {}
         self._bb_rx_boxes: dict[str, QCheckBox] = {}
         self._pcs_rx_boxes: dict[str, QCheckBox] = {}
         self._bb_cards: list[CardInfo] = []
         self._bb_dll_dir: str | None = None
         self._pcs_list: list[PcsInfo] = []
-        self._pcs_imem_aw = 9
+        self._pcs_imem_aw = 10
         self._pcs_dmem_aw = 8
         self._pcs_prev_telem: dict | None = None
-        self._pcs_log_count = 0
+        self._pcs_log_entries: list[tuple[str, str]] = []
+        self._pcs_started_ts: float | None = None
+        self._pcs_last_fail_ch: str = ""
         self._can_run_base = False
         self._busy = False
         self._bb_scanning = False
         self._pcs_scanning = False
         self._tip_base = ""
+        self._active_run_mode: str | None = None
 
         self._pcs_poll_timer = QTimer(self)
         self._pcs_poll_timer.setInterval(1000)
@@ -66,7 +121,7 @@ class TestTab(QWidget):
         split = QSplitter(Qt.Orientation.Horizontal)
         root.addWidget(split)
 
-        # ---------------------------------------------------------------- Sol: kurulum
+        # ================================================================ Sol: kurulum
         left = look.Card(margins=12, spacing=8, object_name="SubCard")
         left.lay.addWidget(look.label("Otomatik Test Kurulumu", "cardTitle"))
 
@@ -90,13 +145,13 @@ class TestTab(QWidget):
         l_lb.setSpacing(6)
         l_lb.addWidget(look.label(
             "Kartın ARINC TX çıkışını (line driver) aşağıda işaretlediğiniz RX girişlerine (line receiver) dışarıdan "
-            "bağlayın. TX BIT kanalı TX hattını kart üzerindeki kendi alıcısıyla dinler. Test TX'ten gönderir, TX BIT'i "
-            "ve RX'leri karşılaştırır; IP'yi ve sürücü/alıcı entegrelerini birlikte doğrular.", "muted", True))
-        l_lb.addWidget(look.label("TX'e bağlı RX kanalları", "muted"))
+            "bağlayın. TX BIT kanalı TX hattını kart üzerindeki kendi alıcısıyla dinler.", "muted", True))
+        l_lb.addLayout(self._rx_header_row("TX'e bağlı RX kanalları", self._rx_boxes))
         self.rx_box = QWidget()
         self.rx_grid = QGridLayout(self.rx_box)
         self.rx_grid.setContentsMargins(0, 0, 0, 0)
-        self.rx_grid.setHorizontalSpacing(12)
+        self.rx_grid.setHorizontalSpacing(10)
+        self.rx_grid.setVerticalSpacing(4)
         l_lb.addWidget(self.rx_box)
         self.chk_tb = QCheckBox("TX BIT (TB) kanalını ve Word Checker'ı dahil et")
         self.chk_tb.setChecked(True)
@@ -149,11 +204,12 @@ class TestTab(QWidget):
         bg.addWidget(self.cb_bb_tx_ch, 1, 1)
         l_bb.addLayout(bg)
 
-        l_bb.addWidget(look.label("Ballard TX'e bağlı Kart RX kanalları", "muted"))
+        l_bb.addLayout(self._rx_header_row("Ballard TX'e bağlı Kart RX kanalları", self._bb_rx_boxes))
         self.bb_rx_box = QWidget()
         self.bb_rx_grid = QGridLayout(self.bb_rx_box)
         self.bb_rx_grid.setContentsMargins(0, 0, 0, 0)
-        self.bb_rx_grid.setHorizontalSpacing(12)
+        self.bb_rx_grid.setHorizontalSpacing(10)
+        self.bb_rx_grid.setVerticalSpacing(4)
         l_bb.addWidget(self.bb_rx_box)
 
         self.chk_bb_tb = QCheckBox("TX BIT (TB) yankısını ve Checker'ı dahil et")
@@ -168,8 +224,8 @@ class TestTab(QWidget):
         l_pcs.setContentsMargins(0, 0, 0, 0)
         l_pcs.setSpacing(6)
         l_pcs.addWidget(look.label(
-            "IP 2.1.0 loopback testini AXIL Studio PCS (cmd_seq) bloğuna bir kez yükler; test FPGA içinde "
-            "periyodik koşar. PC yalnızca PCS D-mem'den toplam tur ve test/kanal kalma sayaçlarını okur.", "muted", True))
+            "IP 2.1.0 loopback testini AXIL Studio PCS (cmd_seq) bloğuna yükler; test FPGA içinde "
+            "periyodik koşar. PC yalnızca PCS D-mem sayaçlarını okur.", "muted", True))
 
         prow = QHBoxLayout()
         self.cb_pcs = QComboBox()
@@ -194,11 +250,12 @@ class TestTab(QWidget):
         self.lbl_pcs_size = look.label("", "muted")
         l_pcs.addWidget(self.lbl_pcs_size)
 
-        l_pcs.addWidget(look.label("TX'e bağlı RX kanalları (loopback)", "muted"))
+        l_pcs.addLayout(self._rx_header_row("TX'e bağlı RX kanalları (loopback)", self._pcs_rx_boxes, on_change=self._update_pcs_size))
         self.pcs_rx_box = QWidget()
         self.pcs_rx_grid = QGridLayout(self.pcs_rx_box)
         self.pcs_rx_grid.setContentsMargins(0, 0, 0, 0)
-        self.pcs_rx_grid.setHorizontalSpacing(12)
+        self.pcs_rx_grid.setHorizontalSpacing(10)
+        self.pcs_rx_grid.setVerticalSpacing(4)
         l_pcs.addWidget(self.pcs_rx_box)
 
         self.chk_pcs_tb = QCheckBox("TX BIT (TB) kanalını ve Word Checker'ı dahil et")
@@ -210,11 +267,20 @@ class TestTab(QWidget):
         pg.setHorizontalSpacing(8)
         pg.setVerticalSpacing(4)
         pg.addWidget(look.label("Tur aralığı (ms)", "muted"), 0, 0)
+        gap_row = QHBoxLayout()
+        gap_row.setContentsMargins(0, 0, 0, 0)
+        gap_row.setSpacing(4)
         self.sp_pcs_gap = QSpinBox()
         self.sp_pcs_gap.setRange(0, 600000)
         self.sp_pcs_gap.setSingleStep(100)
         self.sp_pcs_gap.setValue(500)
-        pg.addWidget(self.sp_pcs_gap, 0, 1)
+        self.btn_pcs_gap_apply = look.button(
+            "Uygula", None, self._pcs_apply_gap,
+            "Tur aralığını programı yeniden yüklemeden çalışan PCS'ye canlı uygular",
+        )
+        gap_row.addWidget(self.sp_pcs_gap, 1)
+        gap_row.addWidget(self.btn_pcs_gap_apply)
+        pg.addLayout(gap_row, 0, 1)
 
         pg.addWidget(look.label("Maks. tur (0 = sürekli)", "muted"), 1, 0)
         self.sp_pcs_max = QSpinBox()
@@ -235,6 +301,14 @@ class TestTab(QWidget):
         hb.addWidget(self.sp_pcs_burst_ls)
         pg.addLayout(hb, 2, 1)
         l_pcs.addLayout(pg)
+
+        self.chk_pcs_stop_fail = QCheckBox("İlk hatada testi durdur (Okunan Veriler'de inceleme için)")
+        self.chk_pcs_stop_fail.setToolTip(
+            "Açıkken ilk kalan testin sonunda PCS durur (HATA İLE DURDU); kalan testler koşmaz ve "
+            "RX Word/Error/BitDiag RAM verileri bozulmadan 'Okunan Veriler' sekmesinde incelenebilir."
+        )
+        self.chk_pcs_stop_fail.toggled.connect(self._on_pcs_stop_fail_toggled)
+        l_pcs.addWidget(self.chk_pcs_stop_fail)
 
         self.chk_pcs_poll = QCheckBox("PCS sayaçlarını otomatik oku (1 s)")
         self.chk_pcs_poll.setChecked(True)
@@ -280,6 +354,9 @@ class TestTab(QWidget):
         th = QHBoxLayout()
         th.addWidget(look.label("Testler", "muted"))
         th.addStretch(1)
+        self.btn_list_info = look.button("ⓘ Bilgi", None, self._show_selected_list_info,
+                                         "Listede seçili testin ne yaptığını ve olası kök nedenlerini gösterir")
+        th.addWidget(self.btn_list_info)
         th.addWidget(look.button("Tümü", None, lambda: self._check_all(True)))
         th.addWidget(look.button("Hiçbiri", None, lambda: self._check_all(False)))
         left.lay.addLayout(th)
@@ -299,115 +376,319 @@ class TestTab(QWidget):
         self.list_stack.addWidget(self.lst_bb)
         self.list_stack.addWidget(self.lst_pcs)
         left.lay.addWidget(self.list_stack, 1)
-        left.setMinimumWidth(370)
+        left.setMinimumWidth(385)
         split.addWidget(left)
 
-        # ---------------------------------------------------------------- Sağ: sonuçlar
+        # ================================================================ Sağ: moda özel sonuç sayfaları
         right = look.Card(margins=12, spacing=8, object_name="SubCard")
+
+        # Üst başlık + aksiyon çubuğu
         hdr = QHBoxLayout()
-        hdr.addWidget(look.label("Test Sonuçları", "cardTitle"))
+        self.lbl_res_title = look.label("Loopback Test Sonuçları", "cardTitle")
+        hdr.addWidget(self.lbl_res_title)
         self.pill = look.Pill("Koşulmadı", "")
         hdr.addWidget(self.pill)
         self.lbl_time = look.label("", "muted")
         hdr.addWidget(self.lbl_time)
         hdr.addStretch(1)
+
         self.btn_run = look.button("▶ Testi Başlat", "primary", self._run)
         self.btn_stop = look.button("Durdur", None, app.do_stop)
-        self.btn_pcs_read = look.button("Oku / Bağlan", None, self._pcs_read_now,
-                                        "Çalışan PCS'nin D-mem sayaçlarını ARINC 429 IP'ye dokunmadan okur")
-        self.btn_pcs_stop = look.button("PCS Durdur", None, self._pcs_stop, "PCS'deki periyodik testi durdurur")
-        self.btn_pcs_clear = look.button("Sayaçları Sıfırla", None, self._pcs_clear,
-                                         "PCS toplam tur ve kalma sayaçlarını sıfırlar")
+        self.btn_pcs_start = look.button(
+            "▶ PCS Başlat", None, self._pcs_start,
+            "Yüklü PCS testini I-mem'i yeniden yüklemeden başlatır veya 'HATA İLE DURDU' durumundan sürdürür",
+        )
+        self.btn_pcs_stop = look.button("⏸ PCS Durdur", None, self._pcs_stop, "PCS'deki periyodik testi durdurur")
+        self.btn_pcs_read = look.button(
+            "Oku / Bağlan", None, self._pcs_read_now,
+            "Çalışan PCS'nin D-mem sayaçlarını ARINC 429 IP'ye dokunmadan okur",
+        )
+        self.btn_pcs_clear = look.button(
+            "Sayaçları Sıfırla", None, self._pcs_clear,
+            "PCS toplam tur ve kalma sayaçlarını sıfırlar",
+        )
+        self.btn_pcs_inspect = look.button(
+            "Okunan Veriler'de İncele →", None, self._pcs_inspect_fail,
+            "Hata veren RX/TB kanalını seçip Okunan Veriler sekmesinde Word/Error/BitDiag RAM verilerini okur",
+        )
+        self.btn_pcs_inspect.setEnabled(False)
         self.btn_save = look.button("Raporu Kaydet…", None, self._save)
         self.btn_save.setEnabled(False)
-        for b in (self.btn_run, self.btn_stop, self.btn_pcs_read, self.btn_pcs_stop, self.btn_pcs_clear, self.btn_save):
+
+        for b in (
+            self.btn_run, self.btn_stop, self.btn_pcs_start, self.btn_pcs_stop,
+            self.btn_pcs_read, self.btn_pcs_clear, self.btn_pcs_inspect, self.btn_save,
+        ):
             hdr.addWidget(b)
         right.lay.addLayout(hdr)
+
         self.prog = QProgressBar()
         self.prog.setRange(0, 100)
         self.prog.setValue(0)
         right.lay.addWidget(self.prog)
 
-        # PCS tur sayaçları şeridi (kenarda sabit toplam / hatasız / hatalı tur + canlı hat rozetleri)
+        # ---- Moda özel 3 bağımsız sonuç sayfası
+        self.result_stack = QStackedWidget()
+        right.lay.addWidget(self.result_stack, 1)
+
+        # === Sayfa 0: Loopback Sonuçları ===
+        pg_res_lb = QWidget()
+        rl_lb = QVBoxLayout(pg_res_lb)
+        rl_lb.setContentsMargins(0, 0, 0, 0)
+        rl_lb.setSpacing(6)
+        lb_bar = QHBoxLayout()
+        lb_bar.setSpacing(6)
+        self.pill_lb_pass = look.Pill("Geçen: 0", "")
+        self.pill_lb_fail = look.Pill("Kalan: 0", "")
+        self.pill_lb_skip = look.Pill("Atlanan: 0", "")
+        self.lbl_lb_meta = look.label("Loopback testi başlatıldığında sonuçlar burada görüntülenir.", "muted")
+        for w in (self.pill_lb_pass, self.pill_lb_fail, self.pill_lb_skip):
+            lb_bar.addWidget(w)
+        lb_bar.addSpacing(8)
+        lb_bar.addWidget(self.lbl_lb_meta, 1)
+        rl_lb.addLayout(lb_bar)
+        self.tree_lb = self._build_result_tree(["Sonuç", "Test / Kontrol", "Hız", "Süre", "Ayrıntı", "ⓘ"])
+        rl_lb.addWidget(self.tree_lb, 1)
+        self.result_stack.addWidget(pg_res_lb)
+
+        # === Sayfa 1: Ballard Dış Doğrulama Sonuçları ===
+        pg_res_bb = QWidget()
+        rl_bb = QVBoxLayout(pg_res_bb)
+        rl_bb.setContentsMargins(0, 0, 0, 0)
+        rl_bb.setSpacing(6)
+        bb_bar = QHBoxLayout()
+        bb_bar.setSpacing(6)
+        self.pill_bb_pass = look.Pill("Geçen: 0", "")
+        self.pill_bb_fail = look.Pill("Kalan: 0", "")
+        self.pill_bb_tx = look.Pill("Kart TX → BB RX: —", "")
+        self.pill_bb_rx = look.Pill("BB TX → Kart RX: —", "")
+        self.lbl_bb_meta = look.label("Ballard dış doğrulama sonuçları burada görüntülenir.", "muted")
+        for w in (self.pill_bb_pass, self.pill_bb_fail, self.pill_bb_tx, self.pill_bb_rx):
+            bb_bar.addWidget(w)
+        bb_bar.addSpacing(8)
+        bb_bar.addWidget(self.lbl_bb_meta, 1)
+        rl_bb.addLayout(bb_bar)
+        self.tree_bb = self._build_result_tree(["Sonuç", "Test / Kontrol", "Hız", "Süre", "Ayrıntı", "ⓘ"])
+        rl_bb.addWidget(self.tree_bb, 1)
+        self.result_stack.addWidget(pg_res_bb)
+
+        # === Sayfa 2: Otonom Periyodik PCS Sonuçları ===
+        pg_res_pcs = QWidget()
+        rl_pcs = QVBoxLayout(pg_res_pcs)
+        rl_pcs.setContentsMargins(0, 0, 0, 0)
+        rl_pcs.setSpacing(6)
+
+        # Özet sayaç şeridi (Toplam / Hatasız / Hatalı / Başarı % / Seri / Süre)
         self.pcs_stats_bar = QWidget()
         sbar = QHBoxLayout(self.pcs_stats_bar)
-        sbar.setContentsMargins(0, 2, 0, 2)
+        sbar.setContentsMargins(0, 2, 0, 0)
         sbar.setSpacing(6)
         self.pill_pcs_total = look.Pill("Toplam: 0", "")
         self.pill_pcs_pass = look.Pill("Hatasız: 0", "")
         self.pill_pcs_fail = look.Pill("Hatalı: 0", "")
-        self._pcs_ch_pills: list[look.Pill] = []
-        self._pcs_ch_bar = QHBoxLayout()
-        self._pcs_ch_bar.setContentsMargins(6, 0, 0, 0)
-        self._pcs_ch_bar.setSpacing(4)
+        self.pill_pcs_rate = look.Pill("Başarı: —", "")
+        self.pill_pcs_streak = look.Pill("Seri: 0", "")
+        self.pill_pcs_uptime = look.Pill("Süre: 00:00", "")
         self.lbl_pcs_meta = look.label("", "muted")
-        sbar.addWidget(self.pill_pcs_total)
-        sbar.addWidget(self.pill_pcs_pass)
-        sbar.addWidget(self.pill_pcs_fail)
-        sbar.addLayout(self._pcs_ch_bar)
+        for p in (
+            self.pill_pcs_total, self.pill_pcs_pass, self.pill_pcs_fail,
+            self.pill_pcs_rate, self.pill_pcs_streak, self.pill_pcs_uptime,
+        ):
+            sbar.addWidget(p)
         sbar.addStretch(1)
         sbar.addWidget(self.lbl_pcs_meta)
-        right.lay.addWidget(self.pcs_stats_bar)
+        rl_pcs.addWidget(self.pcs_stats_bar)
+
+        # Çoklu-RX uyumlu canlı hat rozet şeridi (6 rozet/satır sarmalı)
+        self._pcs_ch_pills: list[look.Pill] = []
+        self._pcs_ch_wrap = QWidget()
+        self._pcs_ch_grid = QGridLayout(self._pcs_ch_wrap)
+        self._pcs_ch_grid.setContentsMargins(0, 0, 0, 0)
+        self._pcs_ch_grid.setHorizontalSpacing(6)
+        self._pcs_ch_grid.setVerticalSpacing(4)
+        self._pcs_ch_wrap.setVisible(False)
+        rl_pcs.addWidget(self._pcs_ch_wrap)
 
         self.right_split = QSplitter(Qt.Orientation.Vertical)
 
-        self.tree = QTreeWidget()
-        self.tree.setColumnCount(4)
-        self.tree.setHeaderLabels(["Sonuç", "Test / Kontrol", "Süre", "Ayrıntı"])
-        self.tree.setRootIsDecorated(True)
-        self.tree.setAlternatingRowColors(True)
-        h = self.tree.header()
-        h.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        h.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
-        h.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
-        h.setStretchLastSection(True)
-        self.tree.setColumnWidth(1, 430)
-        self.right_split.addWidget(self.tree)
+        # Üst: yalnızca test satırlarını gösteren temiz PCS tablosu
+        self.pcs_tree = QTreeWidget()
+        self.pcs_tree.setColumnCount(6)
+        self.pcs_tree.setHeaderLabels(["Son Tur", "Test Adı", "Hatalı / Toplam", "Kalan Hat(lar)", "Ayrıntı", "ⓘ"])
+        self.pcs_tree.setRootIsDecorated(False)
+        self.pcs_tree.setAlternatingRowColors(True)
+        self.pcs_tree.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
+        ph = self.pcs_tree.header()
+        ph.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        ph.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
+        ph.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        ph.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        ph.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        ph.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
+        self.pcs_tree.setColumnWidth(1, 310)
+        self.pcs_tree.setColumnWidth(5, 34)
+        self.right_split.addWidget(self.pcs_tree)
 
-        # PCS canlı hata akışı (log) paneli — geçen testler geri yeşil olur, geçmiş hatalar burada kayıtlı kalır
+        # Orta: Hat / Kanal Durumu + İlk/Son Hata Özeti (yan yana kompakt)
+        mid_box = QWidget()
+        mlay = QHBoxLayout(mid_box)
+        mlay.setContentsMargins(0, 2, 0, 2)
+        mlay.setSpacing(8)
+
+        ch_panel = QFrame()
+        ch_panel.setObjectName("SubPanel")
+        cpl = QVBoxLayout(ch_panel)
+        cpl.setContentsMargins(8, 6, 8, 6)
+        cpl.setSpacing(4)
+        cpl.addWidget(look.label("Hat / Kanal Durumu", "cardTitle"))
+        self.pcs_ch_tree = QTreeWidget()
+        self.pcs_ch_tree.setColumnCount(4)
+        self.pcs_ch_tree.setHeaderLabels(["Durum", "Hat / Kanal", "Toplam Hata", "Son Tur"])
+        self.pcs_ch_tree.setRootIsDecorated(False)
+        self.pcs_ch_tree.setAlternatingRowColors(True)
+        chh = self.pcs_ch_tree.header()
+        chh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        chh.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        chh.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        chh.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+        cpl.addWidget(self.pcs_ch_tree, 1)
+        mlay.addWidget(ch_panel, 1)
+
+        fail_panel = QFrame()
+        fail_panel.setObjectName("SubPanel")
+        fpl = QVBoxLayout(fail_panel)
+        fpl.setContentsMargins(8, 6, 8, 6)
+        fpl.setSpacing(4)
+        fpl.addWidget(look.label("Yakalanan Hata Özeti (İlk / Son)", "cardTitle"))
+        self.lbl_pcs_fail_summary = QLabel("Henüz hata kaydedilmedi — tüm turlar temiz.")
+        self.lbl_pcs_fail_summary.setWordWrap(True)
+        self.lbl_pcs_fail_summary.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.lbl_pcs_fail_summary.setFont(look.mono_font(-0.5))
+        fpl.addWidget(self.lbl_pcs_fail_summary, 1)
+        mlay.addWidget(fail_panel, 1)
+        self.right_split.addWidget(mid_box)
+
+        # Alt: Renkli + Hat Filtreli Hata Akışı (Log)
         self.pcs_log_box = QWidget()
         llay = QVBoxLayout(self.pcs_log_box)
-        llay.setContentsMargins(0, 4, 0, 0)
+        llay.setContentsMargins(0, 2, 0, 0)
         llay.setSpacing(4)
         lhdr = QHBoxLayout()
         lhdr.setContentsMargins(0, 0, 0, 0)
-        lhdr.addWidget(look.label("Hata Akışı (Log)", "muted"))
+        lhdr.addWidget(look.label("Hata ve Durum Akışı (Log)", "cardTitle"))
         self.lbl_pcs_log_cnt = look.label("0 kayıt", "muted")
         lhdr.addWidget(self.lbl_pcs_log_cnt)
+        lhdr.addSpacing(8)
+        lhdr.addWidget(look.label("Hat Filtresi:", "muted"))
+        self.cb_pcs_log_filter = QComboBox()
+        self.cb_pcs_log_filter.addItem("Tüm Hatlar", "")
+        self.cb_pcs_log_filter.currentIndexChanged.connect(self._rerender_pcs_log)
+        lhdr.addWidget(self.cb_pcs_log_filter)
         lhdr.addStretch(1)
+        self.btn_pcs_log_save = look.button("Logu Kaydet…", None, self._save_pcs_log,
+                                            "Hata akışı kayıtlarını .txt dosyasına kaydeder")
         self.btn_pcs_log_clear = look.button("Logu Temizle", None, self._clear_pcs_log,
                                              "Alttaki hata akışı kayıtlarını temizler (PCS sayaçlarına dokunmaz)")
+        lhdr.addWidget(self.btn_pcs_log_save)
         lhdr.addWidget(self.btn_pcs_log_clear)
         llay.addLayout(lhdr)
         self.txt_pcs_log = QPlainTextEdit()
         self.txt_pcs_log.setReadOnly(True)
         self.txt_pcs_log.setFont(look.mono_font(-0.5))
-        self.txt_pcs_log.setMaximumBlockCount(2000)
+        self.txt_pcs_log.setMaximumBlockCount(3000)
         self.txt_pcs_log.setPlaceholderText(
-            "Henüz hata kaydedilmedi — bir test kaldığında tur numarası, hat/kanal adı ve ayrıntısı burada akış halinde tutulur."
+            "Henüz hata kaydedilmedi — bir test kaldığında kırmızı, toparlandığında yeşil, durduğunda turuncu renkte burada listelenir."
         )
         llay.addWidget(self.txt_pcs_log, 1)
         self.right_split.addWidget(self.pcs_log_box)
-        self.right_split.setStretchFactor(0, 3)
-        self.right_split.setStretchFactor(1, 1)
-        self.right_split.setSizes([480, 150])
-        right.lay.addWidget(self.right_split, 1)
+        self.right_split.setStretchFactor(0, 4)
+        self.right_split.setStretchFactor(1, 2)
+        self.right_split.setStretchFactor(2, 2)
+        self.right_split.setSizes([340, 120, 160])
+        rl_pcs.addWidget(self.right_split, 1)
+        self.result_stack.addWidget(pg_res_pcs)
 
         self.lbl_note = look.label(NOTE_LOOPBACK, "muted", True)
         right.lay.addWidget(self.lbl_note)
         split.addWidget(right)
         split.setStretchFactor(0, 0)
         split.setStretchFactor(1, 1)
-        split.setSizes([410, 1000])
+        split.setSizes([420, 1020])
         self._on_mode_changed()
+
+    # ---------------------------------------------------------------- geriye dönük uyumlu özellikler
+    @property
+    def report(self) -> dict | None:
+        return self._reports.get(self.mode())
+
+    @report.setter
+    def report(self, val: dict | None):
+        self._reports[self.mode()] = val
+
+    @property
+    def tree(self) -> QTreeWidget:
+        m = self.mode()
+        if m == "pcs":
+            return self.pcs_tree
+        if m == "ballard":
+            return self.tree_bb
+        return self.tree_lb
+
+    # ---------------------------------------------------------------- yardımcı kurucular
+    def _rx_header_row(self, title: str, box_map: dict[str, QCheckBox], on_change=None) -> QHBoxLayout:
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 2, 0, 0)
+        row.setSpacing(4)
+        row.addWidget(look.label(title, "muted"))
+        row.addStretch(1)
+
+        def _set_all(val: bool):
+            for cb in box_map.values():
+                cb.blockSignals(True)
+                cb.setChecked(val)
+                cb.blockSignals(False)
+            if on_change:
+                on_change()
+
+        b_all = QToolButton()
+        b_all.setText("Tümü")
+        b_all.setAutoRaise(True)
+        b_all.clicked.connect(lambda: _set_all(True))
+        b_none = QToolButton()
+        b_none.setText("Temizle")
+        b_none.setAutoRaise(True)
+        b_none.clicked.connect(lambda: _set_all(False))
+        row.addWidget(b_all)
+        row.addWidget(b_none)
+        return row
+
+    @staticmethod
+    def _build_result_tree(headers: list[str]) -> QTreeWidget:
+        tw = QTreeWidget()
+        tw.setColumnCount(len(headers))
+        tw.setHeaderLabels(headers)
+        tw.setRootIsDecorated(True)
+        tw.setAlternatingRowColors(True)
+        h = tw.header()
+        h.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        h.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
+        h.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        h.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+        h.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        h.setSectionResizeMode(5, QHeaderView.ResizeMode.Fixed)
+        tw.setColumnWidth(1, 340)
+        tw.setColumnWidth(5, 34)
+        return tw
 
     @staticmethod
     def _build_test_list(catalog, always) -> QListWidget:
         lst = QListWidget()
-        lst.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
+        lst.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         for tid, title, _fn, per_speed in catalog:
+            doc = test_docs.get_test_doc(tid, title)
             it = QListWidgetItem(title + ("  (HS / LS)" if per_speed else ""))
             it.setData(Qt.ItemDataRole.UserRole, tid)
+            it.setToolTip(f"{doc.title}\n\n{doc.what}\n\nKontrol: {doc.checks}")
             flags = it.flags() | Qt.ItemFlag.ItemIsUserCheckable
             if tid in always:
                 flags &= ~Qt.ItemFlag.ItemIsEnabled
@@ -415,6 +696,19 @@ class TestTab(QWidget):
             it.setCheckState(Qt.CheckState.Checked)
             lst.addItem(it)
         return lst
+
+    def _show_test_info(self, tid: str, fallback_title: str = "", fallback_hint: str = "", fail_detail: str = ""):
+        doc = test_docs.get_test_doc(tid, fallback_title, fallback_hint)
+        dlg = TestInfoDialog(self, doc, fail_detail=fail_detail)
+        dlg.exec()
+
+    def _show_selected_list_info(self):
+        lst = self._active_list()
+        it = lst.currentItem() or (lst.item(0) if lst.count() else None)
+        if it is None:
+            return
+        tid = str(it.data(Qt.ItemDataRole.UserRole) or "")
+        self._show_test_info(tid, it.text())
 
     # ---------------------------------------------------------------- mod & kurulum
     def mode(self) -> str:
@@ -425,27 +719,42 @@ class TestTab(QWidget):
         if idx >= 0:
             self.cb_mode.setCurrentIndex(idx)
 
+    def _set_mode_pill(self, mode: str, text: str, state: str, sub: str = ""):
+        self._pill_state[mode] = (text, state, sub)
+        if self.mode() == mode:
+            self.pill.set(text, state)
+            self.lbl_time.setText(sub)
+
     def _on_mode_changed(self):
         m = self.mode()
         idx = {"loopback": 0, "ballard": 1, "pcs": 2}.get(m, 0)
         self.mode_stack.setCurrentIndex(idx)
         self.list_stack.setCurrentIndex(idx)
+        self.result_stack.setCurrentIndex(idx)
         self.common_box.setVisible(m != "pcs")
         self.btn_stop.setVisible(m != "pcs")
-        self.pcs_stats_bar.setVisible(m == "pcs")
-        self.pcs_log_box.setVisible(m == "pcs")
-        for b in (self.btn_pcs_read, self.btn_pcs_stop, self.btn_pcs_clear):
+        for b in (self.btn_pcs_start, self.btn_pcs_stop, self.btn_pcs_read, self.btn_pcs_clear, self.btn_pcs_inspect):
             b.setVisible(m == "pcs")
         self.btn_run.setText("▶ PCS'ye Yükle & Başlat" if m == "pcs" else "▶ Testi Başlat")
-        self.tree.setHeaderLabels(
-            ["Durum", "Test / Kanal", "Kalma · Hat", "Ayrıntı"] if m == "pcs"
-            else ["Sonuç", "Test / Kontrol", "Süre", "Ayrıntı"]
-        )
+        self.lbl_res_title.setText({
+            "loopback": "Loopback Test Sonuçları",
+            "ballard": "Ballard Dış Doğrulama Sonuçları",
+            "pcs": "Otonom Periyodik PCS Sonuçları",
+        }[m])
         self.lbl_note.setText({"loopback": NOTE_LOOPBACK, "ballard": NOTE_BALLARD, "pcs": NOTE_PCS}[m])
+
+        ptxt, pst, psub = self._pill_state[m]
+        self.pill.set(ptxt, pst)
+        self.lbl_time.setText(psub)
+        self.btn_save.setEnabled(self._reports.get(m) is not None)
+
         if m != "pcs":
             self.stop_pcs_poll()
         else:
             self._update_pcs_size()
+            rep = self._reports.get("pcs")
+            if rep and rep.get("pcs_busy") and not rep.get("halted_on_fail") and rep.get("run_state") != "TAMAMLANDI":
+                self.start_pcs_poll()
         self._apply_run_state()
 
     def _sync_bb_enabled(self):
@@ -459,21 +768,22 @@ class TestTab(QWidget):
                 cb.setParent(None)
             box_map.clear()
         rx = [c for c in rm.channels() if c.startswith("RX")] if rm.is_loaded() else []
+        cols = 4 if len(rx) <= 8 else 5
         for i, ch in enumerate(rx):
-            cb = QCheckBox(f"{ch}  ←  TX")
+            cb = QCheckBox(f"{ch} ← TX")
             cb.setChecked(ch == "RX0")
-            self.rx_grid.addWidget(cb, i // 4, i % 4)
+            self.rx_grid.addWidget(cb, i // cols, i % cols)
             self._rx_boxes[ch] = cb
 
-            cb2 = QCheckBox(f"{ch}  ←  BB")
+            cb2 = QCheckBox(f"{ch} ← BB")
             cb2.setChecked(ch == "RX0")
-            self.bb_rx_grid.addWidget(cb2, i // 4, i % 4)
+            self.bb_rx_grid.addWidget(cb2, i // cols, i % cols)
             self._bb_rx_boxes[ch] = cb2
 
-            cb3 = QCheckBox(f"{ch}  ←  TX")
+            cb3 = QCheckBox(f"{ch} ← TX")
             cb3.setChecked(ch == "RX0")
             cb3.toggled.connect(self._update_pcs_size)
-            self.pcs_rx_grid.addWidget(cb3, i // 4, i % 4)
+            self.pcs_rx_grid.addWidget(cb3, i // cols, i % cols)
             self._pcs_rx_boxes[ch] = cb3
 
         has_tb = rm.is_loaded() and rm.has("TB_CTRL")
@@ -547,6 +857,12 @@ class TestTab(QWidget):
             val = self.cb_pcs.currentData()
             return int(val) & 0xFFFFFFFF if val is not None else 0
 
+    def selected_pcs_name(self) -> str:
+        idx = self.cb_pcs.currentIndex()
+        if 0 <= idx < len(self._pcs_list):
+            return self._pcs_list[idx].name
+        return ""
+
     def _scan_pcs(self):
         if self._busy or self._pcs_scanning:
             return
@@ -601,7 +917,8 @@ class TestTab(QWidget):
             clk_hz = int(round((self.app.ci.clk_mhz or 50.0) * 1e6))
             comp = pcs_test.build_program(
                 ip_base, rx or ["RX0"], use_tb=tb, selected=sel, clk_hz=clk_hz,
-                imem_aw=max(self._pcs_imem_aw, 10), dmem_aw=self._pcs_dmem_aw,
+                stop_on_fail=self.chk_pcs_stop_fail.isChecked(),
+                imem_aw=self._pcs_imem_aw, dmem_aw=self._pcs_dmem_aw,
             )
             over = comp.insn_count > cap
             self.lbl_pcs_size.setText(
@@ -622,6 +939,7 @@ class TestTab(QWidget):
             comp = pcs_test.build_program(
                 ip_base, o["rx"], use_tb=o["tb"], selected=o["selected"], clk_hz=clk_hz,
                 gap_ms=o["gap_ms"], max_rounds=o["max_rounds"],
+                stop_on_fail=o["stop_on_fail"],
                 burst_hs=o["burst_hs"], burst_ls=o["burst_ls"],
                 imem_aw=self._pcs_imem_aw, dmem_aw=self._pcs_dmem_aw,
             )
@@ -640,6 +958,8 @@ class TestTab(QWidget):
 
     def start_pcs_poll(self):
         if self.chk_pcs_poll.isChecked() and self.mode() == "pcs":
+            if self._pcs_started_ts is None:
+                self._pcs_started_ts = time.monotonic()
             self._pcs_poll_timer.start()
 
     def stop_pcs_poll(self):
@@ -648,8 +968,10 @@ class TestTab(QWidget):
     def _on_pcs_poll_toggled(self, on: bool):
         if not on:
             self.stop_pcs_poll()
-        elif self.mode() == "pcs" and self.report and self.report.get("mode") == "pcs" and self.report.get("pcs_busy"):
-            self.start_pcs_poll()
+        elif self.mode() == "pcs":
+            rep = self._reports.get("pcs")
+            if rep and rep.get("pcs_busy") and not rep.get("halted_on_fail"):
+                self.start_pcs_poll()
 
     def _on_pcs_poll_tick(self):
         if self.mode() != "pcs" or not self.app.connected or self._busy:
@@ -660,46 +982,134 @@ class TestTab(QWidget):
         self.app.do_pcs_read(self.pcs_base_addr(), quiet=False)
         self.start_pcs_poll()
 
+    def _pcs_start(self):
+        if self._pcs_started_ts is None:
+            self._pcs_started_ts = time.monotonic()
+        self.app.do_pcs_start(self.pcs_base_addr())
+
     def _pcs_stop(self):
         self.stop_pcs_poll()
         self.app.do_pcs_stop(self.pcs_base_addr())
 
+    def _pcs_apply_gap(self):
+        if not self.app.connected or self._busy:
+            return
+        self.app.do_pcs_update_gap(self.pcs_base_addr(), self.sp_pcs_gap.value())
+
+    def _on_pcs_stop_fail_toggled(self, on: bool):
+        self._update_pcs_size()
+        rep = self._reports.get("pcs")
+        if self.app.connected and not self._busy and rep and rep.get("recognized"):
+            self.app.do_pcs_update_stop_on_fail(self.pcs_base_addr(), on)
+
+    def _pcs_inspect_fail(self):
+        ch = self._pcs_last_fail_ch or "RX0"
+        self.app.do_inspect_pcs_channel(ch)
+
+    # ---------------------------------------------------------------- PCS hat rozetleri & renkli log
     def _clear_pcs_ch_pills(self):
         for p in self._pcs_ch_pills:
-            self._pcs_ch_bar.removeWidget(p)
+            self._pcs_ch_grid.removeWidget(p)
             p.setParent(None)
             p.deleteLater()
         self._pcs_ch_pills.clear()
+        self._pcs_ch_wrap.setVisible(False)
 
     def _update_pcs_ch_pills(self, items: list[tuple[str, str]]):
+        if not items:
+            self._clear_pcs_ch_pills()
+            return
+        cols = 6
         if len(self._pcs_ch_pills) != len(items):
             self._clear_pcs_ch_pills()
-            for txt, st in items:
+            for i, (txt, st) in enumerate(items):
                 p = look.Pill(txt, st)
-                self._pcs_ch_bar.addWidget(p)
+                self._pcs_ch_grid.addWidget(p, i // cols, i % cols)
                 self._pcs_ch_pills.append(p)
         else:
             for p, (txt, st) in zip(self._pcs_ch_pills, items):
                 p.set(txt, st)
+        self._pcs_ch_wrap.setVisible(True)
+
+    def _sync_pcs_log_filter_choices(self, chans: list[dict]):
+        want = [("", "Tüm Hatlar")] + [(c["name"], c["name"]) for c in chans] + [("TX / Genel", "TX / Genel")]
+        cur_data = self.cb_pcs_log_filter.currentData() or ""
+        existing = [self.cb_pcs_log_filter.itemData(i) for i in range(self.cb_pcs_log_filter.count())]
+        if existing == [w[0] for w in want]:
+            return
+        self.cb_pcs_log_filter.blockSignals(True)
+        self.cb_pcs_log_filter.clear()
+        for val, lbl in want:
+            self.cb_pcs_log_filter.addItem(lbl, val)
+        idx = self.cb_pcs_log_filter.findData(cur_data)
+        self.cb_pcs_log_filter.setCurrentIndex(idx if idx >= 0 else 0)
+        self.cb_pcs_log_filter.blockSignals(False)
+
+    def _append_colored_log(self, level: str, line: str):
+        fmt = QTextCharFormat()
+        col_name = {"err": "danger", "warn": "warning", "ok": "success", "info": "accent"}.get(level, "text")
+        fmt.setForeground(QBrush(look.color(col_name)))
+        if level in ("err", "warn"):
+            fmt.setFontWeight(QFont.Weight.DemiBold)
+        cur = self.txt_pcs_log.textCursor()
+        cur.movePosition(QTextCursor.MoveOperation.End)
+        if not self.txt_pcs_log.document().isEmpty():
+            cur.insertText("\n")
+        cur.insertText(line, fmt)
+        self.txt_pcs_log.setTextCursor(cur)
+        self.txt_pcs_log.ensureCursorVisible()
+
+    def _rerender_pcs_log(self):
+        flt = self.cb_pcs_log_filter.currentData() or ""
+        self.txt_pcs_log.clear()
+        shown = 0
+        for lvl, line in self._pcs_log_entries:
+            if not flt or (flt in line):
+                self._append_colored_log(lvl, line)
+                shown += 1
+        total = len(self._pcs_log_entries)
+        self.lbl_pcs_log_cnt.setText(f"{shown}/{total} kayıt" if flt else f"{total} kayıt")
 
     def _clear_pcs_log(self):
+        self._pcs_log_entries.clear()
         self.txt_pcs_log.clear()
-        self._pcs_log_count = 0
         self.lbl_pcs_log_cnt.setText("0 kayıt")
+
+    def _save_pcs_log(self):
+        if not self._pcs_log_entries:
+            return
+        d = self.app.rs.out_dir or os.path.expanduser("~")
+        p, _ = QFileDialog.getSaveFileName(
+            self, "PCS Hata Akışı Logunu Kaydet",
+            os.path.join(d, time.strftime("a429_pcs_log_%Y%m%d_%H%M%S.txt")),
+            "Metin (*.txt);;Tüm Dosyalar (*)",
+        )
+        if not p:
+            return
+        with open(p, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(line for _, line in self._pcs_log_entries) + "\n")
+        self.app.log(f"[PCS] Hata akışı logu kaydedildi: {p}")
 
     def _pcs_clear(self):
         self._pcs_prev_telem = None
+        self._pcs_started_ts = time.monotonic()
         self._clear_pcs_log()
         self._clear_pcs_ch_pills()
         self.pill_pcs_total.set("Toplam: 0", "")
         self.pill_pcs_pass.set("Hatasız: 0", "")
         self.pill_pcs_fail.set("Hatalı: 0", "")
+        self.pill_pcs_rate.set("Başarı: —", "")
+        self.pill_pcs_streak.set("Seri: 0", "")
+        self.pill_pcs_uptime.set("Süre: 00:00", "")
+        self.lbl_pcs_fail_summary.setText("Henüz hata kaydedilmedi — tüm turlar temiz.")
+        self.btn_pcs_inspect.setEnabled(False)
+        self._pcs_last_fail_ch = ""
         self.app.do_pcs_clear(self.pcs_base_addr())
 
+    # ---------------------------------------------------------------- PCS telemetri güncelleme
     def set_pcs_telemetry(self, t: dict | None, error: str = ""):
         if t is None:
-            self.pill.set("PCS Hata", "err")
-            self.lbl_time.setText(error)
+            self._set_mode_pill("pcs", "PCS Hata", "err", error)
             return
 
         prev = self._pcs_prev_telem
@@ -709,20 +1119,37 @@ class TestTab(QWidget):
         ):
             prev = None
             self._clear_pcs_log()
+            self._pcs_started_ts = time.monotonic()
 
-        events = pcs_test.diff_fail_events(prev, t)
+        events = pcs_test.diff_log_events(prev, t)
         if events:
-            for line in events:
-                self.txt_pcs_log.appendPlainText(line)
-            self._pcs_log_count += len(events)
-            self.lbl_pcs_log_cnt.setText(f"{self._pcs_log_count} kayıt")
+            flt = self.cb_pcs_log_filter.currentData() or ""
+            for lvl, line in events:
+                self._pcs_log_entries.append((lvl, line))
+                if not flt or (flt in line):
+                    self._append_colored_log(lvl, line)
+            if len(self._pcs_log_entries) > 3000:
+                self._pcs_log_entries = self._pcs_log_entries[-3000:]
+            total_l = len(self._pcs_log_entries)
+            if flt:
+                shown = sum(1 for _, ln in self._pcs_log_entries if flt in ln)
+                self.lbl_pcs_log_cnt.setText(f"{shown}/{total_l} kayıt")
+            else:
+                self.lbl_pcs_log_cnt.setText(f"{total_l} kayıt")
 
         prev_ch_fails = {c["code"]: int(c["fails"]) for c in prev.get("channels", [])} if prev else {}
         self._pcs_prev_telem = t
+        self._reports["pcs"] = t
+        if self.mode() == "pcs":
+            self.btn_save.setEnabled(True)
 
-        self.report = t
-        self.btn_save.setEnabled(True)
-        self.tree.clear()
+        # Checkbox'ı donanımdaki stop_on_fail ile senkron tut
+        if t.get("recognized") and "stop_on_fail" in t:
+            self.chk_pcs_stop_fail.blockSignals(True)
+            self.chk_pcs_stop_fail.setChecked(bool(t["stop_on_fail"]))
+            self.chk_pcs_stop_fail.blockSignals(False)
+
+        self._sync_pcs_log_filter_choices(t.get("channels", []))
 
         last_bad = bool(t.get("last_round_failed", any(x.get("last_failed") for x in t["tests"])))
         cur_bad_chans = {
@@ -731,36 +1158,50 @@ class TestTab(QWidget):
         }
 
         if t["pcs_err"]:
-            self.pill.set(f"PCS HATA ({t['pcs_err_text']})", "err")
+            self._set_mode_pill("pcs", f"PCS HATA ({t['pcs_err_text']})", "err")
             self.stop_pcs_poll()
         elif not t["recognized"]:
-            self.pill.set("A429 PCS Programı Yüklü Değil", "warn")
+            self._set_mode_pill("pcs", "A429 PCS Programı Yüklü Değil", "warn")
+        elif t.get("halted_on_fail") or t.get("run_state") == "HATA İLE DURDU":
+            self._set_mode_pill("pcs", f"HATA İLE DURDU · Tur #{t['total_rounds']}", "warn")
+            self.stop_pcs_poll()
         elif t["run_state"] == "TAMAMLANDI":
             ok = t["total_rounds"] > 0 and not last_bad
-            self.pill.set(
+            self._set_mode_pill(
+                "pcs",
                 f"TAMAMLANDI {'✓' if ok else '✗'} ({t['total_rounds']} tur, {t['pass_rounds']} hatasız / {t['fail_rounds']} hatalı)",
                 "ok" if ok else "err",
             )
             self.stop_pcs_poll()
         elif t["pcs_busy"]:
             if t["total_rounds"] == 0:
-                self.pill.set("KOŞUYOR · 0 tur", "accent")
+                self._set_mode_pill("pcs", "KOŞUYOR · 0 tur", "accent")
             elif not last_bad:
-                self.pill.set(f"KOŞUYOR · {t['total_rounds']} tur · GEÇTİ ✓", "ok")
+                self._set_mode_pill("pcs", f"KOŞUYOR · {t['total_rounds']} tur · GEÇTİ ✓", "ok")
             else:
-                self.pill.set(f"KOŞUYOR · {t['total_rounds']} tur · SON TUR KALDI ✗", "err")
+                self._set_mode_pill("pcs", f"KOŞUYOR · {t['total_rounds']} tur · SON TUR KALDI ✗", "err")
         else:
-            self.pill.set(f"DURDURULDU · {t['total_rounds']} tur ({t['fail_rounds']} hatalı)", "warn")
+            self._set_mode_pill("pcs", f"DURDURULDU · {t['total_rounds']} tur ({t['fail_rounds']} hatalı)", "warn")
             self.stop_pcs_poll()
 
-        # Kenarda sabit toplam / hatasız / hatalı tur sayaçları + canlı hat rozetleri
-        self.pill_pcs_total.set(f"Toplam: {t['total_rounds']}", "")
-        self.pill_pcs_pass.set(f"Hatasız: {t['pass_rounds']}", "ok" if t["pass_rounds"] else "")
-        self.pill_pcs_fail.set(f"Hatalı: {t['fail_rounds']}", "err" if t["fail_rounds"] else "")
+        # Üst özet rozetleri
+        total = int(t["total_rounds"])
+        pass_n = int(t["pass_rounds"])
+        fail_n = int(t["fail_rounds"])
+        rate_str = f"{t.get('pass_rate_pct', 100.0 * pass_n / total if total else 0.0):.1f}%" if total else "—"
+        streak = int(t.get("consec_pass", 0))
+        self.pill_pcs_total.set(f"Toplam: {total}", "")
+        self.pill_pcs_pass.set(f"Hatasız: {pass_n}", "ok" if pass_n else "")
+        self.pill_pcs_fail.set(f"Hatalı: {fail_n}", "err" if fail_n else "")
+        self.pill_pcs_rate.set(f"Başarı: {rate_str}", "ok" if total and fail_n == 0 else ("warn" if fail_n else ""))
+        self.pill_pcs_streak.set(f"Seri: {streak}", "ok" if streak > 0 else "")
+        if self._pcs_started_ts is not None:
+            self.pill_pcs_uptime.set(f"Süre: {_fmt_duration(time.monotonic() - self._pcs_started_ts)}", "")
+
         ch_pill_items: list[tuple[str, str]] = []
         for c in t["channels"]:
             ch_now = (c["name"] in cur_bad_chans) or (last_bad and c["fails"] > prev_ch_fails.get(c["code"], 0))
-            if t["total_rounds"] == 0:
+            if total == 0:
                 ch_pill_items.append((f"{c['name']}: —", ""))
             elif ch_now:
                 ch_pill_items.append((f"{c['name']} ✗ ({c['fails']})", "err"))
@@ -768,123 +1209,126 @@ class TestTab(QWidget):
                 ch_pill_items.append((f"{c['name']} ✓ ({c['fails']})", "ok"))
         self._update_pcs_ch_pills(ch_pill_items)
 
-        meta = (
-            f"Son tur: {t['last_dur_ms']} ms · Gürültü maks: {t['max_noise_clk']} clk · "
+        self.lbl_pcs_meta.setText(
+            f"Son tur: {t['last_dur_ms']} ms · Gürültü: {t['max_noise_clk']} clk · "
             f"PCS: {t['pcs_state']} (PC={t['pcs_pc']}, {t['imem_cnt']}/{t['imem_size']} komut)"
         )
-        self.lbl_pcs_meta.setText(meta)
-        self.lbl_time.setText("")
 
         if t["max_rounds"] > 0:
             self.prog.setMaximum(t["max_rounds"])
-            self.prog.setValue(min(t["total_rounds"], t["max_rounds"]))
-            self.prog.setFormat(f"%v / %m tur  ·  {t['pass_rounds']} hatasız, {t['fail_rounds']} hatalı")
+            self.prog.setValue(min(total, t["max_rounds"]))
+            self.prog.setFormat(f"%v / %m tur  ·  {pass_n} hatasız, {fail_n} hatalı")
         else:
             self.prog.setMaximum(100)
-            self.prog.setValue(100 if t["total_rounds"] else 0)
-            self.prog.setFormat(f"Sürekli  ·  {t['total_rounds']} tur ({t['pass_rounds']} hatasız, {t['fail_rounds']} hatalı)")
+            self.prog.setValue(100 if total else 0)
+            self.prog.setFormat(f"Sürekli  ·  {total} tur ({pass_n} hatasız, {fail_n} hatalı)")
 
-        # Ağaç satırları: 1) Özet, 2) Test bazlı (son tura göre yeşil/kırmızı + hat), 3) Kanal bazlı, 4) İlk/Son hata
-        summary_it = QTreeWidgetItem([
-            "ÖZET",
-            f"Toplam {t['total_rounds']} tur · Hatasız {t['pass_rounds']} · Hatalı {t['fail_rounds']}",
-            f"{t['fail_rounds']}/{t['total_rounds']}",
-            f"PCS 0x{t['pcs_base']:08X} → IP 0x{t['ip_base']:08X} · aralık {t['gap_ms']} ms · maks. gürültü {t['max_noise_clk']} clk",
-        ])
-        f = summary_it.font(0)
-        f.setBold(True)
-        summary_it.setFont(0, f)
-        self.tree.addTopLevelItem(summary_it)
-
+        # 1) Temiz Test Sonuçları tablosu (sadece testler!)
+        self.pcs_tree.clear()
+        lf = t.get("last_fail")
+        ff = t.get("first_fail")
         for x in t["tests"]:
             cur_failed = bool(x["last_failed"])
             had_fails = x["fails"] > 0
             fch = x.get("fail_channels") or []
-            hat_txt = ", ".join(fch)
-            cnt_txt = f"{x['fails']} / {t['total_rounds']}" + (f" · {hat_txt}" if hat_txt else "")
-            if t["total_rounds"] == 0:
+            hat_txt = ", ".join(fch) or "—"
+            cnt_txt = f"{x['fails']} / {total}"
+            if total == 0:
                 st_txt, col = "BEKLİYOR", look.color("muted")
-                detail = "ilk tur bekleniyor"
+                detail = "İlk tur bekleniyor"
             elif cur_failed:
                 st_txt, col = "KALDI", look.color("danger")
-                prefix = f"[Hat: {hat_txt}] " if hat_txt else ""
-                detail = f"{prefix}Son turda KALDI · {x['hint']}"
+                detail = x["hint"] or "Son turda kaldı"
             else:
                 st_txt, col = "GEÇTİ", look.color("success")
-                if had_fails:
-                    hat_part = f" · son hat: {hat_txt}" if hat_txt else ""
-                    detail = f"Son tur GEÇTİ (geçmişte {x['fails']} hata{hat_part})"
-                else:
-                    detail = "0 hata"
-            it = QTreeWidgetItem([st_txt, x["title"], cnt_txt, detail])
+                detail = f"Son tur GEÇTİ (geçmişte {x['fails']} hata)" if had_fails else "Temiz · 0 hata"
+
+            it = QTreeWidgetItem([st_txt, x["title"], cnt_txt, hat_txt if had_fails else "—", detail, ""])
             it.setForeground(0, QBrush(col))
             if cur_failed:
                 it.setForeground(2, QBrush(look.color("danger")))
+                it.setForeground(3, QBrush(look.color("danger")))
             elif had_fails:
                 it.setForeground(2, QBrush(look.color("warning")))
-            ff = it.font(0)
-            ff.setBold(True)
-            it.setFont(0, ff)
-            self.tree.addTopLevelItem(it)
+                it.setForeground(3, QBrush(look.color("warning")))
+            fnt = it.font(0)
+            fnt.setBold(True)
+            it.setFont(0, fnt)
+            self.pcs_tree.addTopLevelItem(it)
 
-        if t["channels"]:
-            ch_top = QTreeWidgetItem([
-                "KANAL",
-                "Hat / Kanal Bazlı Kalma Sayaçları",
-                f"{sum(c['fails'] for c in t['channels'])} hata",
-                ", ".join(f"{c['name']}: {c['fails']}" for c in t["channels"]),
-            ])
-            for c in t["channels"]:
-                ch_now = (c["name"] in cur_bad_chans) or (last_bad and c["fails"] > prev_ch_fails.get(c["code"], 0))
-                if ch_now:
-                    c_mark, c_col, c_det = "✗", look.color("danger"), "son turda hata!"
-                elif c["fails"] > 0:
-                    c_mark, c_col, c_det = "✓", look.color("success"), f"son tur temiz (geçmişte {c['fails']} hata)"
-                else:
-                    c_mark, c_col, c_det = "✓", look.color("success"), "temiz"
-                cit = QTreeWidgetItem([c_mark, c["name"], str(c["fails"]), c_det])
-                cit.setForeground(0, QBrush(c_col))
-                if ch_now:
-                    cit.setForeground(2, QBrush(look.color("danger")))
-                elif c["fails"] > 0:
-                    cit.setForeground(2, QBrush(look.color("warning")))
-                ch_top.addChild(cit)
-            self.tree.addTopLevelItem(ch_top)
-            ch_top.setExpanded(True)
+            fail_det = ""
+            if lf and lf.get("test_id") == x["tid"]:
+                fail_det = pcs_test._fmt_fail_rec(lf)
+            elif ff and ff.get("test_id") == x["tid"]:
+                fail_det = pcs_test._fmt_fail_rec(ff)
+            elif had_fails:
+                fail_det = f"Hatalı tur: {x['fails']}/{total} · Hat: {hat_txt}"
+            self.pcs_tree.setItemWidget(
+                it, 5,
+                _info_btn(lambda _c=False, tid=x["tid"], ttl=x["title"], hnt=x["hint"], fd=fail_det:
+                          self._show_test_info(tid, ttl, hnt, fd)),
+            )
 
-        if t["first_fail"]:
-            ff = t["first_fail"]
-            fit = QTreeWidgetItem([
-                "İLK HATA",
-                f"Tur #{ff['round']} · [Hat: {ff['channel']}] · {ff['test_title']}",
-                f"Kod {ff['sub_code']}",
-                f"{ff['reason']} (beklenen 0x{ff['expected']:08X}, okunan 0x{ff['got']:08X})",
-            ])
-            fcol = look.color("danger" if last_bad else "warning")
-            fit.setForeground(0, QBrush(fcol))
-            self.tree.addTopLevelItem(fit)
+        # 2) Hat / Kanal Durumu tablosu (1..17 kanal destekli)
+        self.pcs_ch_tree.clear()
+        for c in t["channels"]:
+            ch_now = (c["name"] in cur_bad_chans) or (last_bad and c["fails"] > prev_ch_fails.get(c["code"], 0))
+            if total == 0:
+                c_mark, c_col, c_det = "—", look.color("muted"), "Bekliyor"
+            elif ch_now:
+                c_mark, c_col, c_det = "KALDI", look.color("danger"), "Son turda hata!"
+            elif c["fails"] > 0:
+                c_mark, c_col, c_det = "GEÇTİ", look.color("success"), f"Son tur temiz (geçmişte {c['fails']} hata)"
+            else:
+                c_mark, c_col, c_det = "GEÇTİ", look.color("success"), "Temiz"
+            cit = QTreeWidgetItem([c_mark, c["name"], str(c["fails"]), c_det])
+            cit.setForeground(0, QBrush(c_col))
+            if ch_now:
+                cit.setForeground(2, QBrush(look.color("danger")))
+            elif c["fails"] > 0:
+                cit.setForeground(2, QBrush(look.color("warning")))
+            cf = cit.font(0)
+            cf.setBold(True)
+            cit.setFont(0, cf)
+            self.pcs_ch_tree.addTopLevelItem(cit)
 
-        lf = t.get("last_fail")
-        if lf and lf != t.get("first_fail"):
-            lit = QTreeWidgetItem([
-                "SON HATA",
-                f"Tur #{lf['round']} · [Hat: {lf['channel']}] · {lf['test_title']}",
-                f"Kod {lf['sub_code']}",
-                f"{lf['reason']} (beklenen 0x{lf['expected']:08X}, okunan 0x{lf['got']:08X})",
-            ])
-            lcol = look.color("danger" if last_bad else "warning")
-            lit.setForeground(0, QBrush(lcol))
-            self.tree.addTopLevelItem(lit)
-
+        # 3) İlk / Son Hata özeti ve 'Okunan Veriler'de İncele' hedef kanalı
+        sum_lines: list[str] = []
         if t["pcs_err"]:
-            eit = QTreeWidgetItem([
-                "PCS HATA",
-                t["pcs_err_text"],
-                f"PC={t['pcs_pc']}",
-                f"ERR_CODE={t['pcs_err_code']} ERR_PC={t['pcs_err_pc']} ERR_ADDR=0x{t['pcs_err_addr']:08X}",
-            ])
-            eit.setForeground(0, QBrush(look.color("danger")))
-            self.tree.addTopLevelItem(eit)
+            sum_lines.append(
+                f"PCS DONANIM HATASI: {t['pcs_err_text']} "
+                f"(PC={t['pcs_pc']}, CODE={t['pcs_err_code']}, ADDR=0x{t['pcs_err_addr']:08X})"
+            )
+        if ff:
+            sum_lines.append(f"İLK HATA: {pcs_test._fmt_fail_rec(ff)}")
+        if lf and lf != ff:
+            sum_lines.append(f"SON HATA: {pcs_test._fmt_fail_rec(lf)}")
+        if t.get("halted_on_fail"):
+            sum_lines.append("DURUM: İlk hatada durduruldu — RX Word/Error/BitDiag RAM verileri inceleme için korunuyor.")
+        self.lbl_pcs_fail_summary.setText("\n".join(sum_lines) if sum_lines else "Henüz hata kaydedilmedi — tüm turlar temiz.")
+
+        # İnceleme kanalını seç (son hata -> ilk hata -> en çok hata alan kanal)
+        target_ch = ""
+        for rec in (lf, ff):
+            if rec:
+                code = int(rec.get("channel_code", 255))
+                if 0 <= code < 16:
+                    target_ch = f"RX{code}"
+                    break
+                if code == 16:
+                    target_ch = "TB"
+                    break
+        if not target_ch:
+            bad_chs = [c for c in t["channels"] if c["fails"] > 0]
+            if bad_chs:
+                code = int(bad_chs[0]["code"])
+                target_ch = "TB" if code == 16 else f"RX{code}"
+        self._pcs_last_fail_ch = target_ch
+        self.btn_pcs_inspect.setEnabled(bool(target_ch) and self.app.connected and not self._busy)
+        if target_ch:
+            self.btn_pcs_inspect.setToolTip(
+                f"Hata kaydedilen {channel_label(target_ch)} kanalını seçip Okunan Veriler sekmesinde hemen okur"
+            )
 
     # ---------------------------------------------------------------- ortak liste & seçenekler
     def _active_list(self) -> QListWidget:
@@ -916,6 +1360,7 @@ class TestTab(QWidget):
             return {
                 "mode": "pcs",
                 "pcs_base": self.pcs_base_addr(),
+                "pcs_name": self.selected_pcs_name(),
                 "imem_aw": self._pcs_imem_aw,
                 "dmem_aw": self._pcs_dmem_aw,
                 "rx": [c for c, cb in self._pcs_rx_boxes.items() if cb.isChecked()],
@@ -923,6 +1368,7 @@ class TestTab(QWidget):
                 "selected": sel,
                 "gap_ms": self.sp_pcs_gap.value(),
                 "max_rounds": self.sp_pcs_max.value(),
+                "stop_on_fail": self.chk_pcs_stop_fail.isChecked(),
                 "burst_hs": self.sp_pcs_burst_hs.value(),
                 "burst_ls": self.sp_pcs_burst_ls.value(),
             }
@@ -977,9 +1423,12 @@ class TestTab(QWidget):
         self.btn_bb_dll.setEnabled(not self._busy and not self._bb_scanning)
         pcs_ok = self._can_run_base and not self._busy
         self.btn_pcs_scan.setEnabled(pcs_ok and not self._pcs_scanning)
+        self.btn_pcs_start.setEnabled(pcs_ok)
         self.btn_pcs_read.setEnabled(pcs_ok)
         self.btn_pcs_stop.setEnabled(pcs_ok)
         self.btn_pcs_clear.setEnabled(pcs_ok)
+        self.btn_pcs_gap_apply.setEnabled(pcs_ok)
+        self.btn_pcs_inspect.setEnabled(pcs_ok and bool(self._pcs_last_fail_ch))
 
     # ---------------------------------------------------------------- koşum
     def _run(self):
@@ -991,21 +1440,29 @@ class TestTab(QWidget):
             if not o["selected"]:
                 look.confirm(self, "Otonom PCS Testi", "En az bir test seçin.", "Tamam", "Kapat")
                 return
-            self.tree.clear()
-            self.report = None
+            self.pcs_tree.clear()
+            self.pcs_ch_tree.clear()
+            self._reports["pcs"] = None
             self._pcs_prev_telem = None
+            self._pcs_started_ts = time.monotonic()
+            self._pcs_last_fail_ch = ""
             self._clear_pcs_log()
             self._clear_pcs_ch_pills()
             self.pill_pcs_total.set("Toplam: 0", "")
             self.pill_pcs_pass.set("Hatasız: 0", "")
             self.pill_pcs_fail.set("Hatalı: 0", "")
+            self.pill_pcs_rate.set("Başarı: —", "")
+            self.pill_pcs_streak.set("Seri: 0", "")
+            self.pill_pcs_uptime.set("Süre: 00:00", "")
             self.lbl_pcs_meta.setText("")
+            self.lbl_pcs_fail_summary.setText("PCS yükleniyor…")
+            self.btn_pcs_inspect.setEnabled(False)
             self.btn_save.setEnabled(False)
-            self.pill.set("PCS'ye yükleniyor…", "accent")
-            self.lbl_time.setText("")
+            self._set_mode_pill("pcs", "PCS'ye yükleniyor…", "accent", "")
             self.prog.setValue(0)
             self.app.do_pcs_load_start(o)
             return
+
         if o["mode"] == "ballard":
             if not o["test_tx"] and not o["test_rx"]:
                 look.confirm(self, "Dış Doğrulama Testi",
@@ -1019,14 +1476,28 @@ class TestTab(QWidget):
                 look.confirm(self, "Dış Doğrulama Testi",
                              "Ballard TX kanalı ve en az bir Kart RX kanalı seçin.", "Tamam", "Kapat")
                 return
-        elif not o["rx"] and not o["tb"]:
-            look.confirm(self, "Loopback Testi", "En az bir RX kanalı ya da TX BIT seçin.", "Tamam", "Kapat")
-            return
-        self.tree.clear()
-        self.report = None
+            self.tree_bb.clear()
+            self.pill_bb_pass.set("Geçen: 0", "")
+            self.pill_bb_fail.set("Kalan: 0", "")
+            self.pill_bb_tx.set("Kart TX → BB RX: Koşuyor…" if o["test_tx"] else "Kart TX → BB RX: Kapalı", "accent" if o["test_tx"] else "")
+            self.pill_bb_rx.set("BB TX → Kart RX: Koşuyor…" if o["test_rx"] else "BB TX → Kart RX: Kapalı", "accent" if o["test_rx"] else "")
+            self.lbl_bb_meta.setText(f"Kart RX: {', '.join(o['rx']) or '—'} · Hız: {'/'.join(o['speeds'])}")
+        else:
+            if not o["rx"] and not o["tb"]:
+                look.confirm(self, "Loopback Testi", "En az bir RX kanalı ya da TX BIT seçin.", "Tamam", "Kapat")
+                return
+            self.tree_lb.clear()
+            self.pill_lb_pass.set("Geçen: 0", "")
+            self.pill_lb_fail.set("Kalan: 0", "")
+            self.pill_lb_skip.set("Atlanan: 0", "")
+            chs = list(o["rx"]) + (["TX BIT"] if o["tb"] else [])
+            self.lbl_lb_meta.setText(f"Kanallar: {', '.join(chs)} · Hız: {'/'.join(o['speeds'])}")
+
+        rmode = o["mode"]
+        self._active_run_mode = rmode
+        self._reports[rmode] = None
         self.btn_save.setEnabled(False)
-        self.pill.set("Koşuyor…", "accent")
-        self.lbl_time.setText("")
+        self._set_mode_pill(rmode, "Koşuyor…", "accent", "")
         self.prog.setValue(0)
         self.app.do_run_selftest(o)
 
@@ -1036,69 +1507,112 @@ class TestTab(QWidget):
         self.prog.setFormat(f"%p%  ·  {msg}")
 
     def add_result(self, r: selftest.TestResult):
+        target_mode = self._active_run_mode or self.mode()
+        tw = self.tree_bb if target_mode == "ballard" else self.tree_lb
         text, role = STATUS_STYLE.get(r.status, (r.status, ""))
-        top = QTreeWidgetItem([text, r.title + (f"  ·  {r.speed}" if r.speed else ""), f"{r.duration_s:.2f} s",
-                               r.summary])
+        top = QTreeWidgetItem([text, r.title, r.speed or "—", f"{r.duration_s:.2f} s", r.summary, ""])
         col = look.color(role) if role in ("success", "danger") else look.color("muted")
         top.setForeground(0, QBrush(col))
         f = top.font(0)
         f.setBold(True)
         top.setFont(0, f)
+        fail_lines = []
         for ck in r.checks:
             mark = {True: "✓", False: "✗", None: "·"}[ck.ok]
-            it = QTreeWidgetItem([mark, ck.name, "", ck.detail])
+            it = QTreeWidgetItem([mark, ck.name, "", "", ck.detail, ""])
             it.setToolTip(1, ck.name)
-            it.setToolTip(3, ck.detail)
+            it.setToolTip(4, ck.detail)
             if ck.ok is False:
                 it.setForeground(0, QBrush(look.color("danger")))
                 it.setForeground(1, QBrush(look.color("danger")))
+                fail_lines.append(f"{ck.name}: {ck.detail}" if ck.detail else ck.name)
             elif ck.ok:
                 it.setForeground(0, QBrush(look.color("success")))
             top.addChild(it)
         for n in r.notes:
-            top.addChild(QTreeWidgetItem(["!", n, "", ""]))
+            top.addChild(QTreeWidgetItem(["!", n, "", "", "", ""]))
+            if r.status in ("FAIL", "ERROR"):
+                fail_lines.append(n)
         if r.measurements:
-            m = QTreeWidgetItem(["", "Ölçümler", "", json.dumps(r.measurements, ensure_ascii=False)])
-            m.setToolTip(3, json.dumps(r.measurements, ensure_ascii=False, indent=1))
+            m = QTreeWidgetItem(["", "Ölçümler", "", "", json.dumps(r.measurements, ensure_ascii=False), ""])
+            m.setToolTip(4, json.dumps(r.measurements, ensure_ascii=False, indent=1))
             top.addChild(m)
-        self.tree.addTopLevelItem(top)
+        tw.addTopLevelItem(top)
+        fail_det = " | ".join(fail_lines[:3])
+        tw.setItemWidget(
+            top, 5,
+            _info_btn(lambda _c=False, tid=r.tid, ttl=r.title, fd=fail_det: self._show_test_info(tid, ttl, "", fd)),
+        )
         top.setExpanded(r.status != "PASS")
-        self.tree.scrollToItem(top)
+        tw.scrollToItem(top)
 
     def set_report(self, rep: dict | None, error: str = ""):
+        rmode = (rep.get("mode") if rep else None) or self._active_run_mode or self.mode()
+        if rmode not in ("loopback", "ballard"):
+            rmode = "loopback"
+        self._active_run_mode = None
         if rep is None:
-            self.pill.set("Hata" if error else "Durduruldu", "err" if error else "warn")
-            self.lbl_time.setText(error)
+            self._set_mode_pill(rmode, "Hata" if error else "Durduruldu", "err" if error else "warn", error)
             return
-        self.report = rep
+        self._reports[rmode] = rep
         c = rep["counts"]
-        if rep["aborted"]:
-            self.pill.set("Durduruldu", "warn")
-        elif rep["passed"]:
-            self.pill.set(f"GEÇTİ ✓  ({c['PASS']} test)", "ok")
-        else:
-            self.pill.set(f"KALDI ✗  ({c['FAIL'] + c['ERROR']} başarısız / {len(rep['results'])})", "err")
         sim = rep.get("sim", {}).get("cycles")
-        self.lbl_time.setText(f"{rep['duration_s']} s" + (f" · RTL {sim / 5e4:.1f} ms simüle" if sim else ""))
-        self.btn_save.setEnabled(True)
+        sub = f"{rep['duration_s']} s" + (f" · RTL {sim / 5e4:.1f} ms simüle" if sim else "")
+        if rep["aborted"]:
+            self._set_mode_pill(rmode, "Durduruldu", "warn", sub)
+        elif rep["passed"]:
+            self._set_mode_pill(rmode, f"GEÇTİ ✓  ({c['PASS']} test)", "ok", sub)
+        else:
+            self._set_mode_pill(rmode, f"KALDI ✗  ({c['FAIL'] + c['ERROR']} başarısız / {len(rep['results'])})", "err", sub)
+
+        n_fail = c["FAIL"] + c["ERROR"]
+        if rmode == "ballard":
+            self.pill_bb_pass.set(f"Geçen: {c['PASS']}", "ok" if c["PASS"] else "")
+            self.pill_bb_fail.set(f"Kalan: {n_fail}", "err" if n_fail else "")
+            tx_res = [r for r in rep["results"] if r.tid.startswith("tx_") or r.tid == "duplex"]
+            rx_res = [r for r in rep["results"] if r.tid.startswith("rx_") or r.tid == "duplex"]
+            if tx_res:
+                tx_ok = all(r.status == "PASS" for r in tx_res)
+                self.pill_bb_tx.set("Kart TX → BB RX: " + ("GEÇTİ ✓" if tx_ok else "KALDI ✗"), "ok" if tx_ok else "err")
+            if rx_res:
+                rx_ok = all(r.status == "PASS" for r in rx_res)
+                self.pill_bb_rx.set("BB TX → Kart RX: " + ("GEÇTİ ✓" if rx_ok else "KALDI ✗"), "ok" if rx_ok else "err")
+        else:
+            self.pill_lb_pass.set(f"Geçen: {c['PASS']}", "ok" if c["PASS"] else "")
+            self.pill_lb_fail.set(f"Kalan: {n_fail}", "err" if n_fail else "")
+            self.pill_lb_skip.set(f"Atlanan: {c['SKIP']}", "")
+
+        if self.mode() == rmode:
+            self.btn_save.setEnabled(True)
         self.prog.setFormat("%p%")
 
     def _save(self):
-        if not self.report:
+        rep = self.report
+        if not rep:
             return
         d = self.app.rs.out_dir or os.path.expanduser("~")
-        rmode = self.report.get("mode")
+        rmode = rep.get("mode", self.mode())
         prefix = {"ballard": "a429_ballard_test_", "pcs": "a429_pcs_test_"}.get(rmode, "a429_loopback_test_")
-        name = os.path.join(d, time.strftime(prefix + "%Y%m%d_%H%M%S.txt"))
-        p, flt = QFileDialog.getSaveFileName(self, "Test raporunu kaydet", name, "Metin (*.txt);;JSON (*.json)")
+        name = os.path.join(d, time.strftime(prefix + "%Y%m%d_%H%M%S.html"))
+        p, flt = QFileDialog.getSaveFileName(
+            self, "Test raporunu kaydet", name,
+            "HTML Rapor (*.html);;Metin (*.txt);;JSON (*.json)",
+        )
         if not p:
             return
         if p.endswith(".json") or "JSON" in flt:
-            text = pcs_test.report_json(self.report) if rmode == "pcs" else selftest.report_json(self.report)
-        else:
+            text = pcs_test.report_json(rep) if rmode == "pcs" else selftest.report_json(rep)
+        elif p.endswith(".txt") or "Metin" in flt:
             text = (
-                pcs_test.report_text(self.report) if rmode == "pcs"
-                else (busbox_test.report_text(self.report) if rmode == "ballard" else selftest.report_text(self.report))
+                pcs_test.report_text(rep) if rmode == "pcs"
+                else (busbox_test.report_text(rep) if rmode == "ballard" else selftest.report_text(rep))
+            )
+        else:
+            rep_for_html = dict(rep)
+            rep_for_html.setdefault("mode", rmode)
+            text = test_docs.build_html_report(
+                rep_for_html,
+                log_entries=self._pcs_log_entries if rmode == "pcs" else None,
             )
         with open(p, "w", encoding="utf-8") as fh:
             fh.write(text)

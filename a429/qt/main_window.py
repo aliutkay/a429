@@ -76,6 +76,7 @@ class MainWindow(QWidget):
         self._last_rx_act: dict | None = None
         self._last_tx_act: dict | None = None
         self._last_health: dict | None = None
+        self._pcs_active = False
 
         self._recalc_timer = QTimer(self)
         self._recalc_timer.setSingleShot(True)
@@ -613,7 +614,20 @@ class MainWindow(QWidget):
         self.bus.run(fn, ok=ok, err=fail)
         return True
 
+    def _confirm_if_pcs_active(self, action: str) -> bool:
+        if not self._pcs_active:
+            return True
+        return look.confirm(
+            self,
+            APP,
+            f"Otonom PCS testi şu an aktif olarak çalışıyor.\n\n"
+            f"'{action}' işlemi devam eden PCS testini bozabilir. Yine de devam edilsin mi?",
+            "Devam Et",
+        )
+
     def do_send_rx_cfg(self):
+        if not self._confirm_if_pcs_active("RX Config gönderme"):
+            return
         self.recalc()
         if not self.res:
             return
@@ -665,6 +679,8 @@ class MainWindow(QWidget):
                 "drop_cnt": sm.get("drop_cnt"),
                 "last_word": data["words"][0]["w"][2] if data.get("words") else None,
             })
+            if not self._pcs_active and self.control_tab._outdated_state == "stale":
+                self.control_tab.set_outdated("")
             self.tabs.setCurrentWidget(self.read_tab)
 
         self._run_job(f"{channel_label(ch)} RX verileri okunuyor", job, on_ok=done, show_progress=True)
@@ -674,12 +690,18 @@ class MainWindow(QWidget):
             return
         ch = self.current_channel()
         rm = self.rm
+
+        def _ok_stat(info):
+            self.control_tab.update_live_stats(info)
+            if not self._pcs_active and self.control_tab._outdated_state == "stale":
+                self.control_tab.set_outdated("")
+
         if not rm.has(channel_prefix(ch) + "CTRL"):
             self.control_tab.update_live_stats(None)
         else:
             self.bus.run(
                 lambda: read_channel_status(self.client, rm, ch, quiet=True),
-                ok=lambda info: self.control_tab.update_live_stats(info),
+                ok=_ok_stat,
                 err=lambda e: self.log(f"Durum okunamadı ({ch}): {e}"),
             )
         self.do_check_rx_config(show_dialog=False)
@@ -853,6 +875,11 @@ class MainWindow(QWidget):
     def do_toggle_rx_enable(self, enable: bool):
         if not self.connected:
             return
+        if not self._confirm_if_pcs_active("RX Logger Enable değiştirme"):
+            self.control_tab.chk_rx_en.blockSignals(True)
+            self.control_tab.chk_rx_en.setChecked(not enable)
+            self.control_tab.chk_rx_en.blockSignals(False)
+            return
         ch = self.current_channel()
         rm = self.rm
         self._run_job(
@@ -862,6 +889,8 @@ class MainWindow(QWidget):
         )
 
     def do_clear_channel(self):
+        if not self._confirm_if_pcs_active("Kanal sayaçlarını temizleme"):
+            return
         ch = self.current_channel()
         if not look.confirm(self, APP, f"{channel_label(ch)} kanalının Word/Error sayaçları temizlensin mi?", "Temizle"):
             return
@@ -969,6 +998,8 @@ class MainWindow(QWidget):
         self._run_job(f"{channel_label(ch)} Config + okuma", job, on_ok=done, show_progress=True)
 
     def do_send_tx_cfg(self):
+        if not self._confirm_if_pcs_active("TX Config gönderme"):
+            return
         self.recalc()
         if not self.res_tx or self.res_tx["errors"]:
             msg = "\n".join(self.res_tx["errors"][:8]) if self.res_tx else "TX Config hesaplanamadı."
@@ -1071,6 +1102,36 @@ class MainWindow(QWidget):
 
         self.bus.run(job, ok=ok, err=err)
 
+    def _sync_pcs_control_state(self, telem: dict | None):
+        if not telem or not telem.get("recognized"):
+            if self._pcs_active:
+                self._pcs_active = False
+                self.control_tab.set_outdated("stale")
+            return
+        running = bool(
+            telem.get("pcs_busy")
+            and not telem.get("halted_on_fail")
+            and telem.get("run_state") != "TAMAMLANDI"
+        )
+        if running:
+            self._pcs_active = True
+            self.control_tab.set_outdated(
+                "running",
+                f"Otonom PCS testi çalışıyor (Tur #{telem.get('total_rounds', 0)}) — "
+                "Kontrol sekmesindeki sayaç ve aktif config değerleri güncel olmayabilir.",
+            )
+        else:
+            was = self._pcs_active
+            self._pcs_active = False
+            if was or telem.get("halted_on_fail") or telem.get("total_rounds", 0) > 0:
+                reason = (
+                    "Otonom PCS ilk hatada durdu (RX RAM korunuyor) — "
+                    "'Okunan Veriler' ile inceleyebilir veya Kontrol sekmesini yenileyebilirsiniz."
+                    if telem.get("halted_on_fail")
+                    else "Otonom PCS testi donanım ayarlarını/sayaçlarını değiştirdi — güncel değerler için 'Şimdi Yenile'ye basın."
+                )
+                self.control_tab.set_outdated("stale", reason)
+
     def do_pcs_load_start(self, opts: dict):
         from .. import pcs_test
         if not self.connected or self.busy or not self.client:
@@ -1079,9 +1140,21 @@ class MainWindow(QWidget):
         ip_base = rm.base if rm.is_loaded() else 0x00010000
         clk_hz = int(round((self.ci.clk_mhz or 50.0) * 1e6))
         pcs_base = int(opts["pcs_base"]) & 0xFFFFFFFF
+        pcs_name = str(opts.get("pcs_name") or "")
+        out_dir = native_dir(self.rs.out_dir) if self.rs.out_dir else os.path.expanduser("~")
 
         def job():
             info = pcs_test.probe_pcs_at(self.client, pcs_base)
+            # Adres haritasından PCS örnek adını bul (AXIL Studio PCS sekmesi senkronu için)
+            target_pcs_name = pcs_name
+            if not target_pcs_name and hasattr(self.client, "address_map"):
+                try:
+                    for e in self.client.address_map() or []:
+                        if e.get("kind") == "cmd_seq" and (int(e.get("base", -1)) & 0xFFFFFFFF) == pcs_base:
+                            target_pcs_name = str(e.get("name") or "")
+                            break
+                except Exception:  # noqa: BLE001
+                    pass
             # IP'nin gerçek CLK_HZ, ERR_DEPTH ve BITDIAG_WORDS değerlerini (varsa) kullan
             real_clk = clk_hz
             err_depth, bit_words = 256, 8
@@ -1104,6 +1177,7 @@ class MainWindow(QWidget):
                 clk_hz=real_clk,
                 gap_ms=opts["gap_ms"],
                 max_rounds=opts["max_rounds"],
+                stop_on_fail=opts.get("stop_on_fail", False),
                 burst_hs=opts["burst_hs"],
                 burst_ls=opts["burst_ls"],
                 bitdiag_words=bit_words,
@@ -1115,6 +1189,12 @@ class MainWindow(QWidget):
                 self.client, pcs_base, comp, log=self.log,
                 progress=lambda d, t, m: self._prog_sig.emit(d, t, m),
             )
+            try:
+                asm_path = pcs_test.save_active_asm(out_dir, comp)
+                if pcs_test.sync_pcs_program_to_studio(self.client, target_pcs_name, asm_path):
+                    self.log(f"[PCS] Aktif assembly AXIL Studio ({target_pcs_name}) ile senkronlandı: {asm_path}")
+            except Exception as exc:  # noqa: BLE001
+                self.log(f"[PCS] Aktif .s dosyası senkron uyarısı: {exc}")
             return pcs_test.read_telemetry(self.client, pcs_base)
 
         self._selftest_running = True
@@ -1122,6 +1202,7 @@ class MainWindow(QWidget):
         def ok(telem):
             self._selftest_running = False
             self.test_tab.set_pcs_telemetry(telem)
+            self._sync_pcs_control_state(telem)
             self.test_tab.start_pcs_poll()
 
         def finished(ok_flag):
@@ -1130,6 +1211,30 @@ class MainWindow(QWidget):
                 self.test_tab.set_pcs_telemetry(None, "PCS yüklenemedi (İşlem Logu'na bakın)")
 
         self._run_job("PCS otonom test yükleniyor", job, on_ok=ok, on_done=finished, show_progress=True)
+
+    def do_pcs_start(self, pcs_base: int):
+        from .. import pcs_test
+        if not self.connected or self.busy or not self.client:
+            return
+
+        def job():
+            action = pcs_test.start_pcs(self.client, pcs_base)
+            return action, pcs_test.read_telemetry(self.client, pcs_base)
+
+        def ok(res):
+            action, telem = res
+            self.test_tab.set_pcs_telemetry(telem)
+            self._sync_pcs_control_state(telem)
+            self.test_tab.start_pcs_poll()
+            msg_map = {
+                "resumed": "HATA İLE DURDU durumundan sürdürüldü",
+                "restarted": "Sayaçlar sıfırlanıp yeniden başlatıldı",
+                "already_running": "Zaten çalışıyor",
+                "started": "Yüklü programla başlatıldı (I-mem yeniden yüklenmedi)",
+            }
+            self.log(f"[PCS] 0x{pcs_base:08X}: {msg_map.get(action, action)}.")
+
+        self._run_job("PCS başlatılıyor", job, on_ok=ok)
 
     def do_pcs_read(self, pcs_base: int, quiet: bool = False):
         from .. import pcs_test
@@ -1145,9 +1250,10 @@ class MainWindow(QWidget):
         def ok(telem):
             self._pcs_reading = False
             self.test_tab.set_pcs_telemetry(telem)
+            self._sync_pcs_control_state(telem)
             if not quiet:
                 self.log(f"[PCS] Okundu (0x{pcs_base:08X}): {telem['total_rounds']} tur, "
-                         f"{telem['fail_rounds']} hatalı ({telem['pcs_state']})")
+                         f"{telem['fail_rounds']} hatalı ({telem['run_state']} / {telem['pcs_state']})")
 
         def err(e):
             self._pcs_reading = False
@@ -1166,11 +1272,12 @@ class MainWindow(QWidget):
             pcs_test.stop_pcs(self.client, pcs_base)
             return pcs_test.read_telemetry(self.client, pcs_base)
 
-        self._run_job(
-            "PCS durduruluyor",
-            job,
-            on_ok=lambda t: (self.test_tab.set_pcs_telemetry(t), self.log(f"[PCS] Durduruldu (0x{pcs_base:08X}).")),
-        )
+        def ok(telem):
+            self.test_tab.set_pcs_telemetry(telem)
+            self._sync_pcs_control_state(telem)
+            self.log(f"[PCS] Durduruldu (0x{pcs_base:08X}).")
+
+        self._run_job("PCS durduruluyor", job, on_ok=ok)
 
     def do_pcs_clear(self, pcs_base: int):
         from .. import pcs_test
@@ -1184,8 +1291,51 @@ class MainWindow(QWidget):
         self._run_job(
             "PCS sayaçları sıfırlanıyor",
             job,
-            on_ok=lambda t: (self.test_tab.set_pcs_telemetry(t), self.log(f"[PCS] Sayaçlar sıfırlandı (0x{pcs_base:08X}).")),
+            on_ok=lambda t: (
+                self.test_tab.set_pcs_telemetry(t),
+                self._sync_pcs_control_state(t),
+                self.log(f"[PCS] Sayaçlar sıfırlandı (0x{pcs_base:08X})."),
+            ),
         )
+
+    def do_pcs_update_gap(self, pcs_base: int, gap_ms: int):
+        from .. import pcs_test
+        if not self.connected or self.busy or not self.client:
+            return
+        rep = self.test_tab._reports.get("pcs") or {}
+        clk_hz = int(rep.get("clk_hz") or round((self.ci.clk_mhz or 50.0) * 1e6))
+
+        def job():
+            pcs_test.update_gap(self.client, pcs_base, gap_ms, clk_hz=clk_hz)
+            return pcs_test.read_telemetry(self.client, pcs_base)
+
+        self.bus.run(
+            job,
+            ok=lambda t: (
+                self.test_tab.set_pcs_telemetry(t),
+                self.log(f"[PCS] Tur aralığı canlı güncellendi: {gap_ms} ms"),
+            ),
+            err=lambda e: self.log(f"[PCS] Tur aralığı güncellenemedi: {e}"),
+        )
+
+    def do_pcs_update_stop_on_fail(self, pcs_base: int, stop_on_fail: bool):
+        from .. import pcs_test
+        if not self.connected or self.busy or not self.client:
+            return
+        self.bus.run(
+            lambda: pcs_test.update_stop_on_fail(self.client, pcs_base, stop_on_fail),
+            ok=lambda _: self.log(f"[PCS] İlk hatada durdur: {'AÇIK' if stop_on_fail else 'KAPALI'}"),
+            err=lambda e: self.log(f"[PCS] İlk hatada durdur güncellenemedi: {e}"),
+        )
+
+    def do_inspect_pcs_channel(self, ch: str):
+        if not self.connected or self.busy:
+            return
+        idx = self.cb_channel.findData(ch)
+        if idx >= 0:
+            self.cb_channel.setCurrentIndex(idx)
+        self.tabs.setCurrentWidget(self.read_tab)
+        self.do_read()
 
     def do_run_selftest(self, opts: dict):
         from .. import busbox_test, selftest
@@ -1209,6 +1359,10 @@ class MainWindow(QWidget):
             self.log(f"[Test] Loopback testi başlıyor: TX → {', '.join(opts['rx']) or '—'}"
                      + (" + TX BIT" if opts["tb"] else "") + f", hızlar {'/'.join(opts['speeds'])}")
         self._selftest_running = True
+        self.control_tab.set_outdated(
+            "running",
+            "Otomatik test şu an çalışıyor — Kontrol sekmesindeki değerler test bitiminde otomatik yenilenecektir.",
+        )
 
         def job():
             if is_bb:
@@ -1247,6 +1401,7 @@ class MainWindow(QWidget):
             c = rep["counts"]
             self.log(f"[Test] {'GEÇTİ' if rep['passed'] else 'KALDI'}: PASS {c['PASS']}, FAIL {c['FAIL']}, "
                      f"ERROR {c['ERROR']}, SKIP {c['SKIP']} ({rep['duration_s']} s)")
+            self.control_tab.set_outdated("")
             self.do_refresh_status()
             self.do_check_tx_config(show_dialog=False)
             self.do_check_ip()
@@ -1254,6 +1409,7 @@ class MainWindow(QWidget):
         def finished(ok):
             if not ok:
                 self._selftest_running = False
+                self.control_tab.set_outdated("stale")
                 self.test_tab.set_report(None, "Test koşturulamadı (İşlem Logu'na bakın)")
 
         title = "Ballard dış doğrulama testi" if is_bb else "Loopback testi"
@@ -1261,6 +1417,8 @@ class MainWindow(QWidget):
         self._update_controls()
 
     def do_ip_reset(self):
+        if not self._confirm_if_pcs_active("IP Reset"):
+            return
         if not look.confirm(self, APP, "ARINC 429 IP bloğu resetlensin mi? (SOFT_RESET.ALL darbesi gönderilir)", "Resetle"):
             return
         rm = self.rm

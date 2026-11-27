@@ -15,11 +15,12 @@ Bu modül harici araç gerektirmeden:
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from dataclasses import dataclass
 
-from . import ipmap
+from . import ipmap, test_docs
 from .regs import channel_label
 from .txlive import build_word
 
@@ -504,6 +505,7 @@ M_BURST_LS = 11
 M_CLK_HZ = 12
 M_IP_BASE = 13
 M_ROUND_T0 = 14
+M_STOP_ON_FAIL = 15  # 1: ilk test hatasında turu kesip M_STATE=3 (HATA İLE DURDU) ile bekle
 
 # ---- D[16..80]: Clearable stats block (65 words: 16..80 inclusive)
 STATS_START = 16
@@ -523,6 +525,7 @@ M_LAST_FAIL_ROUND = 27
 M_LAST_FAIL_INFO = 28
 M_LAST_FAIL_EXP = 29
 M_LAST_FAIL_GOT = 30
+M_CONSEC_PASS = 31  # Ardışık hatasız tur serisi (hata olunca 0'lanır)
 D_TEST_FAIL = 32   # 32..46 (15 test kalma sayacı; D[47]=global/TX kalma sayacı)
 D_CHAN_FAIL = 48   # 48..64 (17 kanal kalma sayacı)
 D_TEST_CH = 65     # 65..80 (16 test için son kalma hat bitmask'i: bit0=TX/Genel, bit(i+1)=ch[i])
@@ -636,6 +639,7 @@ def build_program(
     clk_hz: int = 50_000_000,
     gap_ms: int = 500,
     max_rounds: int = 0,
+    stop_on_fail: bool = False,
     burst_hs: int = 24,
     burst_ls: int = 6,
     bitdiag_words: int = 8,
@@ -643,7 +647,13 @@ def build_program(
     imem_aw: int = 9,
     dmem_aw: int = 8,
 ) -> CompiledProgram:
-    """Seçili test ve kanallar için IP 2.1.0 PCS assembly'sini üretip 64-bit makine koduna derler."""
+    """Seçili test ve kanallar için IP 2.1.0 PCS assembly'sini üretip 64-bit makine koduna derler.
+
+    ``imem_aw >= 10`` (1024+ komut) olduğunda tam izole test kurulumları,
+    canlı değiştirilebilir ``M_STOP_ON_FAIL`` kontrol noktaları ve ardışık
+    hatasız tur serisi (``M_CONSEC_PASS``) dahil edilir. ``imem_aw == 9`` (512
+    komut) için geriye dönük kompakt mod korunur.
+    """
     sel_set = set(selected if selected is not None else ALL_TEST_IDS)
     sel_list = [tid for _, tid, _, _ in TESTS if tid in sel_set]
     if not sel_list:
@@ -654,6 +664,10 @@ def build_program(
         chans.append("TB")
     if not chans:
         raise PcsError("En az bir RX kanalı veya TX BIT (TB) seçilmelidir.")
+
+    full_mode = (1 << imem_aw) >= 1024
+    emit_sof = full_mode or bool(stop_on_fail)
+    last_sel_tid = sel_list[-1]
 
     clk_hz = max(1_000_000, int(clk_hz))
     clk_us = max(1, clk_hz // 1_000_000)
@@ -706,11 +720,12 @@ def build_program(
         M_CLK_HZ: clk_hz,
         M_IP_BASE: ip_base & 0xFFFFFFFF,
         M_ROUND_T0: 0,
+        M_STOP_ON_FAIL: 1 if stop_on_fail else 0,
         M_SEQ_BEGIN: 0,
         M_TOTAL_ROUNDS: 0,
         M_SIGNATURE: SIGNATURE,
     }
-    # D[16..64] istatistik bloğu start: başında PCS tarafından clear_stats ile sıfırlanır (47 UART yazması tasarrufu)
+    # D[16..80] istatistik bloğu start: başında PCS tarafından clear_stats ile sıfırlanır
     # D_CH_CODE - 1 = 255: R8=0 (global/TX) için tek LDD ile kanal kodu çözümü
     dmem_init[D_CH_CODE - 1] = 255
     for i, ch in enumerate(chans):
@@ -745,7 +760,8 @@ def build_program(
 
     L: list[str] = [
         "; ARINC 429 IP 2.1.0 — Otonom Periyodik Loopback Testi (AXIL Studio PCS / cmd_seq v2.0)",
-        f"; IP_BASE=0x{ip_base:08X}  CLK={clk_hz} Hz  Kanallar={','.join(chans)}  Testler={','.join(sel_list)}",
+        f"; IP_BASE=0x{ip_base:08X}  CLK={clk_hz} Hz  IMEM={1 << imem_aw}  Kanallar={','.join(chans)}",
+        f"; Testler={','.join(sel_list)}  stop_on_fail={int(bool(stop_on_fail))}",
         "",
         f".equ IP_BASE          0x{ip_base & 0xFFFFFFFF:08X}",
         f".equ IP_ID_EXP        0x{ipmap.IP_ID_WORD:08X}",
@@ -838,8 +854,13 @@ def build_program(
         "no_clr:",
         "        TMR   R1",
         f"        STD   D[{M_ROUND_T0}], R1",
-        "        LDI   R10, 0",                      # round_fail_mask = 0
+        "        LDI   R10, 0",                      # round_fail_mask = 0 (bit31 = stop_on_fail tetiklendi)
     ]
+
+    def _sof_break(tid: str):
+        if emit_sof and tid != last_sel_tid:
+            L.append("        CMP   R10, 0")
+            L.append("        BR    MI, round_end")
 
     # ---- Test 0: ident
     if "ident" in sel_set:
@@ -855,6 +876,7 @@ def build_program(
             "        CALL  rec_fail",
             "t_ident_ok:",
         ]
+        _sof_break("ident")
 
     # ---- Test 1: idle
     if "idle" in sel_set:
@@ -867,6 +889,7 @@ def build_program(
             "        LDI   R15, 2",
             "        CALL  chk_line_now",
         ]
+        _sof_break("idle")
 
     # ---- Test 2: polarity (LOW=2->0x2000, HIGH=1->0x1000, NULL=0->0x0000)
     if "polarity" in sel_set:
@@ -888,24 +911,31 @@ def build_program(
             "        LDI   R1, 5",                   # override PULSE_STUCK temizle
             "        CALL  all_ch_ctrl",
         ]
+        _sof_break("polarity")
 
     # ---- Test 3 & 4: single_hs / single_ls
     if "single_hs" in sel_set:
         L += ["t_s_hs:", "        LDI   R9, 3", "        LDI   R1, 0x10", "        CALL  run_single"]
+        _sof_break("single_hs")
     if "single_ls" in sel_set:
         L += ["t_s_ls:", "        LDI   R9, 4", "        LDI   R1, 0x11", "        CALL  run_single"]
+        _sof_break("single_ls")
 
     # ---- Test 5 & 6: pattern_hs / pattern_ls
     if "pattern_hs" in sel_set:
         L += ["t_p_hs:", "        LDI   R9, 5", "        LDI   R1, 0x10", "        LDI   R15, 10", "        CALL  run_pattern"]
+        _sof_break("pattern_hs")
     if "pattern_ls" in sel_set:
         L += ["t_p_ls:", "        LDI   R9, 6", "        LDI   R1, 0x11", "        LDI   R15, 6", "        CALL  run_pattern"]
+        _sof_break("pattern_ls")
 
     # ---- Test 7 & 8: burst_hs / burst_ls (IP 2.1.0 TX_SCHED_COUNT)
     if "burst_hs" in sel_set:
         L += ["t_b_hs:", "        LDI   R9, 7", "        LDI   R1, 0x10", f"        LDD   R12, D[{M_BURST_HS}]", "        CALL  run_burst"]
+        _sof_break("burst_hs")
     if "burst_ls" in sel_set:
         L += ["t_b_ls:", "        LDI   R9, 8", "        LDI   R1, 0x11", f"        LDD   R12, D[{M_BURST_LS}]", "        CALL  run_burst"]
+        _sof_break("burst_ls")
 
     # ---- Test 9: switch (HS <-> LS 2 tur)
     if "switch" in sel_set:
@@ -923,6 +953,7 @@ def build_program(
             "        CALL  send_chk_one",
             "        LOOP  R14, sw_lp",
         ]
+        _sof_break("switch")
 
     # ---- Test 10: parity
     if "parity" in sel_set:
@@ -930,7 +961,7 @@ def build_program(
             "t_par:",
             "        LDI   R9, 10",
         ]
-        if "switch" not in sel_set:
+        if full_mode or ("switch" not in sel_set):
             L += ["        CALL  set_hs"]
         L += [
             f"        LDI   R11, 0x{PARITY_BAD_WORD:08X}",  # Even parity
@@ -939,6 +970,7 @@ def build_program(
             f"        LDI   R11, 0x{PARITY_GOOD_WORD:08X}", # Odd parity recovery
             "        CALL  send_chk_one",
         ]
+        _sof_break("parity")
 
     # ---- Test 11: mismatch
     if "mismatch" in sel_set:
@@ -960,6 +992,7 @@ def build_program(
             "        CALL  send_chk_rej",
             "        CALL  set_hs",
         ]
+        _sof_break("mismatch")
 
     # ---- Test 12: gapviol (IP 2.1.0 TX_SCHED_COUNT=3 + TX_CUST_GAP_DUR = ACT_GAP/2)
     if "gapviol" in sel_set:
@@ -967,7 +1000,7 @@ def build_program(
             "t_gap:",
             "        LDI   R9, 12",
         ]
-        if "mismatch" not in sel_set:
+        if full_mode or ("mismatch" not in sel_set):
             L += ["        CALL  set_hs"]
         L += [
             "        RD    R1, [R6+OFF_TX_ACT_TIM]",
@@ -988,6 +1021,7 @@ def build_program(
             "        CALL  check_rej",
             "        CALL  send_chk_one",            # toparlanma (R11=0x80C0FFEE)
         ]
+        _sof_break("gapviol")
 
     # ---- Test 13: bittime (Bit Diagnostic: 32 bit pulse/bit unsigned-range + gürültü)
     if "bittime" in sel_set:
@@ -995,7 +1029,7 @@ def build_program(
             "t_bt:",
             "        LDI   R9, 13",
         ]
-        if "gapviol" not in sel_set:
+        if full_mode or ("gapviol" not in sel_set):
             L += ["        CALL  set_hs"]
         L += [
             "        LDI   R11, 0xD5555555",
@@ -1065,6 +1099,7 @@ def build_program(
             "bt_nx:",
             "        LOOP  R8, bt_ch",
         ]
+        _sof_break("bittime")
 
     # ---- Test 14: logger (ENABLE=0, FREEZE=1, GLOBAL_FREEZE=1)
     if "logger" in sel_set:
@@ -1072,7 +1107,7 @@ def build_program(
             "t_log:",
             "        LDI   R9, 14",
         ]
-        if "bittime" not in sel_set:
+        if full_mode or ("bittime" not in sel_set):
             L += ["        CALL  set_hs"]
         L += [
             "        LDI   R11, 0x80555AAA",
@@ -1090,9 +1125,13 @@ def build_program(
         ]
 
     # ---- Tur sonu istatistik güncellemesi (seqlock: M_SEQ_BEGIN .. M_TOTAL_ROUNDS)
+    L += ["", "round_end:"]
+    if emit_sof:
+        L += [
+            "        MOV   R4, R10",                 # bit31 = stop_on_fail tetiklendi
+            "        AND   R10, 0x7FFFFFFF",         # saf 15-bit test fail maskesi
+        ]
     L += [
-        "",
-        "round_end:",
         f"        STD   D[{M_PRNG}], R13",
         f"        LDD   R1, D[{M_TOTAL_ROUNDS}]",
         "        ADD   R1, 1",
@@ -1106,12 +1145,36 @@ def build_program(
         "        OR    R2, R10",
         f"        STD   D[{M_CUM_FAIL_MASK}], R2",
         "        CMP   R10, 0",
-        "        BR    Z, r_pub",
-        f"        LDD   R2, D[{M_FAIL_ROUNDS}]",
-        "        ADD   R2, 1",
-        f"        STD   D[{M_FAIL_ROUNDS}], R2",
-        "r_pub:",
-        f"        STD   D[{M_TOTAL_ROUNDS}], R1",
+    ]
+    if full_mode:
+        L += [
+            "        BR    NZ, r_fail",
+            f"        LDD   R2, D[{M_CONSEC_PASS}]",
+            "        ADD   R2, 1",
+            f"        STD   D[{M_CONSEC_PASS}], R2",
+            "        JMP   r_pub",
+            "r_fail:",
+            f"        STD   D[{M_CONSEC_PASS}], R0",
+            f"        LDD   R2, D[{M_FAIL_ROUNDS}]",
+            "        ADD   R2, 1",
+            f"        STD   D[{M_FAIL_ROUNDS}], R2",
+            "r_pub:",
+        ]
+    else:
+        L += [
+            "        BR    Z, r_pub",
+            f"        LDD   R2, D[{M_FAIL_ROUNDS}]",
+            "        ADD   R2, 1",
+            f"        STD   D[{M_FAIL_ROUNDS}], R2",
+            "r_pub:",
+        ]
+    L += [f"        STD   D[{M_TOTAL_ROUNDS}], R1"]
+    if emit_sof:
+        L += [
+            "        CMP   R4, 0",
+            "        BR    MI, fail_halted",
+        ]
+    L += [
         f"        LDD   R2, D[{M_MAX_ROUNDS}]",
         "        CMP   R2, 0",
         "        BR    Z, r_wait",
@@ -1125,13 +1188,34 @@ def build_program(
         "finished:",
         "        LDI   R1, 2",
         f"        STD   D[{M_STATE}], R1",
-        "fin_lp:",
-        f"        LDD   R1, D[{M_AGAIN}] @50",
-        "        CMP   R1, 0",
-        "        BR    Z, fin_lp",
-        f"        STD   D[{M_AGAIN}], R0",
-        "        CALL  clear_stats",
-        "        JMP   set_run",
+    ]
+    if emit_sof:
+        L += [
+            "        JMP   fin_lp",
+            "fail_halted:",
+            "        LDI   R1, 3",                   # HATA İLE DURDU (RX RAM inceleme için korunur)
+            f"        STD   D[{M_STATE}], R1",
+            "fin_lp:",
+            f"        LDD   R1, D[{M_AGAIN}] @50",
+            "        CMP   R1, 0",
+            "        BR    Z, fin_lp",
+            f"        STD   D[{M_AGAIN}], R0",
+            "        CMP   R1, 1",                   # 1: sayaçları koruyarak devam et; 2: sıfırla ve baştan başlat
+            "        BR    Z, set_run",
+            "        CALL  clear_stats",
+            "        JMP   set_run",
+        ]
+    else:
+        L += [
+            "fin_lp:",
+            f"        LDD   R1, D[{M_AGAIN}] @50",
+            "        CMP   R1, 0",
+            "        BR    Z, fin_lp",
+            f"        STD   D[{M_AGAIN}], R0",
+            "        CALL  clear_stats",
+            "        JMP   set_run",
+        ]
+    L += [
         "",
         "; ============================================================================",
         "; Ortak alt-yordamlar (maks. çağrı derinliği <= 4)",
@@ -1192,8 +1276,16 @@ def build_program(
         f"        STD   D[{M_FIRST_FAIL_EXP}], R2",
         f"        STD   D[{M_FIRST_FAIL_GOT}], R1",
         "rf_ret:",
-        "        RET",
     ]
+    if emit_sof:
+        L += [
+            f"        LDD   R4, D[{M_STOP_ON_FAIL}]",
+            "        CMP   R4, 0",
+            "        BR    Z, rf_done",
+            "        OR    R10, 0x80000000",         # turu mevcut testin sonunda durdur
+            "rf_done:",
+        ]
+    L += ["        RET"]
 
     if need_chk_line:
         L += [
@@ -1765,6 +1857,33 @@ def stop_pcs(client, pcs_base: int):
     _abs_batch(client, [("write", base + REG_CTRL, CTRL_ERR_HALT | CTRL_STOP)])
 
 
+def start_pcs(client, pcs_base: int) -> str:
+    """I-mem'i yeniden yüklemeden PCS'yi başlatır veya 'HATA İLE DURDU' / 'TAMAMLANDI' durumundan sürdürür."""
+    base = pcs_base & 0xFFFFFFFF
+    st_v, imem_cnt, sig, state = _abs_batch(client, [
+        ("read", base + REG_STATUS),
+        ("read", base + REG_IMEM_CNT),
+        ("read", base + REG_DMEM_BASE + M_SIGNATURE * 4),
+        ("read", base + REG_DMEM_BASE + M_STATE * 4),
+    ])
+    st = PcsStatus(st_v)
+    if imem_cnt == 0 or sig != SIGNATURE:
+        raise PcsError("PCS belleğinde yüklü ARINC 429 test programı yok. Önce 'PCS'ye Yükle & Başlat' kullanın.")
+    if st.busy and state == 3:
+        _abs_batch(client, [("write", base + REG_DMEM_BASE + M_AGAIN * 4, 1)])
+        return "resumed"
+    if st.busy and state == 2:
+        _abs_batch(client, [("write", base + REG_DMEM_BASE + M_AGAIN * 4, 2)])
+        return "restarted"
+    if st.busy:
+        return "already_running"
+    _abs_batch(client, [
+        ("write", base + REG_CTRL, CTRL_ERR_HALT | CTRL_RESET),
+        ("write", base + REG_CTRL, CTRL_ERR_HALT | CTRL_RUN),
+    ])
+    return "started"
+
+
 def clear_stats(client, pcs_base: int):
     """Çalışan PCS'ye istatistik sıfırlama isteği gönderir; durmuşsa D-mem'i doğrudan sıfırlar."""
     base = pcs_base & 0xFFFFFFFF
@@ -1782,12 +1901,39 @@ def update_gap(client, pcs_base: int, gap_ms: int, clk_hz: int = 50_000_000):
     _abs_batch(client, [("write", base + REG_DMEM_BASE + M_GAP_CLK * 4, gap_clk)])
 
 
+def update_stop_on_fail(client, pcs_base: int, stop_on_fail: bool):
+    """İlk hatada durdurma bayrağını (D[M_STOP_ON_FAIL]) canlı olarak günceller."""
+    base = pcs_base & 0xFFFFFFFF
+    _abs_batch(client, [("write", base + REG_DMEM_BASE + M_STOP_ON_FAIL * 4, 1 if stop_on_fail else 0)])
+
+
 def restart_rounds(client, pcs_base: int, max_rounds: int):
     base = pcs_base & 0xFFFFFFFF
     _abs_batch(client, [
         ("write", base + REG_DMEM_BASE + M_MAX_ROUNDS * 4, max(0, int(max_rounds))),
-        ("write", base + REG_DMEM_BASE + M_AGAIN * 4, 1),
+        ("write", base + REG_DMEM_BASE + M_AGAIN * 4, 2),
     ])
+
+
+def save_active_asm(out_dir: str, compiled: CompiledProgram, filename: str = "a429_pcs_active.s") -> str:
+    """Aktif PCS assembly kaynak kodunu diske yazar ve mutlak dosya yolunu döner."""
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.abspath(os.path.join(out_dir, filename))
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(compiled.asm)
+    return path
+
+
+def sync_pcs_program_to_studio(client, pcs_name: str, asm_path: str) -> bool:
+    """AXIL Studio'daki cmd_seq (PCS) arayüzünün aktif programı canlı göstermesi için proje ayarını günceller."""
+    fn = getattr(client, "set_settings", None)
+    if not fn or not pcs_name or not asm_path:
+        return False
+    try:
+        fn(ip=pcs_name, program=os.path.abspath(asm_path))
+        return True
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def _chan_name(code: int) -> str:
@@ -1892,6 +2038,10 @@ def read_telemetry(client, pcs_base: int) -> dict:
     failed_n = int(dm[M_FAIL_ROUNDS]) if recognized else 0
     passed_n = max(0, total - failed_n)
     state_code = int(dm[M_STATE]) if recognized else 0
+    consec_pass = int(dm[M_CONSEC_PASS]) if recognized else 0
+    if recognized and consec_pass == 0 and total > 0 and failed_n == 0:
+        # 512-komut kompakt mod M_CONSEC_PASS yazmaz; hiç hata yoksa seri = toplam tur
+        consec_pass = total
 
     return {
         "mode": "pcs",
@@ -1911,7 +2061,9 @@ def read_telemetry(client, pcs_base: int) -> dict:
         "pcs_err_addr": int(err_addr),
         "recognized": recognized,
         "signature": int(dm[M_SIGNATURE]),
-        "run_state": {0: "HAZIRLANIYOR", 1: "KOŞUYOR", 2: "TAMAMLANDI"}.get(state_code, str(state_code)),
+        "run_state": {0: "HAZIRLANIYOR", 1: "KOŞUYOR", 2: "TAMAMLANDI", 3: "HATA İLE DURDU"}.get(state_code, str(state_code)),
+        "halted_on_fail": recognized and state_code == 3,
+        "stop_on_fail": bool(dm[M_STOP_ON_FAIL]) if recognized else False,
         "clk_hz": clk_hz,
         "ip_base": int(dm[M_IP_BASE]) if recognized else 0,
         "gap_ms": round(int(dm[M_GAP_CLK]) * 1000.0 / clk_hz, 1) if recognized else 0.0,
@@ -1919,6 +2071,8 @@ def read_telemetry(client, pcs_base: int) -> dict:
         "total_rounds": total,
         "pass_rounds": passed_n,
         "fail_rounds": failed_n,
+        "pass_rate_pct": round(100.0 * passed_n / total, 2) if total else 0.0,
+        "consec_pass": consec_pass,
         "last_round_failed": bool(last_mask),
         "last_dur_ms": round(int(dm[M_LAST_DUR_CLK]) * 1000.0 / clk_hz, 3) if recognized else 0.0,
         "max_noise_clk": int(dm[M_MAX_NOISE]) if recognized else 0,
@@ -1938,17 +2092,21 @@ def _fmt_fail_rec(rec: dict, ch_override: str = "") -> str:
     )
 
 
-def diff_fail_events(prev: dict | None, cur: dict) -> list[str]:
-    """İki PCS telemetri okuması arasındaki yeni hataları hat/kanal bilgisiyle log satırlarına dönüştürür."""
+def diff_log_events(prev: dict | None, cur: dict) -> list[tuple[str, str]]:
+    """İki PCS telemetri okuması arasındaki olayları ``(seviye, metin)`` listesi olarak üretir.
+
+    Seviyeler: ``"err"`` (kırmızı), ``"warn"`` (turuncu), ``"ok"`` (yeşil toparlanma), ``"info"`` (durum).
+    """
     ts = str(cur.get("timestamp") or "").split(" ")[-1] or time.strftime("%H:%M:%S")
-    out: list[str] = []
+    out: list[tuple[str, str]] = []
 
     if cur.get("pcs_err") and (prev is None or not prev.get("pcs_err")):
-        out.append(
+        out.append((
+            "err",
             f"[{ts}] PCS HATA · {cur.get('pcs_err_text', '')} "
             f"(PC={cur.get('pcs_pc', 0)}, ERR_CODE={cur.get('pcs_err_code', 0)}, "
-            f"ADDR=0x{cur.get('pcs_err_addr', 0):08X})"
-        )
+            f"ADDR=0x{cur.get('pcs_err_addr', 0):08X})",
+        ))
 
     if not cur.get("recognized"):
         return out
@@ -1961,105 +2119,153 @@ def diff_fail_events(prev: dict | None, cur: dict) -> list[str]:
     if prev is None:
         if fails > 0:
             if ff:
-                out.append(f"[{ts}] İlk hata · {_fmt_fail_rec(ff)}")
+                out.append(("err", f"[{ts}] İlk hata · {_fmt_fail_rec(ff)}"))
             if lf and lf != ff:
-                out.append(f"[{ts}] Son hata · {_fmt_fail_rec(lf)}")
+                out.append(("err", f"[{ts}] Son hata · {_fmt_fail_rec(lf)}"))
             if not ff and not lf:
                 for x in cur.get("tests", []):
                     if x.get("fails", 0) > 0:
                         fch = ", ".join(x.get("fail_channels") or ()) or "—"
-                        out.append(
+                        out.append((
+                            "err",
                             f"[{ts}] Tur #{total} · [Hat: {fch}] · {x['title']} · "
-                            f"{x['fails']}/{total} hata ({x.get('hint', '')})"
-                        )
+                            f"{x['fails']}/{total} hata ({x.get('hint', '')})",
+                        ))
+        if cur.get("halted_on_fail"):
+            ch_hint = f" ({lf['channel']})" if lf else ""
+            out.append((
+                "warn",
+                f"[{ts}] HATA İLE DURDU · İlk hata yakalandı{ch_hint}; RX RAM korunuyor — "
+                "'Okunan Veriler'de İncele' ile ayrıntıları görebilir veya 'PCS Başlat' ile sürdürebilirsiniz.",
+            ))
         return out
 
     prev_total = int(prev.get("total_rounds", 0))
     prev_fails = int(prev.get("fail_rounds", 0))
-    if total <= prev_total or fails <= prev_fails:
-        return out
 
-    prev_t = {x["tid"]: int(x["fails"]) for x in prev.get("tests", [])}
-    prev_c = {c["code"]: int(c["fails"]) for c in prev.get("channels", [])}
-    changed_chans = [
-        c["name"]
-        for c in cur.get("channels", [])
-        if int(c["fails"]) > prev_c.get(c["code"], 0)
-    ]
+    if total > prev_total and fails > prev_fails:
+        prev_t = {x["tid"]: int(x["fails"]) for x in prev.get("tests", [])}
+        prev_c = {c["code"]: int(c["fails"]) for c in prev.get("channels", [])}
+        changed_chans = [
+            c["name"]
+            for c in cur.get("channels", [])
+            if int(c["fails"]) > prev_c.get(c["code"], 0)
+        ]
 
-    logged_any = False
-    for x in cur.get("tests", []):
-        dt = int(x["fails"]) - prev_t.get(x["tid"], 0)
-        if dt <= 0:
-            continue
-        logged_any = True
-        fch = list(x.get("fail_channels") or ()) or changed_chans
-        ch_lbl = ", ".join(fch)
-        if lf and lf.get("test_id") == x["tid"]:
-            extra = f" (+{dt} tur)" if dt > 1 else ""
-            out.append(f"[{ts}] {_fmt_fail_rec(lf, ch_lbl)}{extra} [toplam {x['fails']}/{total}]")
-        else:
-            hat_part = f"[Hat: {ch_lbl}] · " if ch_lbl else ""
-            out.append(
-                f"[{ts}] Tur #{total} · {hat_part}{x['title']} · +{dt} hata "
-                f"({x.get('hint', '')}) [toplam {x['fails']}/{total}]"
-            )
+        logged_any = False
+        for x in cur.get("tests", []):
+            dt = int(x["fails"]) - prev_t.get(x["tid"], 0)
+            if dt <= 0:
+                continue
+            logged_any = True
+            fch = list(x.get("fail_channels") or ()) or changed_chans
+            ch_lbl = ", ".join(fch)
+            if lf and lf.get("test_id") == x["tid"]:
+                extra = f" (+{dt} tur)" if dt > 1 else ""
+                out.append(("err", f"[{ts}] {_fmt_fail_rec(lf, ch_lbl)}{extra} [toplam {x['fails']}/{total}]"))
+            else:
+                hat_part = f"[Hat: {ch_lbl}] · " if ch_lbl else ""
+                out.append((
+                    "err",
+                    f"[{ts}] Tur #{total} · {hat_part}{x['title']} · +{dt} hata "
+                    f"({x.get('hint', '')}) [toplam {x['fails']}/{total}]",
+                ))
 
-    if not logged_any:
-        if lf:
-            out.append(f"[{ts}] {_fmt_fail_rec(lf)} [hatalı tur {fails}/{total}]")
-        else:
-            hat_part = f"[Hat: {', '.join(changed_chans)}] · " if changed_chans else ""
-            out.append(f"[{ts}] Tur #{total} · {hat_part}+{fails - prev_fails} hatalı tur [toplam {fails}/{total}]")
+        if not logged_any:
+            if lf:
+                out.append(("err", f"[{ts}] {_fmt_fail_rec(lf)} [hatalı tur {fails}/{total}]"))
+            else:
+                hat_part = f"[Hat: {', '.join(changed_chans)}] · " if changed_chans else ""
+                out.append(("err", f"[{ts}] Tur #{total} · {hat_part}+{fails - prev_fails} hatalı tur [toplam {fails}/{total}]"))
+
+    # Toparlanma bildirimi (önceki tur hatalıydı -> bu tur tamamen temiz geçti)
+    if total > prev_total and prev.get("last_round_failed") and not cur.get("last_round_failed"):
+        streak = int(cur.get("consec_pass", 1) or 1)
+        out.append(("ok", f"[{ts}] Tur #{total} · Tüm testler toparlandı ve hatasız geçti (hatasız seri: {streak})"))
+
+    # Durum geçişleri (HATA İLE DURDU / TAMAMLANDI)
+    if cur.get("halted_on_fail") and not prev.get("halted_on_fail"):
+        ch_hint = f" ({lf['channel']})" if lf else ""
+        out.append((
+            "warn",
+            f"[{ts}] HATA İLE DURDU · İlk hata yakalandı{ch_hint}; RX RAM korunuyor — "
+            "'Okunan Veriler'de İncele' ile ayrıntıları inceleyebilirsiniz.",
+        ))
+    elif cur.get("run_state") == "TAMAMLANDI" and prev.get("run_state") != "TAMAMLANDI":
+        out.append(("info", f"[{ts}] Hedef {total} tur tamamlandı (Hatasız: {cur.get('pass_rounds', 0)}, Hatalı: {fails})."))
+
     return out
 
 
+def diff_fail_events(prev: dict | None, cur: dict) -> list[str]:
+    """İki PCS telemetri okuması arasındaki yeni hata satırlarını döner (geriye dönük uyumlu)."""
+    return [msg for lvl, msg in diff_log_events(prev, cur) if lvl == "err"]
+
+
 def report_text(t: dict) -> str:
-    """PCS otonom test telemetrisini metin raporuna dönüştürür."""
+    """PCS otonom test telemetrisini teknik açıklamalı detaylı metin raporuna dönüştürür."""
     status = "PCS HATA" if t["pcs_err"] else (
-        "GEÇTİ" if t["passed"] else ("KALDI" if t["fail_rounds"] else t["run_state"])
+        "GEÇTİ" if t["passed"] else (
+            "HATA İLE DURDU" if t.get("halted_on_fail")
+            else ("KALDI" if t["fail_rounds"] else t["run_state"])
+        )
     )
+    total = int(t.get("total_rounds", 0))
+    rate = f"{t.get('pass_rate_pct', 0.0):.2f}%" if total else "—"
     lines = [
         f"ARINC 429 Otonom Periyodik Test Raporu (AXIL Studio PCS) — {status}",
         f"Tarih     : {t['timestamp']}   PCS: 0x{t['pcs_base']:08X} ({t['pcs_state']}, PC={t['pcs_pc']}, "
         f"{t['imem_cnt']}/{t['imem_size']} komut)",
         f"IP        : 0x{t['ip_base']:08X}   Saat: {t['clk_hz'] / 1e6:g} MHz   Tur aralığı: {t['gap_ms']} ms   "
         f"Son tur süresi: {t['last_dur_ms']} ms",
-        f"Turlar    : Toplam {t['total_rounds']} · Geçen {t['pass_rounds']} · Kalan {t['fail_rounds']}"
+        f"Turlar    : Toplam {total} · Hatasız {t['pass_rounds']} · Hatalı {t['fail_rounds']} "
+        f"(Başarı: {rate} · Son Seri: {t.get('consec_pass', 0)})"
         + (f" / Hedef {t['max_rounds']}" if t["max_rounds"] else " (sürekli)"),
-        f"Gürültü   : Maks. Bit Diagnostic glitch = {t['max_noise_clk']} clk",
-        "=" * 78,
-        "TEST BAZLI KALMA SAYAÇLARI:",
+        f"Mod       : İlk hatada durdur = {'AÇIK' if t.get('stop_on_fail') else 'KAPALI'}   "
+        f"Maks. Bit Diagnostic glitch = {t['max_noise_clk']} clk",
+        "=" * 84,
+        "TEST SONUÇLARI VE TEKNİK AÇIKLAMALAR:",
     ]
     for x in t["tests"]:
-        st = "KALDI" if x["fails"] else "GEÇTİ"
+        st = "KALDI" if x["last_failed"] else ("GEÇTİ" if total > 0 else "BEKL.")
         fch = x.get("fail_channels") or []
         hat = f"  [Hat: {', '.join(fch)}]" if fch else ""
-        last = " [son turda kaldı]" if x["last_failed"] else ""
-        lines.append(f"  [{st:5s}] {x['title']:52s}  Kalma: {x['fails']}/{t['total_rounds']}{hat}{last}")
+        hist = f" (geçmişte {x['fails']} hata)" if x["fails"] and not x["last_failed"] else ""
+        doc = test_docs.get_test_doc(x["tid"], x["title"], x.get("hint", ""))
+        lines.append(f"  [{st:5s}] {x['title']}  —  Hatalı: {x['fails']}/{total}{hat}{hist}")
+        lines.append(f"          Ne test eder : {doc.what}")
+        if x["fails"]:
+            lines.append(f"          Olası neden  : {doc.causes}")
     if t["channels"]:
-        lines.append("-" * 78)
-        lines.append("KANAL BAZLI KALMA SAYAÇLARI:")
+        lines.append("-" * 84)
+        lines.append("HAT / KANAL BAZLI KALMA SAYAÇLARI:")
         for ch in t["channels"]:
             lines.append(f"  {ch['name']:18s}: {ch['fails']} hata")
     if t["first_fail"]:
         ff = t["first_fail"]
-        lines.append("-" * 78)
+        lines.append("-" * 84)
         lines.append(
             f"İLK HATA  : Tur #{ff['round']} · [Hat: {ff['channel']}] · {ff['test_title']}\n"
-            f"            Neden: {ff['reason']}  (beklenen 0x{ff['expected']:08X}, okunan 0x{ff['got']:08X})"
+            f"            Neden (Kod {ff['sub_code']}): {ff['reason']}  "
+            f"(beklenen 0x{ff['expected']:08X}, okunan 0x{ff['got']:08X})"
         )
     if t.get("last_fail") and t["last_fail"] != t.get("first_fail"):
         lf = t["last_fail"]
-        lines.append("-" * 78)
+        lines.append("-" * 84)
         lines.append(
             f"SON HATA  : Tur #{lf['round']} · [Hat: {lf['channel']}] · {lf['test_title']}\n"
-            f"            Neden: {lf['reason']}  (beklenen 0x{lf['expected']:08X}, okunan 0x{lf['got']:08X})"
+            f"            Neden (Kod {lf['sub_code']}): {lf['reason']}  "
+            f"(beklenen 0x{lf['expected']:08X}, okunan 0x{lf['got']:08X})"
         )
     if t["pcs_err"]:
-        lines.append("-" * 78)
+        lines.append("-" * 84)
         lines.append(f"PCS HATA  : {t['pcs_err_text']} (PC={t['pcs_err_pc']}, ADDR=0x{t['pcs_err_addr']:08X})")
     return "\n".join(lines) + "\n"
+
+
+def report_html(t: dict, log_entries: list[tuple[str, str]] | None = None) -> str:
+    """PCS telemetrisini tek-dosya zengin HTML raporuna dönüştürür."""
+    return test_docs.build_html_report(t, log_entries=log_entries)
 
 
 def report_json(t: dict) -> str:
