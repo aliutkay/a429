@@ -328,7 +328,7 @@ class TestTab(QWidget):
         self.prog.setValue(0)
         right.lay.addWidget(self.prog)
 
-        # PCS tur sayaçları şeridi (kenarda sabit toplam / hatasız / hatalı tur sayısı)
+        # PCS tur sayaçları şeridi (kenarda sabit toplam / hatasız / hatalı tur + canlı hat rozetleri)
         self.pcs_stats_bar = QWidget()
         sbar = QHBoxLayout(self.pcs_stats_bar)
         sbar.setContentsMargins(0, 2, 0, 2)
@@ -336,10 +336,15 @@ class TestTab(QWidget):
         self.pill_pcs_total = look.Pill("Toplam: 0", "")
         self.pill_pcs_pass = look.Pill("Hatasız: 0", "")
         self.pill_pcs_fail = look.Pill("Hatalı: 0", "")
+        self._pcs_ch_pills: list[look.Pill] = []
+        self._pcs_ch_bar = QHBoxLayout()
+        self._pcs_ch_bar.setContentsMargins(6, 0, 0, 0)
+        self._pcs_ch_bar.setSpacing(4)
         self.lbl_pcs_meta = look.label("", "muted")
         sbar.addWidget(self.pill_pcs_total)
         sbar.addWidget(self.pill_pcs_pass)
         sbar.addWidget(self.pill_pcs_fail)
+        sbar.addLayout(self._pcs_ch_bar)
         sbar.addStretch(1)
         sbar.addWidget(self.lbl_pcs_meta)
         right.lay.addWidget(self.pcs_stats_bar)
@@ -379,7 +384,7 @@ class TestTab(QWidget):
         self.txt_pcs_log.setFont(look.mono_font(-0.5))
         self.txt_pcs_log.setMaximumBlockCount(2000)
         self.txt_pcs_log.setPlaceholderText(
-            "Henüz hata kaydedilmedi — bir test kaldığında tur numarası, kanal ve ayrıntısı burada akış halinde tutulur."
+            "Henüz hata kaydedilmedi — bir test kaldığında tur numarası, hat/kanal adı ve ayrıntısı burada akış halinde tutulur."
         )
         llay.addWidget(self.txt_pcs_log, 1)
         self.right_split.addWidget(self.pcs_log_box)
@@ -433,7 +438,7 @@ class TestTab(QWidget):
             b.setVisible(m == "pcs")
         self.btn_run.setText("▶ PCS'ye Yükle & Başlat" if m == "pcs" else "▶ Testi Başlat")
         self.tree.setHeaderLabels(
-            ["Durum", "Test / Kanal", "Kalma", "Ayrıntı"] if m == "pcs"
+            ["Durum", "Test / Kanal", "Kalma · Hat", "Ayrıntı"] if m == "pcs"
             else ["Sonuç", "Test / Kontrol", "Süre", "Ayrıntı"]
         )
         self.lbl_note.setText({"loopback": NOTE_LOOPBACK, "ballard": NOTE_BALLARD, "pcs": NOTE_PCS}[m])
@@ -659,6 +664,24 @@ class TestTab(QWidget):
         self.stop_pcs_poll()
         self.app.do_pcs_stop(self.pcs_base_addr())
 
+    def _clear_pcs_ch_pills(self):
+        for p in self._pcs_ch_pills:
+            self._pcs_ch_bar.removeWidget(p)
+            p.setParent(None)
+            p.deleteLater()
+        self._pcs_ch_pills.clear()
+
+    def _update_pcs_ch_pills(self, items: list[tuple[str, str]]):
+        if len(self._pcs_ch_pills) != len(items):
+            self._clear_pcs_ch_pills()
+            for txt, st in items:
+                p = look.Pill(txt, st)
+                self._pcs_ch_bar.addWidget(p)
+                self._pcs_ch_pills.append(p)
+        else:
+            for p, (txt, st) in zip(self._pcs_ch_pills, items):
+                p.set(txt, st)
+
     def _clear_pcs_log(self):
         self.txt_pcs_log.clear()
         self._pcs_log_count = 0
@@ -667,6 +690,7 @@ class TestTab(QWidget):
     def _pcs_clear(self):
         self._pcs_prev_telem = None
         self._clear_pcs_log()
+        self._clear_pcs_ch_pills()
         self.pill_pcs_total.set("Toplam: 0", "")
         self.pill_pcs_pass.set("Hatasız: 0", "")
         self.pill_pcs_fail.set("Hatalı: 0", "")
@@ -701,6 +725,10 @@ class TestTab(QWidget):
         self.tree.clear()
 
         last_bad = bool(t.get("last_round_failed", any(x.get("last_failed") for x in t["tests"])))
+        cur_bad_chans = {
+            ch for x in t["tests"] if x.get("last_failed")
+            for ch in (x.get("fail_channels") or ())
+        }
 
         if t["pcs_err"]:
             self.pill.set(f"PCS HATA ({t['pcs_err_text']})", "err")
@@ -725,10 +753,21 @@ class TestTab(QWidget):
             self.pill.set(f"DURDURULDU · {t['total_rounds']} tur ({t['fail_rounds']} hatalı)", "warn")
             self.stop_pcs_poll()
 
-        # Kenarda sabit toplam / hatasız / hatalı tur sayaçları
+        # Kenarda sabit toplam / hatasız / hatalı tur sayaçları + canlı hat rozetleri
         self.pill_pcs_total.set(f"Toplam: {t['total_rounds']}", "")
         self.pill_pcs_pass.set(f"Hatasız: {t['pass_rounds']}", "ok" if t["pass_rounds"] else "")
         self.pill_pcs_fail.set(f"Hatalı: {t['fail_rounds']}", "err" if t["fail_rounds"] else "")
+        ch_pill_items: list[tuple[str, str]] = []
+        for c in t["channels"]:
+            ch_now = (c["name"] in cur_bad_chans) or (last_bad and c["fails"] > prev_ch_fails.get(c["code"], 0))
+            if t["total_rounds"] == 0:
+                ch_pill_items.append((f"{c['name']}: —", ""))
+            elif ch_now:
+                ch_pill_items.append((f"{c['name']} ✗ ({c['fails']})", "err"))
+            else:
+                ch_pill_items.append((f"{c['name']} ✓ ({c['fails']})", "ok"))
+        self._update_pcs_ch_pills(ch_pill_items)
+
         meta = (
             f"Son tur: {t['last_dur_ms']} ms · Gürültü maks: {t['max_noise_clk']} clk · "
             f"PCS: {t['pcs_state']} (PC={t['pcs_pc']}, {t['imem_cnt']}/{t['imem_size']} komut)"
@@ -745,7 +784,7 @@ class TestTab(QWidget):
             self.prog.setValue(100 if t["total_rounds"] else 0)
             self.prog.setFormat(f"Sürekli  ·  {t['total_rounds']} tur ({t['pass_rounds']} hatasız, {t['fail_rounds']} hatalı)")
 
-        # Ağaç satırları: 1) Özet, 2) Test bazlı (son tura göre yeşil/kırmızı), 3) Kanal bazlı, 4) İlk/Son hata
+        # Ağaç satırları: 1) Özet, 2) Test bazlı (son tura göre yeşil/kırmızı + hat), 3) Kanal bazlı, 4) İlk/Son hata
         summary_it = QTreeWidgetItem([
             "ÖZET",
             f"Toplam {t['total_rounds']} tur · Hatasız {t['pass_rounds']} · Hatalı {t['fail_rounds']}",
@@ -760,16 +799,24 @@ class TestTab(QWidget):
         for x in t["tests"]:
             cur_failed = bool(x["last_failed"])
             had_fails = x["fails"] > 0
+            fch = x.get("fail_channels") or []
+            hat_txt = ", ".join(fch)
+            cnt_txt = f"{x['fails']} / {t['total_rounds']}" + (f" · {hat_txt}" if hat_txt else "")
             if t["total_rounds"] == 0:
                 st_txt, col = "BEKLİYOR", look.color("muted")
                 detail = "ilk tur bekleniyor"
             elif cur_failed:
                 st_txt, col = "KALDI", look.color("danger")
-                detail = f"Son turda KALDI · {x['hint']}"
+                prefix = f"[Hat: {hat_txt}] " if hat_txt else ""
+                detail = f"{prefix}Son turda KALDI · {x['hint']}"
             else:
                 st_txt, col = "GEÇTİ", look.color("success")
-                detail = f"Son tur GEÇTİ (geçmişte {x['fails']} hata)" if had_fails else "0 hata"
-            it = QTreeWidgetItem([st_txt, x["title"], f"{x['fails']} / {t['total_rounds']}", detail])
+                if had_fails:
+                    hat_part = f" · son hat: {hat_txt}" if hat_txt else ""
+                    detail = f"Son tur GEÇTİ (geçmişte {x['fails']} hata{hat_part})"
+                else:
+                    detail = "0 hata"
+            it = QTreeWidgetItem([st_txt, x["title"], cnt_txt, detail])
             it.setForeground(0, QBrush(col))
             if cur_failed:
                 it.setForeground(2, QBrush(look.color("danger")))
@@ -783,14 +830,12 @@ class TestTab(QWidget):
         if t["channels"]:
             ch_top = QTreeWidgetItem([
                 "KANAL",
-                "Kanal Bazlı Kalma Sayaçları",
+                "Hat / Kanal Bazlı Kalma Sayaçları",
                 f"{sum(c['fails'] for c in t['channels'])} hata",
                 ", ".join(f"{c['name']}: {c['fails']}" for c in t["channels"]),
             ])
-            any_ch_now = False
             for c in t["channels"]:
-                ch_now = last_bad and (c["fails"] > prev_ch_fails.get(c["code"], 0))
-                any_ch_now = any_ch_now or ch_now
+                ch_now = (c["name"] in cur_bad_chans) or (last_bad and c["fails"] > prev_ch_fails.get(c["code"], 0))
                 if ch_now:
                     c_mark, c_col, c_det = "✗", look.color("danger"), "son turda hata!"
                 elif c["fails"] > 0:
@@ -805,13 +850,13 @@ class TestTab(QWidget):
                     cit.setForeground(2, QBrush(look.color("warning")))
                 ch_top.addChild(cit)
             self.tree.addTopLevelItem(ch_top)
-            ch_top.setExpanded(any_ch_now)
+            ch_top.setExpanded(True)
 
         if t["first_fail"]:
             ff = t["first_fail"]
             fit = QTreeWidgetItem([
                 "İLK HATA",
-                f"Tur #{ff['round']} · {ff['test_title']} · {ff['channel']}",
+                f"Tur #{ff['round']} · [Hat: {ff['channel']}] · {ff['test_title']}",
                 f"Kod {ff['sub_code']}",
                 f"{ff['reason']} (beklenen 0x{ff['expected']:08X}, okunan 0x{ff['got']:08X})",
             ])
@@ -823,7 +868,7 @@ class TestTab(QWidget):
         if lf and lf != t.get("first_fail"):
             lit = QTreeWidgetItem([
                 "SON HATA",
-                f"Tur #{lf['round']} · {lf['test_title']} · {lf['channel']}",
+                f"Tur #{lf['round']} · [Hat: {lf['channel']}] · {lf['test_title']}",
                 f"Kod {lf['sub_code']}",
                 f"{lf['reason']} (beklenen 0x{lf['expected']:08X}, okunan 0x{lf['got']:08X})",
             ])
@@ -950,6 +995,7 @@ class TestTab(QWidget):
             self.report = None
             self._pcs_prev_telem = None
             self._clear_pcs_log()
+            self._clear_pcs_ch_pills()
             self.pill_pcs_total.set("Toplam: 0", "")
             self.pill_pcs_pass.set("Hatasız: 0", "")
             self.pill_pcs_fail.set("Hatalı: 0", "")

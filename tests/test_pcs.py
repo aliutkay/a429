@@ -785,3 +785,53 @@ def test_pcs_transient_fail_recovery_and_diff_fail_events():
     assert len(ev4) == 1 and "Tur #4" in ev4[0] and "Parity" in ev4[0] and "toplam 1/4" in ev4[0]
 
 
+def test_pcs_midrun_cable_unplug_catches_bittime_and_identifies_line():
+    """Loopback kablosu test çalışırken (bayat BIT_RAM doluyken) RX0'da koparsa:
+    - bittime testi artık bayat BIT_RAM yüzünden geçmez, KALIR,
+    - Her kalan testin fail_channels alanı yalnızca ['RX0'] gösterir (RX1 ve TX BIT temiz),
+    - diff_fail_events her log satırında '[Hat: RX0]' bilgisini verir,
+    - Kablo geri takılınca sonraki tur tüm testler tekrar GEÇTİ olur."""
+    ip = FakeIp21(num_rx=2, has_txbit=True)
+    sys_pcs = FakePcsSystem(ip)
+    comp = pcs_test.build_program(ip.base, ["RX0", "RX1"], use_tb=True, max_rounds=0, gap_ms=1)
+    pcs_test.load_and_start(sys_pcs, 0, comp)
+
+    # Tur 1: her şey bağlı ve temiz (RX0 BIT_RAM geçerli ölçümle dolar)
+    sys_pcs.run_until_rounds(1)
+    t1 = pcs_test.read_telemetry(sys_pcs, 0)
+    assert t1["passed"] and t1["total_rounds"] == 1
+
+    # Tur 2: sadece RX0 loopback kablosu koptu (RX1 ve TX BIT sağlam)
+    ip.fault_open.add("RX0")
+    sys_pcs.run_until_rounds(2)
+    t2 = pcs_test.read_telemetry(sys_pcs, 0)
+    assert t2["last_round_failed"] is True
+    by2 = {x["tid"]: x for x in t2["tests"]}
+    # bittime kesinlikle kalmalı ve yalnızca RX0 hattını raporlamalı!
+    assert by2["bittime"]["last_failed"] is True
+    assert by2["bittime"]["fails"] == 1
+    assert by2["bittime"]["fail_channels"] == ["RX0"]
+    for tid in ("polarity", "single_hs", "single_ls", "pattern_hs", "pattern_ls",
+                "burst_hs", "burst_ls", "switch", "parity", "mismatch", "gapviol", "bittime", "logger"):
+        assert by2[tid]["last_failed"] is True, f"{tid} kopuk kabloyu yakalamalı"
+        assert by2[tid]["fail_channels"] == ["RX0"], f"{tid} yalnızca RX0 raporlamalı"
+
+    ch2 = {c["name"]: c["fails"] for c in t2["channels"]}
+    assert ch2["RX0"] > 0 and ch2["RX1"] == 0 and ch2["TX BIT"] == 0
+
+    events = pcs_test.diff_fail_events(t1, t2)
+    assert any("[Hat: RX0]" in e and "Bit zamanlaması" in e for e in events)
+    assert all("[Hat: RX0]" in e for e in events)
+
+    # Tur 3: kablo geri takıldı -> tüm testler geri geçer
+    ip.fault_open.clear()
+    sys_pcs.run_until_rounds(3)
+    t3 = pcs_test.read_telemetry(sys_pcs, 0)
+    assert t3["last_round_failed"] is False
+    assert t3["pass_rounds"] == 2 and t3["fail_rounds"] == 1
+    by3 = {x["tid"]: x for x in t3["tests"]}
+    assert by3["bittime"]["last_failed"] is False
+    assert pcs_test.diff_fail_events(t2, t3) == []
+
+
+

@@ -505,9 +505,9 @@ M_CLK_HZ = 12
 M_IP_BASE = 13
 M_ROUND_T0 = 14
 
-# ---- D[16..64]: Clearable stats block (49 words: 16..64 inclusive)
+# ---- D[16..80]: Clearable stats block (65 words: 16..80 inclusive)
 STATS_START = 16
-STATS_COUNT = 49
+STATS_COUNT = 65
 M_SEQ_BEGIN = 16
 M_TOTAL_ROUNDS = 17
 M_FAIL_ROUNDS = 18
@@ -523,21 +523,22 @@ M_LAST_FAIL_ROUND = 27
 M_LAST_FAIL_INFO = 28
 M_LAST_FAIL_EXP = 29
 M_LAST_FAIL_GOT = 30
-D_TEST_FAIL = 32   # 32..47 (16 test kalma sayacı)
+D_TEST_FAIL = 32   # 32..46 (15 test kalma sayacı; D[47]=global/TX kalma sayacı)
 D_CHAN_FAIL = 48   # 48..64 (17 kanal kalma sayacı)
+D_TEST_CH = 65     # 65..80 (16 test için son kalma hat bitmask'i: bit0=TX/Genel, bit(i+1)=ch[i])
 
-# ---- D[65..175]: Kanal adres/kod tabloları, snapshot ve geçici hücreler
-D_CH_ADDR = 65     # 65..81 (17 kanal mutlak taban adresi)
-D_CH_CODE = 83     # 82=global(255), 83..99 (17 kanal mantıksal kodu: 0..15=RXn, 16=TB)
-D_SNAP_W = 100     # 100..116
-D_SNAP_E = 117     # 117..133
-D_SNAP_D = 134     # 134..150
-M_SNAP_TX = 151
-M_SNAP_CHKO = 152
-M_SNAP_CHKE = 153
-M_TMP0 = 154
-M_TMP1 = 155
-D_PATTERNS = 160   # 160..165 (6 sabit odd-parity uç desen)
+# ---- D[81..181]: Kanal adres/kod tabloları, snapshot ve geçici hücreler
+D_CH_ADDR = 81     # 81..97 (17 kanal mutlak taban adresi)
+D_CH_CODE = 99     # 98=global(255), 99..115 (17 kanal mantıksal kodu: 0..15=RXn, 16=TB)
+D_SNAP_W = 116     # 116..132
+D_SNAP_E = 133     # 133..149
+D_SNAP_D = 150     # 150..166
+M_SNAP_TX = 167
+M_SNAP_CHKO = 168
+M_SNAP_CHKE = 169
+M_TMP0 = 170
+M_TMP1 = 171
+D_PATTERNS = 176   # 176..181 (6 sabit odd-parity uç desen)
 M_SIGNATURE = 255  # +0x7FC: SIGNATURE
 
 # ARINC 429 IP 2.1.0 sabit register ofsetleri (a429/ipmap.py)
@@ -728,11 +729,11 @@ def build_program(
     need_pattern = bool(sel_set & {"pattern_hs", "pattern_ls"})
     need_burst = bool(sel_set & {"burst_hs", "burst_ls"})
     need_sched = need_burst or ("gapviol" in sel_set)
-    need_check_ok = bool(sel_set & {"single_hs", "single_ls", "pattern_hs", "pattern_ls", "burst_hs", "burst_ls", "switch", "parity", "gapviol", "logger"})
+    need_check_ok = bool(sel_set & {"single_hs", "single_ls", "pattern_hs", "pattern_ls", "burst_hs", "burst_ls", "switch", "parity", "gapviol", "bittime", "logger"})
     need_check_rej = bool(sel_set & {"parity", "mismatch", "gapviol"})
     need_set_speed = bool(sel_set & {"idle", "single_hs", "single_ls", "pattern_hs", "pattern_ls", "burst_hs", "burst_ls", "switch", "parity", "mismatch", "gapviol", "bittime", "logger"})
     need_single = bool(sel_set & {"single_hs", "single_ls"})
-    need_send_chk_one = bool(sel_set & {"switch", "parity", "gapviol", "logger"})
+    need_send_chk_one = bool(sel_set & {"switch", "parity", "gapviol", "bittime", "logger"})
 
     # 1-tabanlı LOOP indeksleme ofsetleri: D[BASE_M1 + R8], R8 = N_CHANS..1
     ch_addr_m1 = D_CH_ADDR - 1
@@ -998,21 +999,23 @@ def build_program(
             L += ["        CALL  set_hs"]
         L += [
             "        LDI   R11, 0xD5555555",
-            "        CALL  send_one",
+            "        CALL  send_chk_one",            # hat kopuksa WORD_CNT artışı doğrulanır, bayat BRAM geçmez
             "        LDI   R8, N_CHANS",
             "bt_ch:",
             f"        LDD   R7, D[{ch_addr_m1}+R8]",
             "        RD    R1, [R7+CH_WORD_CNT]",
+            f"        LDD   R2, D[{snap_w_m1}+R8]",
+            "        CMP   R1, R2",                  # bu turda Word almadıysa bayat BIT_RAM okuma
+            "        BR    Z, bt_nx",
             "        SUB   R1, 1",
             "        AND   R1, BIT_WMASK",
             "        SHL   R1, 8",
             "        WR    [R7+CH_BIT_RADDR], R1",
-            "        RD    R1, [R7+CH_ACT_PULSE]",
-            "        MOV   R12, R1",
+            "        RD    R15, [R7+CH_ACT_PULSE]",
+            "        MOV   R12, R15",
             "        AND   R12, 0xFFFF",             # min_p
-            "        SHR   R1, 16",
-            "        SUB   R1, R12",
-            "        MOV   R15, R1",                 # max_p - min_p
+            "        SHR   R15, 16",
+            "        SUB   R15, R12",                # max_p - min_p
             "        RD    R1, [R7+CH_ACT_BIT]",
             "        MOV   R2, R1",
             "        AND   R2, 0xFFFF",
@@ -1160,13 +1163,16 @@ def build_program(
         f"        LDD   R5, D[{D_TEST_FAIL}+R9]",
         "        ADD   R5, 1",
         f"        STD   D[{D_TEST_FAIL}+R9], R5",
+        f"        STD   D[{D_TEST_CH}+R9], R0",      # bu turdaki ilk hata: hat maskesini sıfırla
         "rf_ch:",
-        "        CMP   R8, 0",
-        "        BR    Z, rf_first",
-        f"        LDD   R5, D[{ch_fail_m1}+R8]",
+        "        LDI   R4, 1",
+        "        SHL   R4, R8",                      # bit0=TX/Genel, bit(i+1)=ch[i]
+        f"        LDD   R5, D[{D_TEST_CH}+R9]",
+        "        OR    R5, R4",
+        f"        STD   D[{D_TEST_CH}+R9], R5",
+        f"        LDD   R5, D[{ch_fail_m1}+R8]",     # R8=0 -> D[47] global, R8=1..N -> D[48..]
         "        ADD   R5, 1",
         f"        STD   D[{ch_fail_m1}+R8], R5",
-        "rf_first:",
         f"        LDD   R5, D[{M_TOTAL_ROUNDS}]",
         "        ADD   R5, 1",
         f"        LDD   R4, D[{ch_code_m1}+R8]",
@@ -1323,7 +1329,6 @@ def build_program(
             "        SUB   R1, R2",
             "        LDI   R2, 0",
             "        LDI   R3, 9",
-            "        CMP   R1, 0",
             "        BR    NZ, co_f",
             "        RD    R1, [R7+CH_LAST_WORD]",
             "        MOV   R2, R11",
@@ -1364,6 +1369,7 @@ def build_program(
             "send_chk_one:",
             "        CALL  snap_all",
             "        CALL  send_one",
+            "chk_one:",
             "        LDI   R12, 1",
             "        JMP   check_ok",
         ]
@@ -1378,15 +1384,16 @@ def build_program(
             "        WR    [R6+OFF_TX_WORD], R1",
             "        LDI   R1, 5",
             "        WR    [R6+OFF_TX_CTRL], R1",
-            "        LDI   R1, 1",
-            "        WR    [R6+OFF_TX_SEND], R1",
+            "        WR    [R6+OFF_TX_SEND], R1",     # bit0=1 (5 & 1 = 1)
             "        CALL  wait_tx_idle",
             "        LDI   R1, 1",
             "        WR    [R6+OFF_TX_CTRL], R1",
             "        LDI   R11, SINGLE_EXP",
-            "        LDI   R12, 1",
-            "        JMP   check_ok",
         ]
+        if need_send_chk_one or need_pattern:
+            L += ["        JMP   chk_one"]
+        else:
+            L += ["        LDI   R12, 1", "        JMP   check_ok"]
 
     if need_pattern:
         L += [
@@ -1493,7 +1500,6 @@ def build_program(
             "        SUB   R1, R2",
             "        LDI   R2, 0",
             "        LDI   R3, 12",
-            "        CMP   R1, 0",
             "        BR    NZ, cr_f",
             "        CMP   R12, 0",
             "        BR    Z, cr_nx",
@@ -1501,7 +1507,6 @@ def build_program(
             f"        LDD   R2, D[{snap_e_m1}+R8]",
             "        SUB   R4, R2",
             "        LDI   R5, 0",
-            "        CMP   R4, 0",
             "        BR    Z, cr_efail",
             "        AND   R2, ERR_MASK",
             "        WR    [R7+CH_ERR_RADDR], R2",
@@ -1539,7 +1544,6 @@ def build_program(
             "        SUB   R1, R2",
             "        LDI   R2, 0",
             "        LDI   R3, 12",
-            "        CMP   R1, 0",
             "        BR    NZ, cd_f",
             "        RD    R1, [R7+CH_DROP_CNT]",
             f"        LDD   R2, D[{snap_d_m1}+R8]",
@@ -1803,7 +1807,7 @@ def read_telemetry(client, pcs_base: int) -> dict:
         base + REG_ID, base + REG_CAPS, base + REG_STATUS, base + REG_ERR_CODE,
         base + REG_ERR_PC, base + REG_ERR_ADDR, base + REG_IMEM_CNT,
     ]
-    dmem_idxs = list(range(0, 65)) + list(range(D_CH_CODE, D_CH_CODE + 17)) + [M_SIGNATURE]
+    dmem_idxs = list(range(0, 81)) + list(range(D_CH_CODE, D_CH_CODE + 17)) + [M_SIGNATURE]
     dmem_addrs = [base + REG_DMEM_BASE + i * 4 for i in dmem_idxs]
 
     vals = None
@@ -1828,20 +1832,6 @@ def read_telemetry(client, pcs_base: int) -> dict:
     last_mask = dm[M_LAST_FAIL_MASK] if recognized else 0
     cum_mask = dm[M_CUM_FAIL_MASK] if recognized else 0
 
-    tests_out = []
-    for idx, tid, title, hint in TESTS:
-        if not ((test_mask >> idx) & 1):
-            continue
-        tests_out.append({
-            "idx": idx,
-            "tid": tid,
-            "title": title,
-            "hint": hint,
-            "fails": int(dm[D_TEST_FAIL + idx]),
-            "last_failed": bool((last_mask >> idx) & 1),
-            "ever_failed": bool((cum_mask >> idx) & 1),
-        })
-
     chans_out = []
     for i in range(n_chans):
         code = int(dm[D_CH_CODE + i])
@@ -1850,6 +1840,28 @@ def read_telemetry(client, pcs_base: int) -> dict:
             "code": code,
             "name": _chan_name(code),
             "fails": int(dm[D_CHAN_FAIL + i]),
+        })
+
+    tests_out = []
+    for idx, tid, title, hint in TESTS:
+        if not ((test_mask >> idx) & 1):
+            continue
+        ch_mask = int(dm[D_TEST_CH + idx]) if recognized else 0
+        fail_chans: list[str] = []
+        if ch_mask & 1:
+            fail_chans.append("TX / Genel")
+        for i in range(n_chans):
+            if (ch_mask >> (i + 1)) & 1:
+                fail_chans.append(chans_out[i]["name"])
+        tests_out.append({
+            "idx": idx,
+            "tid": tid,
+            "title": title,
+            "hint": hint,
+            "fails": int(dm[D_TEST_FAIL + idx]),
+            "last_failed": bool((last_mask >> idx) & 1),
+            "ever_failed": bool((cum_mask >> idx) & 1),
+            "fail_channels": fail_chans,
         })
 
     def _decode_fail(r_idx: int, i_idx: int, e_idx: int, g_idx: int) -> dict | None:
@@ -1918,15 +1930,16 @@ def read_telemetry(client, pcs_base: int) -> dict:
     }
 
 
-def _fmt_fail_rec(rec: dict) -> str:
+def _fmt_fail_rec(rec: dict, ch_override: str = "") -> str:
+    ch = ch_override or rec["channel"]
     return (
-        f"Tur #{rec['round']} · {rec['test_title']} · {rec['channel']} · "
+        f"Tur #{rec['round']} · [Hat: {ch}] · {rec['test_title']} · "
         f"{rec['reason']} (beklenen 0x{rec['expected']:08X}, okunan 0x{rec['got']:08X})"
     )
 
 
 def diff_fail_events(prev: dict | None, cur: dict) -> list[str]:
-    """İki PCS telemetri okuması arasındaki yeni hataları log satırları olarak döndürür."""
+    """İki PCS telemetri okuması arasındaki yeni hataları hat/kanal bilgisiyle log satırlarına dönüştürür."""
     ts = str(cur.get("timestamp") or "").split(" ")[-1] or time.strftime("%H:%M:%S")
     out: list[str] = []
 
@@ -1954,7 +1967,11 @@ def diff_fail_events(prev: dict | None, cur: dict) -> list[str]:
             if not ff and not lf:
                 for x in cur.get("tests", []):
                     if x.get("fails", 0) > 0:
-                        out.append(f"[{ts}] Tur #{total} · {x['title']} · {x['fails']}/{total} hata ({x.get('hint', '')})")
+                        fch = ", ".join(x.get("fail_channels") or ()) or "—"
+                        out.append(
+                            f"[{ts}] Tur #{total} · [Hat: {fch}] · {x['title']} · "
+                            f"{x['fails']}/{total} hata ({x.get('hint', '')})"
+                        )
         return out
 
     prev_total = int(prev.get("total_rounds", 0))
@@ -1964,12 +1981,11 @@ def diff_fail_events(prev: dict | None, cur: dict) -> list[str]:
 
     prev_t = {x["tid"]: int(x["fails"]) for x in prev.get("tests", [])}
     prev_c = {c["code"]: int(c["fails"]) for c in prev.get("channels", [])}
-    ch_deltas = [
-        f"{c['name']} +{int(c['fails']) - prev_c.get(c['code'], 0)}"
+    changed_chans = [
+        c["name"]
         for c in cur.get("channels", [])
         if int(c["fails"]) > prev_c.get(c["code"], 0)
     ]
-    ch_txt = ", ".join(ch_deltas)
 
     logged_any = False
     for x in cur.get("tests", []):
@@ -1977,13 +1993,15 @@ def diff_fail_events(prev: dict | None, cur: dict) -> list[str]:
         if dt <= 0:
             continue
         logged_any = True
+        fch = list(x.get("fail_channels") or ()) or changed_chans
+        ch_lbl = ", ".join(fch)
         if lf and lf.get("test_id") == x["tid"]:
             extra = f" (+{dt} tur)" if dt > 1 else ""
-            out.append(f"[{ts}] {_fmt_fail_rec(lf)}{extra} [toplam {x['fails']}/{total}]")
+            out.append(f"[{ts}] {_fmt_fail_rec(lf, ch_lbl)}{extra} [toplam {x['fails']}/{total}]")
         else:
-            ch_part = f" · {ch_txt}" if ch_txt else ""
+            hat_part = f"[Hat: {ch_lbl}] · " if ch_lbl else ""
             out.append(
-                f"[{ts}] Tur #{total} · {x['title']}{ch_part} · +{dt} hata "
+                f"[{ts}] Tur #{total} · {hat_part}{x['title']} · +{dt} hata "
                 f"({x.get('hint', '')}) [toplam {x['fails']}/{total}]"
             )
 
@@ -1991,7 +2009,8 @@ def diff_fail_events(prev: dict | None, cur: dict) -> list[str]:
         if lf:
             out.append(f"[{ts}] {_fmt_fail_rec(lf)} [hatalı tur {fails}/{total}]")
         else:
-            out.append(f"[{ts}] Tur #{total} · +{fails - prev_fails} hatalı tur [toplam {fails}/{total}]")
+            hat_part = f"[Hat: {', '.join(changed_chans)}] · " if changed_chans else ""
+            out.append(f"[{ts}] Tur #{total} · {hat_part}+{fails - prev_fails} hatalı tur [toplam {fails}/{total}]")
     return out
 
 
@@ -2014,8 +2033,10 @@ def report_text(t: dict) -> str:
     ]
     for x in t["tests"]:
         st = "KALDI" if x["fails"] else "GEÇTİ"
+        fch = x.get("fail_channels") or []
+        hat = f"  [Hat: {', '.join(fch)}]" if fch else ""
         last = " [son turda kaldı]" if x["last_failed"] else ""
-        lines.append(f"  [{st:5s}] {x['title']:52s}  Kalma: {x['fails']}/{t['total_rounds']}{last}")
+        lines.append(f"  [{st:5s}] {x['title']:52s}  Kalma: {x['fails']}/{t['total_rounds']}{hat}{last}")
     if t["channels"]:
         lines.append("-" * 78)
         lines.append("KANAL BAZLI KALMA SAYAÇLARI:")
@@ -2025,14 +2046,14 @@ def report_text(t: dict) -> str:
         ff = t["first_fail"]
         lines.append("-" * 78)
         lines.append(
-            f"İLK HATA  : Tur #{ff['round']} · {ff['test_title']} · {ff['channel']}\n"
+            f"İLK HATA  : Tur #{ff['round']} · [Hat: {ff['channel']}] · {ff['test_title']}\n"
             f"            Neden: {ff['reason']}  (beklenen 0x{ff['expected']:08X}, okunan 0x{ff['got']:08X})"
         )
     if t.get("last_fail") and t["last_fail"] != t.get("first_fail"):
         lf = t["last_fail"]
         lines.append("-" * 78)
         lines.append(
-            f"SON HATA  : Tur #{lf['round']} · {lf['test_title']} · {lf['channel']}\n"
+            f"SON HATA  : Tur #{lf['round']} · [Hat: {lf['channel']}] · {lf['test_title']}\n"
             f"            Neden: {lf['reason']}  (beklenen 0x{lf['expected']:08X}, okunan 0x{lf['got']:08X})"
         )
     if t["pcs_err"]:
