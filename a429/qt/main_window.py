@@ -1033,9 +1033,26 @@ class MainWindow(QWidget):
         title = "TX Scheduler " + ("başlatılıyor" if enable else "durduruluyor")
         return self._run_job(title, job, on_ok=ok_cb, on_done=done_cb)
 
-    # ------------------------------------------------------------- Loopback test
+    # ------------------------------------------------------------- Otomatik testler
+    def do_probe_ballard(self, dll_dir: str | None = None):
+        from .. import ballard
+
+        def job():
+            return ballard.probe_cards(dll_dir)
+
+        def ok(res):
+            cards, dll_path = res
+            self.test_tab.set_ballard_probe_result(cards, dll_path=dll_path)
+            self.log(f"[Test] Ballard tarama tamamlandı: {len(cards)} core ({dll_path})")
+
+        def err(e):
+            self.test_tab.set_ballard_probe_result([], error=str(e))
+            self.log(f"[Test] Ballard tarama hatası: {e}")
+
+        self.bus.run(job, ok=ok, err=err)
+
     def do_run_selftest(self, opts: dict):
-        from .. import selftest
+        from .. import busbox_test, selftest
         if not self.connected or self.busy:
             return
         rm = self.rm
@@ -1043,11 +1060,43 @@ class MainWindow(QWidget):
         custom = None
         if self.res and self.res_tx and self.res.rx_values:
             custom = {"rx": dict(self.res.rx_values), "tx": list(self.res_tx["writes"])}
-        self.log(f"[Test] Loopback testi başlıyor: TX → {', '.join(opts['rx']) or '—'}"
-                 + (" + TX BIT" if opts["tb"] else "") + f", hızlar {'/'.join(opts['speeds'])}")
+        is_bb = opts.get("mode") == "ballard"
+        if is_bb:
+            dirs = []
+            if opts.get("test_tx"):
+                dirs.append(f"Kart TX → BB RX CH{opts.get('bb_rx_chan')}")
+            if opts.get("test_rx"):
+                dirs.append(f"BB TX CH{opts.get('bb_tx_chan')} → {', '.join(opts['rx']) or '—'}")
+            self.log(f"[Test] Ballard dış doğrulama başlıyor (Kart #{opts.get('card_num', 0)} Core #{opts.get('core_num', 0)}): "
+                     + " · ".join(dirs) + f", hızlar {'/'.join(opts['speeds'])}")
+        else:
+            self.log(f"[Test] Loopback testi başlıyor: TX → {', '.join(opts['rx']) or '—'}"
+                     + (" + TX BIT" if opts["tb"] else "") + f", hızlar {'/'.join(opts['speeds'])}")
         self._selftest_running = True
 
         def job():
+            if is_bb:
+                return busbox_test.run(
+                    self.client, rm, opts["rx"],
+                    card_num=opts.get("card_num", 0),
+                    core_num=opts.get("core_num", 0),
+                    dll_dir=opts.get("dll_dir"),
+                    test_tx=opts.get("test_tx", True),
+                    test_rx=opts.get("test_rx", True),
+                    bb_rx_chan=opts.get("bb_rx_chan"),
+                    bb_tx_chan=opts.get("bb_tx_chan"),
+                    selected=opts["selected"],
+                    speeds=opts["speeds"],
+                    use_tb=opts["tb"],
+                    pattern_len=opts["pattern_len"],
+                    burst_words=opts["burst_words"],
+                    custom=custom,
+                    stop_on_fail=opts["stop_on_fail"],
+                    log=self.log,
+                    stop=self._stop_flag,
+                    progress=lambda d, t, m: self._prog_sig.emit(d, t, m),
+                    on_result=lambda r: self._test_sig.emit(r),
+                )
             return selftest.run(
                 self.client, rm, opts["rx"], selected=opts["selected"], speeds=opts["speeds"], use_tb=opts["tb"],
                 pattern_len=opts["pattern_len"], burst_words=opts["burst_words"], custom=custom,
@@ -1071,7 +1120,8 @@ class MainWindow(QWidget):
                 self._selftest_running = False
                 self.test_tab.set_report(None, "Test koşturulamadı (İşlem Logu'na bakın)")
 
-        self._run_job("Loopback testi", job, on_ok=done, on_done=finished, show_progress=True)
+        title = "Ballard dış doğrulama testi" if is_bb else "Loopback testi"
+        self._run_job(title, job, on_ok=done, on_done=finished, show_progress=True)
         self._update_controls()
 
     def do_ip_reset(self):

@@ -216,3 +216,44 @@ def test_test_tab_disabled_on_sim_and_runs_on_rtl():
     win.bus.shutdown()
     cl.close()
 
+
+def test_test_tab_ballard_mode_ui():
+    from a429.ballard import CardInfo
+
+    app = _app()
+    win = MainWindow(SimClient(num_rx=2, has_tx=True, has_txbit=True))
+    win.show()
+    _wait(app, win)
+    tt = win.test_tab
+    assert tt.mode() == "loopback"
+    assert tt.mode_stack.currentIndex() == 0
+    assert tt.list_stack.currentIndex() == 0
+
+    tt.set_mode("ballard")
+    assert tt.mode() == "ballard"
+    assert tt.mode_stack.currentIndex() == 1
+    assert tt.list_stack.currentIndex() == 1
+
+    card = CardInfo(
+        card_num=0, core_num=0, product="BUSBox BB1120", card_type="BUSBOX",
+        rx_channels=[0, 1, 2, 3], tx_channels=[4, 5], serial=112042,
+    )
+    tt.set_ballard_probe_result([card], dll_path=r"C:\Windows\System32\BTICARD64.DLL")
+    assert tt.cb_bb_rx_ch.count() == 4
+    assert tt.cb_bb_tx_ch.count() == 2
+    opts = tt.options()
+    assert opts["mode"] == "ballard"
+    assert opts["card_num"] == 0 and opts["core_num"] == 0
+    assert opts["bb_rx_chan"] == 0 and opts["bb_tx_chan"] == 4
+    assert opts["rx"] == ["RX0"]
+    assert "tx_period" in opts["selected"] and "duplex" in opts["selected"]
+
+    tt.set_mode("loopback")
+    assert tt.options()["mode"] == "loopback"
+
+    win._closing = True
+    win.close()
+    win.bus.shutdown()
+    app.processEvents()
+
+

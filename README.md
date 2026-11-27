@@ -47,16 +47,26 @@ okumaları inceleme) çalışır.
 | **Config** | Sol panelde **Genel** (System Clock, ±ppm), **RX Config** (ARINC 429 profili, Receiver entegresi, FPGA giriş standardı, Glitch Filter ve limitler, test toleransı, örnek dalga formu / tek bit grafikleri) ve **TX Config** (ARINC 429 profili). Sağda **RX / TX** alt sekmeleri: kontroller, ara hesaplar (çift tık → formül), hesaplanan register değerleri, panoya kopyalama ve **Debug Bridge config listesine ekle**. |
 | **Kontrol** | Okunacak RX verileri (Word / Error / Bit Diagnostic: Tümü / Son N / Okunmasın), okuma ve yazma dosyası ayarları, IP/kanal harita durumu; sağda **RX İşlemleri** (**RX Config gönder**, **RX verilerini oku**, **Config + oku**), **TX İşlemleri** (**TX Config gönder**, **TX Canlı Kontrol…**), **IP Kontrol** (**IP reset**, **Durdur**), ilerleme çubuğu ve **İşlem Logu**. |
 | **RX Okunan Veriler** | Word Listesi, Word Dalga Formu, Bit Diagnostic, Error Listesi, İstatistik ve tutarlılık kontrolleri. PASS/FAIL hücre renklendirmesi (neden için üzerine gelin veya sağ tıklayın). Word satırına çift tık → dalga formu. |
-| **Test** | TX → RX loopback otomatik testi (aşağıda **Test (Loopback) menüsü**). |
+| **Test** | **Loopback Testi** (TX → RX) ve **Dış Doğrulama Modu (Ballard BusBox / OmniBusBox)** otomatik testleri (aşağıda **Test menüsü**). |
 | **TX Gönderilen Veriler** | TX Canlı Kontrol gönderim geçmişi (filtreleme, CSV dışa aktarma, projeyle kayıt) ve **TX Built-In Test (TX BIT · Wraparound Checker)** canlı sayaçları (`TX_WORD_CNT`, `TB_WORD_CNT`, `CHK_OK_CNT`, `CHK_ERR_CNT`, FIFO), Checker kontrolü ve tek tıkla `TB_` okuması. |
 
 Üst başlık çubuğundan hedef kanal (`RX0`…`RXn`, `TX BIT`) seçilir.
 
-## Test (Loopback) menüsü
+## Test menüsü
 
-**Test** sekmesi ARINC 429 IP'sini ve hat entegrelerini (line driver / line receiver) birlikte otomatik test eder.
-Kartın ARINC **TX** çıkışını dışarıdan test edilecek **RX** girişlerine bağlayın (loopback) ve bu RX'leri
-işaretleyin; **TX BIT** kanalı TX hattını kart üzerindeki kendi alıcısıyla dinler ve Word Checker yankıyı karşılaştırır.
+**Test** sekmesinde iki otomatik test modu bulunur:
+
+1. **Loopback Testi (TX → RX):** Kartın ARINC **TX** çıkışını dışarıdan test edilecek **RX** girişlerine bağlayın
+   ve bu RX'leri işaretleyin; **TX BIT** kanalı TX hattını kart üzerindeki kendi alıcısıyla dinler ve Word Checker
+   yankıyı karşılaştırır. IP ve hat entegrelerini birlikte doğrular.
+2. **Dış Doğrulama Modu (Ballard BusBox / OmniBusBox):** Windows 64-bit Ballard BTIDriver DLL'leri
+   (`BTICARD64.DLL` / `BTI42964.DLL`, `ctypes`) üzerinden BB1120 / OmniBusBox / UA2000 gibi harici bir referans
+   cihazla **Kart TX + sürücü entegresini** (`Kart TX → Ballard RX`) ve **alıcı entegresi + Kart RX'i**
+   (`Ballard TX → Kart RX`) birbirinden bağımsız test eder. Loopback'in gizleyebileceği FPGA saat / PLL kaymasını
+   (Ballard 1 µs donanım timestamp'iyle), ARINC 429 bit/label sırasını, arıza yönünü (TX mi RX mi?) ve alıcı
+   entegresinin gerçek gecikme asimetrisini ayrı ayrı raporlar.
+
+### Loopback testleri
 
 | Test | Ne doğrular |
 |---|---|
@@ -74,6 +84,16 @@ işaretleyin; **TX BIT** kanalı TX hattını kart üzerindeki kendi alıcısıy
 | Gap ihlali tespiti | 2 bit gap ile art arda Word → `Gap Violation`, standart gap'e dönünce alım devam |
 | Logger kontrolleri | `ENABLE=0` (kayıt yok), `FREEZE` / `GLOBAL_FREEZE` (`DROP_CNT`) |
 | Custom config | Config sekmesinde hesaplanan Custom TX / RX config ile desen + bit zamanlaması |
+
+### Dış Doğrulama testleri (Ballard BusBox / OmniBusBox)
+
+| Test | Ne doğrular |
+|---|---|
+| Bağlantı, IP kimliği ve Ballard öz-testi | `IP_ID`/`CAPS`/`CLK_HZ`, Ballard kart/core/kanal doğrulaması ve `BTICard_CardTest` (seviye 0..2) |
+| Kart TX → BusBox RX *(HS / LS)* | Tek Word + bit/label sırası, veri bütünlüğü deseni, **bağımsız saat ve periyot ölçümü (ppm)**, 4-bit gap burst, parity hatası üretimi, HS ↔ LS geçişi (sürücü SLP) |
+| BusBox TX → Kart RX *(HS / LS)* | Tek Word + bit/label sırası, veri bütünlüğü deseni, **alıcı entegre bit zamanlaması (referans 5 / 40 µs'ye göre asimetri)**, burst, parity hatası enjeksiyonu, hız uyuşmazlığı, HS ↔ LS geçişi |
+| Çift yönlü stres *(HS / LS)* | Eşzamanlı Kart TX → BusBox RX ve BusBox TX → Kart RX tam çift yönlü doğrulama |
+| Custom config | Config sekmesindeki HS/LS uyumlu Custom TX/RX ayarlarının Ballard referansıyla doğrulanması |
 
 Başarısız kontrollerde olası neden yazılır (logger kapalı, hat `11`, A/B ters, tüm bitler ters, hatta sinyal yok,
 son hata kodları). Sonuçlar ağaçta test → kontrol → ölçüm olarak listelenir, **Raporu Kaydet…** ile `.txt` / `.json`
