@@ -340,7 +340,10 @@ class TxLivePanel(QWidget):
 
     def sched_values(self):
         p = next((x for x in self.app.ci.profiles if x.name == self.app.ci.tx_profile), self.app.ci.profiles[0])
-        return calc_sched(self._cfg_dict(), self.app.ci.clk_mhz, self._tbit_us(), p.name)
+        res = getattr(self.app, "res_tx", None) or {}
+        bit_clk = res.get("nom_clk", (None, None, None))[1]
+        return calc_sched(self._cfg_dict(), self.app.ci.clk_mhz, self._tbit_us(), p.name,
+                          bit_clk=bit_clk, gap_clk=res.get("gap_clk"))
 
     def sched_writes(self) -> list[tuple[str, int]]:
         delay, gap, _ = self.sched_values()

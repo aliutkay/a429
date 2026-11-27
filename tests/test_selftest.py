@@ -34,7 +34,7 @@ def test_full_suite_passes_on_rtl(rtl):
     bt = next(r for r in rep["results"] if r.tid == "bittime" and r.speed == "HS")
     assert bt.measurements["RX0"]["pulse_us"][1] == 5.0
     per = next(r for r in rep["results"] if r.tid == "period" and r.speed == "LS")
-    assert abs(per.measurements["RX0"]["period_us"][0] - 46 * 80) < 0.1
+    assert per.measurements["RX0"]["period_us"] == [46 * 80, 46 * 80]   # clk hassasiyetinde (1 clk = 0.02 µs)
     txt = selftest.report_text(rep)
     assert "GEÇTİ" in txt and "Gap ihlali" in txt
     assert '"results"' in selftest.report_json(rep)

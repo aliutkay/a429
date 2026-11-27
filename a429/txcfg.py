@@ -22,6 +22,7 @@ def compute_tx(ci, override: str = "Kapalı", rm: RegMap | None = None) -> dict:
       errors : [hata metinleri]
       single : {"MIN"|"NOM"|"MAX": dalga formu parametre sözlüğü}
       nom_clk: (pulse_clk, bit_clk, null_clk)
+      gap_clk: TX Word Gap (clk)
       text   : özet bilgi satırı
     """
     p, drv, mhz, cfg = tx_profile(ci), ci.driver, ci.clk_mhz, ci.tx_live
@@ -175,7 +176,7 @@ def compute_tx(ci, override: str = "Kapalı", rm: RegMap | None = None) -> dict:
     except ValueError as e:
         errors.append(f"Direkt Word: {e}")
     try:
-        delay, igap, _ = sched_values(cfg, mhz, tbit_nom, p.name)
+        delay, igap, _ = sched_values(cfg, mhz, tbit_nom, p.name, bit_clk=bit, gap_clk=gap)
         vals.update(TX_INITIAL_DELAY=delay, TX_INTER_WORD_GAP=igap)
     except ValueError as e:
         errors.append(f"Scheduler: {e}")
@@ -255,5 +256,6 @@ def compute_tx(ci, override: str = "Kapalı", rm: RegMap | None = None) -> dict:
         "errors": errors,
         "single": single,
         "nom_clk": (pulse, bit, null),
+        "gap_clk": gap,
         "text": text,
     }

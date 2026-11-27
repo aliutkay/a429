@@ -52,6 +52,7 @@ TBS=(
   tb_a429_tx_word_evt
   tb_a429_tx_channel
   tb_arinc429_core
+  tb_a429_timing
 )
 
 run_vhdl_suite() {

@@ -95,20 +95,37 @@ def _number(text, name):
     return value
 
 
-def sched_values(cfg, mhz, tbit_us, profile_name):
-    """Scheduler süreleri: (initial_delay_clk, inter_word_gap_clk, açıklama)."""
+def sched_values(cfg, mhz, tbit_us, profile_name, bit_clk: int | None = None, gap_clk: int | None = None):
+    """Scheduler süreleri: (initial_delay_clk, inter_word_gap_clk, açıklama).
+
+    bit_clk / gap_clk (TX_CUST_PULSE+NULL ve TX_CUST_GAP_DUR, clk) verilirse "Periyottan" modunda inter-word gap
+    clk hassasiyetinde hesaplanır: periyot_clk = 32 * bit_clk + gap_clk + inter_word_gap (donanım periyodu,
+    tb_a429_timing). Verilmezse nominal Bit süresinden (32 Bit + 4 Bit) µs cinsinden hesaplanır.
+    """
     delay_clk = round(to_clk(_number(cfg["delay_us"], "Initial delay"), cfg["delay_unit"], mhz))
     if cfg["gap_mode"] == "period":
-        period_us = to_clk(_number(cfg["period_us"], "Periyot"), cfg["period_unit"], mhz) / mhz
-        gap, word, fixed = gap_from_period(period_us, tbit_us)
-        head = (f"TX profili: {profile_name}\n"
-                f"Periyot: {period_us:g} µs\n"
-                f"Word süresi (32 Bit): {word:g} µs\n"
-                f"Zorunlu gap (4 Bit): {fixed:g} µs\n"
-                f"Inter word gap = {period_us:g} − {word:g} − {fixed:g} = {gap:g} µs")
-        gap_clk = round(gap * mhz)
-        if gap_clk < 1:      # gap, 32 Bit Word + 4 Bit gap'ten sonra eklenir ve 0 olamaz
-            raise ValueError(f"{head}\nPeriyot, Word + 4 Bit gap süresinden ({word + fixed:g} µs) uzun olmalı "
+        period_clk = round(to_clk(_number(cfg["period_us"], "Periyot"), cfg["period_unit"], mhz))
+        period_us = period_clk / mhz
+        if bit_clk and gap_clk:
+            word_clk, fixed_clk = 32 * bit_clk, gap_clk
+            gap_clk_iw = period_clk - word_clk - fixed_clk
+            head = (f"TX profili: {profile_name}\n"
+                    f"Periyot: {period_us:g} µs = {period_clk:,} clk\n"
+                    f"Word süresi (32 Bit): {word_clk / mhz:g} µs = {word_clk:,} clk\n"
+                    f"Zorunlu gap (TX Gap): {fixed_clk / mhz:g} µs = {fixed_clk:,} clk\n"
+                    f"Inter word gap = {period_clk:,} − {word_clk:,} − {fixed_clk:,}")
+            word, fixed = word_clk / mhz, fixed_clk / mhz
+            gap_clk = gap_clk_iw
+        else:
+            gap, word, fixed = gap_from_period(period_us, tbit_us)
+            head = (f"TX profili: {profile_name}\n"
+                    f"Periyot: {period_us:g} µs\n"
+                    f"Word süresi (32 Bit): {word:g} µs\n"
+                    f"Zorunlu gap (4 Bit): {fixed:g} µs\n"
+                    f"Inter word gap = {period_us:g} − {word:g} − {fixed:g} = {gap:g} µs")
+            gap_clk = round(gap * mhz)
+        if gap_clk < 1:      # gap, 32 Bit Word + TX gap'ten sonra eklenir ve 0 olamaz
+            raise ValueError(f"{head}\nPeriyot, Word + gap süresinden ({word + fixed:g} µs) uzun olmalı "
                              f"(Inter word gap en az 1 clk).")
         text = f"{head} = {gap_clk:,} clk"
     else:

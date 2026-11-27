@@ -18,9 +18,13 @@
 --             Bit 0..7  : word_in(7 downto 0) — Label MSB önce (bit 7 -> bit 0)
 --             Bit 8..31 : word_in(31 downto 8) — SDI, Data, SSM, Parity LSB önce
 --   REQ-4 : Her bit pulse_dur clk HIGH ("10" = bit 1) veya LOW ("01" = bit 0),
---           ardından null_dur clk NULL ("00") sürülür. 32. bitten sonra gap_dur
---           clk zorunlu Word Gap ("00") sürülür ve WT_IDLE'a dönülür.
---   REQ-5 : tx_busy tüm 32 bit + gap_dur boyunca '1', WT_IDLE'da '0' olmalıdır.
+--           ardından null_dur clk NULL ("00") sürülür. 32. bitin null'undan sonra
+--           hatta tam gap_dur clk zorunlu Word Gap ("00") oluşur: gap_dur - 1 clk
+--           WT_GAP + yeni tetiğin örneklendiği en az 1 clk WT_IDLE (gap_dur = 1
+--           ise WT_GAP atlanır). Böylece sürekli tetikte (SEND_CMD) Word'ler arası
+--           NULL = null_dur + gap_dur, Scheduler'da null_dur + gap_dur +
+--           inter_word_gap olur (clk hassasiyetinde, tb_a429_timing).
+--   REQ-5 : tx_busy 32 bit + (gap_dur - 1) clk boyunca '1', WT_IDLE'da '0'.
 --           word_tx yakalanan 32-bit Word'ü (TX BIT Checker için) dışarı verir.
 --   REQ-6 : soft_rst = '1' veya rst_n = '0' anında FSM WT_IDLE'a, çıkışlar
 --           NULL ("00") durumuna döner.
@@ -134,8 +138,13 @@ begin
                         wt_low  <= '0';
                         if dur_cnt = 0 then
                             if bit_idx = 31 then
-                                dur_cnt <= r_gap - 1;
-                                state   <= WT_GAP;
+                                -- Gap'in son clk'i WT_IDLE'da geçer (tetik orada örneklenir)
+                                if r_gap <= 1 then
+                                    state   <= WT_IDLE;
+                                else
+                                    dur_cnt <= r_gap - 2;
+                                    state   <= WT_GAP;
+                                end if;
                             else
                                 bit_idx <= bit_idx + 1;
                                 dur_cnt <= resize(r_pulse - 1, 32);

@@ -72,7 +72,7 @@ Bus katmanı **AXI4-Lite**'tır ve doğrudan **AXIL Studio** (`axilgen` / ZipCPU
 | `vhdl/rtl/arinc429_ip.vhd` | HDL Designer uyumlu karma-dil üst modül: `arinc429_axil_pk` (Verilog, paketli `SLAVE_AXI_REQ/RSP`) + `arinc429_core` (VHDL). Düz `S_AXI_*` portlu eski top için üreteçte `--plain-top` |
 | `vhdl/tb/tb_arinc429_ip_pk.v` | Top entegrasyon testi: `ghdl --synth` netlist + `arinc429_axil_pk` ile paketli arayüzden register okuma/yazma |
 | `vhdl/tb/tb_*.vhd` | Her RTL bloğu için ayrı kendi kendini doğrulayan 19 adet birim/entegrasyon testbench'i |
-| `vhdl/scripts/run_tests.sh` | Tüm 19 VHDL testini hem VHDL-93 hem VHDL-2008 ile + Icarus Verilog AXIL testini koşar |
+| `vhdl/scripts/run_tests.sh` | Tüm 20 VHDL testini hem VHDL-93 hem VHDL-2008 ile + Icarus Verilog AXIL testini koşar |
 
 ---
 
@@ -112,11 +112,27 @@ Tam bit-bazlı tablo: [`vhdl/axil/arinc429_axil_regs.md`](../axil/arinc429_axil_
 
 ## 4. Simülasyon ve Formal Doğrulama
 
-Tüm 19 VHDL birim/entegrasyon testbench'i (hem **VHDL-93** hem **VHDL-2008**) ve AXIL Studio **Icarus Verilog** testbench'i tek komutla çalıştırılır:
+Tüm 20 VHDL birim/entegrasyon testbench'i (hem **VHDL-93** hem **VHDL-2008**) ve AXIL Studio **Icarus Verilog** testbench'i tek komutla çalıştırılır:
 
 ```bash
 bash vhdl/scripts/run_tests.sh
 ```
+
+**Clock hassasiyetinde zamanlama (`tb_a429_timing`):**
+
+| Büyüklük | Hatta / ölçümde (clk) |
+|---|---|
+| TX pulse / null | tam `PULSE_DUR` / `NULL_DUR` |
+| Word'ler arası NULL, sürekli `SEND_CMD` | `NULL_DUR + GAP_DUR` (gap asla `GAP_DUR`'dan kısa değil) |
+| Word'ler arası NULL, Scheduler | `NULL_DUR + GAP_DUR + INTER_WORD_GAP` |
+| Scheduler periyodu | `32 × (PULSE_DUR + NULL_DUR) + GAP_DUR + INTER_WORD_GAP` |
+| `INITIAL_DELAY` | ilk pulse tam `INITIAL_DELAY` clk gecikir |
+| RX Bit Diagnostic pulse / null, Word gap | hattaki süreyle aynı (CDC + glitch filtresi her kenarı eşit geciktirir) |
+| RX sınırları | `MIN/MAX_PULSE`, `MIN/MAX_BIT` ve `4 × MIN_BIT` gap tam değerde kabul, 1 clk dışında ret |
+
+Transmitter'da gap'in son clk'i, yeni tetiğin örneklendiği `WT_IDLE` clk'idir (`GAP_DUR − 1` clk `WT_GAP` +
+1 clk `WT_IDLE`); bu yüzden `TX_STATUS.BUSY` Word sonunda `GAP_DUR − 1` clk sürer. RX, bit 31'in null'unu hattan
+ayıramadığı için Word gap'i bit 31'in tahmini bitişinden (bit 31 pulse + bit 30 null) sayar.
 
 **Formal Doğrulama (GHDL `synth` + Yosys SAT — 13 blok):**
 

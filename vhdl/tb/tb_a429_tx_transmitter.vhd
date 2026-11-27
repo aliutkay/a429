@@ -75,12 +75,20 @@ begin
             end loop;
         end loop;
 
-        -- Gap (C_G clk) boyunca NULL ve busy=1, sonra IDLE
-        for g in 1 to C_G loop
+        -- Gap: C_G - 1 clk WT_GAP (NULL, busy=1) + 1 clk WT_IDLE (NULL, busy=0) = hatta tam C_G clk
+        for g in 1 to C_G - 1 loop
             chk(lh = '0' and ll = '0' and busy = '1', "Gap fazinda NULL ve busy=1 olmali");
             tick;
         end loop;
-        chk(busy = '0' and lh = '0' and ll = '0', "Gap bitiminde WT_IDLE'a donmeli");
+        chk(busy = '0' and lh = '0' and ll = '0', "Gap'in son clk'i WT_IDLE'da (busy=0, NULL) olmali");
+        -- Bu clk'te gelen tetik ile yeni Word, son bitin null'undan tam C_N + C_G clk sonra başlar
+        word_in <= W_TEST; start_trig <= '1'; tick; start_trig <= '0';
+        exp_b := wire_bit(W_TEST, 0);
+        chk(lh = exp_b and ll = (not exp_b) and busy = '1', "Ardisik Word gap tam C_G clk olmali");
+        for k in 1 to 32 * (C_P + C_N) + C_G + 2 loop
+            tick;
+        end loop;
+        chk(busy = '0' and lh = '0' and ll = '0', "Ikinci Word sonrasi WT_IDLE'a donmeli");
 
         -- soft_rst gönderim ortasında kesebilmeli
         word_in <= W_TEST; start_trig <= '1'; tick; start_trig <= '0';

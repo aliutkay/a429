@@ -561,7 +561,7 @@ def t_period(c: Ctx, R: TestResult, speed: str):
         recs = c.last_words(ch, n)
         diffs = [b["ts"] - a["ts"] for a, b in zip(recs, recs[1:])]
         gaps = [r["gap"] for r in recs[1:]]
-        tol = max(20, period // 1000)
+        tol = 2                       # clk: TX ve RX aynı saatte; yalnız alıcı örnekleme (CDC) ±1 clk
         R.measurements[ch] = {"period_us": [round(c.us(min(diffs)), 3), round(c.us(max(diffs)), 3)],
                               "gap_us": [round(c.us(min(gaps)), 3), round(c.us(max(gaps)), 3)]}
         R.add(f"{lab}: Word periyodu {c.us(min(diffs)):.2f}…{c.us(max(diffs)):.2f} µs (beklenen {c.us(period):.2f} µs)",
