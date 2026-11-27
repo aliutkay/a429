@@ -600,7 +600,10 @@ def _expect_rejected(c: Ctx, R: TestResult, s0, s1, what: str, err_bit: str | No
         lab = channel_label(ch)
         dw, de = c.delta(s0, s1, ch, "word"), c.delta(s0, s1, ch, "err")
         R.add(f"{lab}: {what} Word kabul edilmedi", dw == 0, f"WORD +{dw}")
-        names = sorted({n for e in c.last_errors(ch, min(de, 8)) for n in e["names"]}) if de else []
+        # s0'dan beri gelen TÜM hata kayıtları taranır: TX BIT kanalında reddedilen her Word için checker
+        # No Echo üretir; gerçek kartta bus gecikmesiyle Scheduler çok Word gönderir ve asıl hata (ör. Gap
+        # Violation) yalnızca son birkaç kayda bakılırsa No Echo'ların gerisinde kalır.
+        names = sorted({n for e in c.last_errors(ch, min(de, 256)) for n in e["names"]}) if de else []
         if err_bit:
             ok = de > 0 and err_bit in names
             R.add(f"{lab}: {err_bit} hatası raporlandı", ok if strict_err else (True if ok else None),
