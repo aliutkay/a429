@@ -58,7 +58,7 @@ CTRL_PT_WR_RUN = 0x20
 CTRL_ERR_HALT = 0x40
 CTRL_IRQ_EN = 0x80
 
-LOAD_CHUNK = 32  # Her batch isteğinde yüklenen 64-bit komut sayısı
+LOAD_CHUNK = 64  # Her batch isteğinde yüklenen 64-bit komut sayısı
 
 PCS_ERR_TEXT = {
     1: "geçersiz komut (illegal instruction)",
@@ -700,10 +700,11 @@ def build_program(
         M_CLK_HZ: clk_hz,
         M_IP_BASE: ip_base & 0xFFFFFFFF,
         M_ROUND_T0: 0,
+        M_SEQ_BEGIN: 0,
+        M_TOTAL_ROUNDS: 0,
         M_SIGNATURE: SIGNATURE,
     }
-    for i in range(STATS_COUNT):
-        dmem_init[STATS_START + i] = 0
+    # D[16..64] istatistik bloğu start: başında PCS tarafından clear_stats ile sıfırlanır (47 UART yazması tasarrufu)
     # D_CH_CODE - 1 = 255: R8=0 (global/TX) için tek LDD ile kanal kodu çözümü
     dmem_init[D_CH_CODE - 1] = 255
     for i, ch in enumerate(chans):
@@ -803,6 +804,7 @@ def build_program(
         "; ---- Başlangıç: IP reset, logger + checker kurulumu ----",
         "start:",
         "        LDI   R6, IP_BASE",
+        "        CALL  clear_stats",
         f"        LDD   R13, D[{M_PRNG}]",
         "        LDI   R1, 1",
         "        WR    [R6+OFF_SOFT_RESET], R1",
@@ -1628,51 +1630,113 @@ def discover_pcs(client, ip_base: int | None = None) -> list[PcsInfo]:
     return out
 
 
-def load_and_start(client, pcs_base: int, compiled: CompiledProgram, log=None) -> PcsInfo:
-    """Derlenmiş programı PCS I-mem'e yükler, doğrular, D-mem'i doldurur ve PCS'yi başlatır."""
+def _dmem_stream_ops(base: int, dmem_init: dict[int, int]) -> list[tuple]:
+    """Bitişik D-mem alanlarını DMEM_PTR + DMEM_DATA (tek adres) yazmalarına dönüştürür."""
+    idxs = sorted(dmem_init)
+    ops: list[tuple] = []
+    i = 0
+    while i < len(idxs):
+        j = i
+        while j + 1 < len(idxs) and idxs[j + 1] == idxs[j] + 1:
+            j += 1
+        if j - i >= 1:
+            ops.append(("write", base + REG_DMEM_PTR, idxs[i]))
+            for k in range(i, j + 1):
+                ops.append(("write", base + REG_DMEM_DATA, dmem_init[idxs[k]]))
+        else:
+            idx = idxs[i]
+            ops.append(("write", base + REG_DMEM_BASE + idx * 4, dmem_init[idx]))
+        i = j + 1
+    return ops
+
+
+def load_and_start(
+    client,
+    pcs_base: int,
+    compiled: CompiledProgram,
+    log=None,
+    progress=None,
+    force_reload: bool = False,
+) -> PcsInfo:
+    """Derlenmiş programı PCS I-mem'e yükler (aynıysa atlar), doğrular, D-mem'i yazar ve başlatır."""
     base = pcs_base & 0xFFFFFFFF
+    prog_cb = progress or (lambda _d, _t, _m: None)
     info = probe_pcs_at(client, base)
     if compiled.insn_count > info.imem_size:
         raise PcsError(f"Program {compiled.insn_count} komut; bu PCS en fazla {info.imem_size} komut alır.")
     if info.dmem_size < 256:
         raise PcsError(f"PCS D-mem boyu en az 256 word olmalı (mevcut {info.dmem_size}).")
 
-    _abs_batch(client, [
-        ("write", base + REG_CTRL, CTRL_ERR_HALT | CTRL_STOP),
-        ("write", base + REG_CTRL, CTRL_ERR_HALT | CTRL_RESET),
-        ("write", base + REG_IMEM_PTR, 0),
-    ])
-
-    w32 = words32(compiled.prog)
-    step = 2 * LOAD_CHUNK
-    for i in range(0, len(w32), step):
-        chunk = [("write", base + REG_IMEM_DATA, w) for w in w32[i:i + step]]
-        _abs_batch(client, chunk)
-
-    cnt, total, st_v = _abs_batch(client, [
-        ("read", base + REG_IMEM_CNT),
-        ("read", base + REG_IMEM_SUM),
-        ("read", base + REG_STATUS),
-    ])
-    st = PcsStatus(st_v)
-    if cnt != compiled.insn_count or total != compiled.imem_sum or st.imem_phase:
-        raise PcsError(
-            f"PCS I-mem yükleme doğrulama hatası: CNT={cnt}/{compiled.insn_count}, "
-            f"SUM=0x{total:08X}/0x{compiled.imem_sum:08X}, PHASE={int(st.imem_phase)}"
+    lock = getattr(client, "lock", None)
+    if lock:
+        client.lock()
+    try:
+        # Önce durdur + resetle (I-mem, IMEM_CNT ve IMEM_SUM korunur)
+        _abs_batch(client, [
+            ("write", base + REG_CTRL, CTRL_ERR_HALT | CTRL_STOP),
+            ("write", base + REG_CTRL, CTRL_ERR_HALT | CTRL_RESET),
+        ])
+        cur_cnt, cur_sum, cur_st_v = _abs_batch(client, [
+            ("read", base + REG_IMEM_CNT),
+            ("read", base + REG_IMEM_SUM),
+            ("read", base + REG_STATUS),
+        ])
+        cur_st = PcsStatus(cur_st_v)
+        already_loaded = (
+            not force_reload
+            and cur_cnt == compiled.insn_count
+            and cur_sum == compiled.imem_sum
+            and not cur_st.imem_phase
         )
 
-    dmem_ops = [("write", base + REG_DMEM_BASE + idx * 4, val) for idx, val in sorted(compiled.dmem_init.items())]
-    for i in range(0, len(dmem_ops), 64):
-        _abs_batch(client, dmem_ops[i:i + 64])
+        if already_loaded:
+            prog_cb(compiled.insn_count, compiled.insn_count, "Aynı program I-mem'de zaten yüklü — D-mem güncelleniyor…")
+        else:
+            _abs_batch(client, [("write", base + REG_IMEM_PTR, 0)])
+            w32 = words32(compiled.prog)
+            step = 2 * LOAD_CHUNK
+            total_insns = compiled.insn_count
+            for i in range(0, len(w32), step):
+                chunk = [("write", base + REG_IMEM_DATA, w) for w in w32[i:i + step]]
+                _abs_batch(client, chunk)
+                done = min(total_insns, (i + len(chunk)) // 2)
+                prog_cb(done, total_insns, f"PCS I-mem yükleniyor: {done} / {total_insns} komut…")
 
-    _abs_batch(client, [
-        ("write", base + REG_ENTRY, compiled.entry),
-        ("write", base + REG_CTRL, CTRL_ERR_HALT | CTRL_RUN),
-    ])
-    if log:
-        log(f"[PCS] 0x{base:08X}: {compiled.insn_count}/{info.imem_size} komut yüklendi "
-            f"(SUM 0x{compiled.imem_sum:08X}) ve başlatıldı.")
-    return probe_pcs_at(client, base, name=info.name, parent=info.parent, is_ip_parent=info.is_ip_parent)
+            cnt, total, st_v = _abs_batch(client, [
+                ("read", base + REG_IMEM_CNT),
+                ("read", base + REG_IMEM_SUM),
+                ("read", base + REG_STATUS),
+            ])
+            st = PcsStatus(st_v)
+            if cnt != compiled.insn_count or total != compiled.imem_sum or st.imem_phase:
+                raise PcsError(
+                    f"PCS I-mem yükleme doğrulama hatası: CNT={cnt}/{compiled.insn_count}, "
+                    f"SUM=0x{total:08X}/0x{compiled.imem_sum:08X}, PHASE={int(st.imem_phase)}"
+                )
+
+        dmem_ops = _dmem_stream_ops(base, compiled.dmem_init)
+        for i in range(0, len(dmem_ops), 64):
+            _abs_batch(client, dmem_ops[i:i + 64])
+
+        _abs_batch(client, [
+            ("write", base + REG_ENTRY, compiled.entry),
+            ("write", base + REG_CTRL, CTRL_ERR_HALT | CTRL_RUN),
+        ])
+        prog_cb(compiled.insn_count, compiled.insn_count, "PCS başlatıldı")
+        if log:
+            if already_loaded:
+                log(f"[PCS] 0x{base:08X}: aynı program zaten yüklü ({compiled.insn_count} komut, "
+                    f"SUM 0x{compiled.imem_sum:08X}) — I-mem atlandı, D-mem güncellenip başlatıldı.")
+            else:
+                log(f"[PCS] 0x{base:08X}: {compiled.insn_count}/{info.imem_size} komut yüklendi "
+                    f"(SUM 0x{compiled.imem_sum:08X}) ve başlatıldı.")
+        return probe_pcs_at(client, base, name=info.name, parent=info.parent, is_ip_parent=info.is_ip_parent)
+    finally:
+        if lock:
+            try:
+                client.unlock()
+            except Exception:  # noqa: BLE001
+                pass
 
 
 def stop_pcs(client, pcs_base: int):

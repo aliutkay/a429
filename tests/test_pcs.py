@@ -306,6 +306,8 @@ class FakePcsSystem:
         self.err_code = self.err_pc = self.err_addr = 0
         self.imem_ptr = self.imem_phase = self.imem_cnt = self.imem_sum = 0
         self._imem_lo = 0
+        self.dmem_ptr = 0
+        self.imem_data_writes = 0
         self.timer = 1000
         self.ip_host_writes = 0  # PC'nin doğrudan ARINC 429 IP'ye yaptığı yazma sayısı
 
@@ -382,6 +384,7 @@ class FakePcsSystem:
                 self.imem_cnt = 0
                 self.imem_sum = 0
             elif off == pcs_test.REG_IMEM_DATA:
+                self.imem_data_writes += 1
                 self.imem_sum = (self.imem_sum + v) & M32
                 if self.imem_phase == 0:
                     self._imem_lo = v
@@ -391,6 +394,11 @@ class FakePcsSystem:
                     self.imem_ptr += 1
                     self.imem_cnt += 1
                     self.imem_phase = 0
+            elif off == pcs_test.REG_DMEM_PTR:
+                self.dmem_ptr = v & ((1 << self.dmem_aw) - 1)
+            elif off == pcs_test.REG_DMEM_DATA:
+                self.dmem[self.dmem_ptr] = v
+                self.dmem_ptr = (self.dmem_ptr + 1) & ((1 << self.dmem_aw) - 1)
             elif pcs_test.REG_DMEM_BASE <= off < pcs_test.REG_DMEM_BASE + (1 << self.dmem_aw) * 4:
                 self.dmem[(off - pcs_test.REG_DMEM_BASE) >> 2] = v
             return
@@ -643,3 +651,21 @@ def test_pcs_noise_tracking_and_channel_isolation():
     assert ch_fails[0] == 0        # RX0 sağlam
     assert ch_fails[1] > 0         # RX1 hatalı
     assert ch_fails[16] == 0       # TB sağlam
+
+
+def test_pcs_smart_imem_skip_on_relaunch():
+    ip = FakeIp21(num_rx=1, has_txbit=True)
+    sys_pcs = FakePcsSystem(ip)
+    comp1 = pcs_test.build_program(ip.base, ["RX0"], use_tb=True, max_rounds=1, gap_ms=500)
+    pcs_test.load_and_start(sys_pcs, 0, comp1)
+    first_writes = sys_pcs.imem_data_writes
+    assert first_writes == 2 * comp1.insn_count
+
+    # Aynı testlerle sadece gap_ms ve max_rounds değiştirilince I-mem tekrar yazılmamalı!
+    comp2 = pcs_test.build_program(ip.base, ["RX0"], use_tb=True, max_rounds=2, gap_ms=100)
+    pcs_test.load_and_start(sys_pcs, 0, comp2)
+    assert sys_pcs.imem_data_writes == first_writes
+    sys_pcs.run_until_rounds(2)
+    t = pcs_test.read_telemetry(sys_pcs, 0)
+    assert t["passed"] and t["total_rounds"] == 2 and t["gap_ms"] == 100.0
+

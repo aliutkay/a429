@@ -1111,18 +1111,25 @@ class MainWindow(QWidget):
                 imem_aw=info.imem_aw,
                 dmem_aw=info.dmem_aw,
             )
-            pcs_test.load_and_start(self.client, pcs_base, comp, log=self.log)
+            pcs_test.load_and_start(
+                self.client, pcs_base, comp, log=self.log,
+                progress=lambda d, t, m: self._prog_sig.emit(d, t, m),
+            )
             return pcs_test.read_telemetry(self.client, pcs_base)
 
+        self._selftest_running = True
+
         def ok(telem):
+            self._selftest_running = False
             self.test_tab.set_pcs_telemetry(telem)
             self.test_tab.start_pcs_poll()
 
         def finished(ok_flag):
+            self._selftest_running = False
             if not ok_flag:
                 self.test_tab.set_pcs_telemetry(None, "PCS yüklenemedi (İşlem Logu'na bakın)")
 
-        self._run_job("PCS otonom test yükleniyor", job, on_ok=ok, on_done=finished)
+        self._run_job("PCS otonom test yükleniyor", job, on_ok=ok, on_done=finished, show_progress=True)
 
     def do_pcs_read(self, pcs_base: int, quiet: bool = False):
         from .. import pcs_test
