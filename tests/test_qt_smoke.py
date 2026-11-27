@@ -238,7 +238,7 @@ def test_test_tab_ballard_mode_ui():
         card_num=0, core_num=0, product="BUSBox BB1120", card_type="BUSBOX",
         rx_channels=[0, 1, 2, 3], tx_channels=[4, 5], serial=112042,
     )
-    tt.set_ballard_probe_result([card], dll_path=r"C:\Windows\System32\BTICARD64.DLL")
+    tt.set_ballard_probe_result([card], dll_path="BTICARD64.DLL")
     assert tt.cb_bb_rx_ch.count() == 4
     assert tt.cb_bb_tx_ch.count() == 2
     opts = tt.options()

@@ -110,7 +110,9 @@ def test_ballard_session_ctypes_call_sequence():
                 return -1
             src = seq_records[self._idx]
             self._idx += 1
-            ctypes.memmove(prec, ctypes.byref(src), recsz)
+            dst = prec._obj
+            for field_name, _ in ballard.SEQRECORD429._fields_:
+                setattr(dst, field_name, getattr(src, field_name))
             return 0
 
     class Fake429DLL:
@@ -563,3 +565,21 @@ def test_stop_flag_aborts_ballard():
     )
     assert rep["aborted"] and not rep["passed"]
     assert seen[:2] == ["ident", "prep"] and len(seen) == 3
+
+
+def test_resolve_dll_paths(tmp_path):
+    card_name, a429_name = ballard.dll_names()
+    assert ballard.resolve_dll_paths(None) == (card_name, a429_name)
+
+    with pytest.raises(ballard.BallardError):
+        ballard.resolve_dll_paths(str(tmp_path / "missing_dir"))
+
+    (tmp_path / card_name).write_bytes(b"")
+    with pytest.raises(ballard.BallardError):
+        ballard.resolve_dll_paths(str(tmp_path))
+
+    (tmp_path / a429_name).write_bytes(b"")
+    c_path, a_path = ballard.resolve_dll_paths(str(tmp_path))
+    assert c_path == str(tmp_path / card_name)
+    assert a_path == str(tmp_path / a429_name)
+

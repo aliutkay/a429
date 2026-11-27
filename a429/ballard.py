@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import ctypes
 import os
-import sys
 import threading
 import time
 from dataclasses import dataclass, field
@@ -224,62 +223,24 @@ def dll_names() -> tuple[str, str]:
     return ("BTICARD64.DLL", "BTI42964.DLL") if _IS_64BIT else ("BTICARD.DLL", "BTI429.DLL")
 
 
-def _search_dirs(dll_dir: str | None = None) -> list[str]:
-    dirs: list[str] = []
-    if dll_dir:
-        dirs.append(dll_dir)
-    if os.name == "nt":
-        sysroot = os.environ.get("SystemRoot", r"C:\Windows")
-        dirs.append(os.path.join(sysroot, "System32"))
-        for base in (
-            os.environ.get("ProgramFiles", r"C:\Program Files"),
-            os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"),
-        ):
-            for vendor in ("Ballard Technology", "Astronics", "Astronics AES"):
-                root = os.path.join(base, vendor)
-                if os.path.isdir(root):
-                    dirs.append(root)
-                    for sub in ("BTIDriver", "Drivers", "API", "Bin", "x64"):
-                        p = os.path.join(root, sub)
-                        if os.path.isdir(p):
-                            dirs.append(p)
-        for p in os.environ.get("PATH", "").split(os.pathsep):
-            if p:
-                dirs.append(p)
-    seen, out = set(), []
-    for d in dirs:
-        norm = os.path.normcase(os.path.normpath(d))
-        if norm not in seen and os.path.isdir(d):
-            seen.add(norm)
-            out.append(d)
-    return out
+def resolve_dll_paths(dll_dir: str | None = None) -> tuple[str, str]:
+    """Yüklenecek BTICard ve BTI429 DLL hedeflerini belirler.
 
-
-def _find_in_dir(directory: str, target_name: str) -> str | None:
-    direct = os.path.join(directory, target_name)
-    if os.path.isfile(direct):
-        return direct
-    want = target_name.lower()
-    try:
-        for fn in os.listdir(directory):
-            if fn.lower() == want:
-                return os.path.join(directory, fn)
-    except OSError:
-        pass
-    return None
-
-
-def find_dlls(dll_dir: str | None = None) -> tuple[str | None, str | None]:
-    """BTICard ve BTI429 DLL tam yollarını arar; bulunamazsa (None, None) döner."""
+    ``dll_dir`` verilmezse yalnızca DLL dosya adları döner; Windows'un güvenli
+    varsayılan kütüphane yükleyicisi (``LOAD_LIBRARY_SEARCH_DEFAULT_DIRS``)
+    kurulu sürücüyü doğrudan yükler. ``dll_dir`` seçilmişse her iki DLL'in de
+    yalnızca o klasörde bulunduğu doğrulanır.
+    """
     card_name, a429_name = dll_names()
-    card_path = a429_path = None
-    for d in _search_dirs(dll_dir):
-        if card_path is None:
-            card_path = _find_in_dir(d, card_name)
-        if a429_path is None:
-            a429_path = _find_in_dir(d, a429_name)
-        if card_path and a429_path:
-            break
+    if not dll_dir:
+        return card_name, a429_name
+    if not os.path.isdir(dll_dir):
+        raise BallardError(f"Seçilen DLL klasörü bulunamadı: {dll_dir}")
+    card_path = os.path.join(dll_dir, card_name)
+    a429_path = os.path.join(dll_dir, a429_name)
+    missing = [name for name, path in ((card_name, card_path), (a429_name, a429_path)) if not os.path.isfile(path)]
+    if missing:
+        raise BallardError(f"Seçilen klasörde bulunamayan DLL: {', '.join(missing)} ({dll_dir})")
     return card_path, a429_path
 
 
@@ -367,36 +328,20 @@ class BTIDriver:
         if os.name != "nt":
             raise BallardError("Ballard BTIDriver DLL'leri yalnızca Windows'ta yüklenebilir.")
         card_name, a429_name = dll_names()
-        card_path, a429_path = find_dlls(dll_dir)
-        # Yol bulunamadıysa Windows varsayılan DLL arama yolundan dene
-        c_target = card_path or card_name
-        a_target = a429_path or a429_name
-        add_dir = getattr(os, "add_dll_directory", None)
-        handles = []
+        card_target, a429_target = resolve_dll_paths(dll_dir)
         try:
-            if add_dir:
-                for p in {os.path.dirname(x) for x in (card_path, a429_path) if x}:
-                    if os.path.isdir(p):
-                        handles.append(add_dir(p))
-            try:
-                card_dll = ctypes.WinDLL(c_target)
-            except OSError as e:
-                arch = "64-bit" if _IS_64BIT else "32-bit"
-                raise BallardError(
-                    f"{card_name} yüklenemedi ({arch} Python): {e}. "
-                    "Ballard BTIDriver sürücüsünün kurulu olduğundan ve DLL klasörünün doğru seçildiğinden emin olun."
-                ) from e
-            try:
-                a429_dll = ctypes.WinDLL(a_target)
-            except OSError as e:
-                raise BallardError(f"{a429_name} yüklenemedi: {e}") from e
-            return cls(card_dll, a429_dll, card_path or c_target, a429_path or a_target)
-        finally:
-            for h in handles:
-                try:
-                    h.close()
-                except Exception:
-                    pass
+            card_dll = ctypes.WinDLL(card_target)
+        except OSError as e:
+            arch = "64-bit" if _IS_64BIT else "32-bit"
+            raise BallardError(
+                f"{card_name} yüklenemedi ({arch} Python): {e}. "
+                "Ballard BTIDriver sürücüsünün kurulu olduğundan veya DLL klasörünün doğru seçildiğinden emin olun."
+            ) from e
+        try:
+            a429_dll = ctypes.WinDLL(a429_target)
+        except OSError as e:
+            raise BallardError(f"{a429_name} yüklenemedi: {e}") from e
+        return cls(card_dll, a429_dll, card_target, a429_target)
 
     def err_str(self, errval: int, handle=None) -> str:
         fn = getattr(self.card, "BTICard_ErrDescStr", None)
