@@ -216,3 +216,233 @@ def test_test_tab_disabled_on_sim_and_runs_on_rtl():
     win.bus.shutdown()
     cl.close()
 
+
+def test_test_tab_ballard_mode_ui():
+    from a429.ballard import CardInfo
+
+    app = _app()
+    win = MainWindow(SimClient(num_rx=2, has_tx=True, has_txbit=True))
+    win.show()
+    _wait(app, win)
+    tt = win.test_tab
+    assert tt.mode() == "loopback"
+    assert tt.mode_stack.currentIndex() == 0
+    assert tt.list_stack.currentIndex() == 0
+    assert tt.result_stack.currentIndex() == 0
+
+    tt.set_mode("ballard")
+    assert tt.mode() == "ballard"
+    assert tt.mode_stack.currentIndex() == 1
+    assert tt.list_stack.currentIndex() == 1
+    assert tt.result_stack.currentIndex() == 1
+
+    card = CardInfo(
+        card_num=0, core_num=0, product="BUSBox BB1120", card_type="BUSBOX",
+        rx_channels=[0, 1, 2, 3], tx_channels=[4, 5], serial=112042,
+    )
+    tt.set_ballard_probe_result([card], dll_path="BTICARD64.DLL")
+    assert tt.cb_bb_rx_ch.count() == 4
+    assert tt.cb_bb_tx_ch.count() == 2
+    opts = tt.options()
+    assert opts["mode"] == "ballard"
+    assert opts["card_num"] == 0 and opts["core_num"] == 0
+    assert opts["bb_rx_chan"] == 0 and opts["bb_tx_chan"] == 4
+    assert opts["rx"] == ["RX0"]
+    assert "tx_period" in opts["selected"] and "duplex" in opts["selected"]
+
+    tt.set_mode("loopback")
+    assert tt.options()["mode"] == "loopback"
+    assert tt.result_stack.currentIndex() == 0
+
+    win._closing = True
+    win.close()
+    win.bus.shutdown()
+    app.processEvents()
+
+
+def test_test_tab_pcs_mode_ui():
+    from a429.pcs_test import PcsInfo
+
+    app = _app()
+    win = MainWindow(SimClient(num_rx=2, has_tx=True, has_txbit=True))
+    win.show()
+    _wait(app, win)
+    tt = win.test_tab
+
+    tt.set_mode("pcs")
+    assert tt.mode() == "pcs"
+    assert tt.mode_stack.currentIndex() == 2
+    assert tt.list_stack.currentIndex() == 2
+    assert tt.result_stack.currentIndex() == 2
+    assert not tt.common_box.isVisibleTo(tt)
+    assert tt.btn_pcs_start.isVisibleTo(tt)
+    assert tt.btn_pcs_inspect.isVisibleTo(tt)
+
+    pi = PcsInfo(name="PCS_A429", base=0x00000000, is_ip_parent=True, pcs_id=0x5EC00200, imem_aw=10, dmem_aw=8)
+    tt.set_pcs_probe_result([pi])
+    assert "1024" in tt.lbl_pcs_size.text()
+    opts = tt.options()
+    assert opts["mode"] == "pcs"
+    assert opts["pcs_base"] == 0
+    assert opts["pcs_name"] == "PCS_A429"
+    assert opts["stop_on_fail"] is False
+    assert len(opts["selected"]) == 15
+
+    telem = {
+        "mode": "pcs", "timestamp": "2026-01-01 00:00:00", "pcs_base": 0, "pcs_id": 0x5EC00200,
+        "imem_size": 1024, "dmem_size": 256, "imem_cnt": 562, "pcs_state": "RUNNING", "pcs_busy": True,
+        "pcs_err": False, "pcs_pc": 42, "pcs_err_code": 0, "pcs_err_text": "", "pcs_err_pc": 0,
+        "pcs_err_addr": 0, "recognized": True, "signature": 0xA4292101, "run_state": "KOŞUYOR",
+        "halted_on_fail": False, "stop_on_fail": False,
+        "clk_hz": 50_000_000, "ip_base": 0x00010000, "gap_ms": 500.0, "max_rounds": 0,
+        "total_rounds": 10, "pass_rounds": 9, "fail_rounds": 1, "pass_rate_pct": 90.0, "consec_pass": 6,
+        "last_round_failed": False, "last_dur_ms": 12.5, "max_noise_clk": 0,
+        "tests": [{"idx": 0, "tid": "ident", "title": "IP kimliği", "hint": "", "fails": 1, "last_failed": False, "ever_failed": True, "fail_channels": ["RX0"]}],
+        "channels": [{"idx": 0, "code": 0, "name": "RX0", "fails": 1}],
+        "first_fail": {"round": 4, "test_idx": 3, "test_id": "single_hs", "test_title": "HS Tek Word",
+                       "channel": "RX0", "channel_code": 0, "sub_code": 10, "reason": "LAST_WORD uyuşmadı",
+                       "expected": 0x12345678, "got": 0x12345679},
+        "last_fail": {"round": 4, "test_idx": 3, "test_id": "single_hs", "test_title": "HS Tek Word",
+                      "channel": "RX0", "channel_code": 0, "sub_code": 10, "reason": "LAST_WORD uyuşmadı",
+                      "expected": 0x12345678, "got": 0x12345679},
+        "passed": False,
+    }
+    tt.set_pcs_telemetry(telem)
+    win._sync_pcs_control_state(telem)
+    assert tt.pcs_tree.topLevelItemCount() == 1
+    assert tt.pcs_tree.topLevelItem(0).text(0) == "GEÇTİ"
+    assert tt.pcs_ch_tree.topLevelItemCount() == 1
+    assert "10 tur" in tt.pill.text()
+    assert tt.pill.property("state") == "ok"
+    assert "9" in tt.pill_pcs_pass.text()
+    assert "1" in tt.pill_pcs_fail.text()
+    assert "90.0%" in tt.pill_pcs_rate.text()
+    assert "6" in tt.pill_pcs_streak.text()
+    assert "Tur #4" in tt.txt_pcs_log.toPlainText()
+    assert win.control_tab.outdated_bar.isVisibleTo(win.control_tab)
+
+    tt.stop_pcs_poll()
+    win._closing = True
+    win.close()
+    win.bus.shutdown()
+    app.processEvents()
+
+
+def test_new_professional_test_tab_and_outdated_ui(tmp_path):
+    """Yeni profesyonel TestTab & ControlTab akışlarını gerçek PySide6 üzerinde uçtan uca doğrular:
+    - 4-RX çoklu kanal düzeni + modlar arası bağımsız result_stack rapor koruması,
+    - ⓘ bilgi penceresi (TestInfoDialog) oluşturma,
+    - HATA İLE DURDU -> renkli & hat filtreli log -> Okunan Veriler'de İncele geçişi,
+    - ControlTab outdated_bar (running -> stale -> Yenile ile temizlenme)."""
+    from a429 import selftest, test_docs
+    from a429.qt.test_tab import TestInfoDialog
+
+    app = _app()
+    sim = SimClient(num_rx=4, has_tx=True, has_txbit=True)
+    win = MainWindow(client=sim)
+    win.rs.out_dir = str(tmp_path)
+    win.show()
+    _wait(app, win)
+    tt = win.test_tab
+
+    # 1) 4-RX kanalı her 3 modda da oluşmuş olmalı
+    assert list(tt._rx_boxes) == ["RX0", "RX1", "RX2", "RX3"]
+    assert list(tt._bb_rx_boxes) == ["RX0", "RX1", "RX2", "RX3"]
+    assert list(tt._pcs_rx_boxes) == ["RX0", "RX1", "RX2", "RX3"]
+
+    # 2) Loopback sonucunu ekle -> Ballard / PCS'ye geçip dönünce sonuç korunmalı
+    tt.set_mode("loopback")
+    r_lb = selftest.TestResult("single", "Tek Word", "HS", "PASS", [selftest.Check("RX0 OK", True, "1/1")], duration_s=0.1)
+    tt.add_result(r_lb)
+    tt.set_report({
+        "results": [r_lb], "counts": {"PASS": 1, "FAIL": 0, "ERROR": 0, "SKIP": 0},
+        "passed": True, "aborted": False, "duration_s": 0.1,
+        "setup": {"rx": ["RX0"], "tb": True, "speeds": ["HS"]}, "started": "2026-11-27 12:00:00",
+    })
+    assert tt.tree_lb.topLevelItemCount() == 1
+    assert tt.tree_lb.itemWidget(tt.tree_lb.topLevelItem(0), 5) is not None  # ⓘ düğmesi
+
+    # 3) TestInfoDialog (ⓘ) düzgün açılıp içeriği göstermeli
+    dlg = TestInfoDialog(tt, test_docs.get_test_doc("gapviol"), fail_detail="Tur #1 · [Hat: RX2] · Gap Violation")
+    dlg.show()
+    app.processEvents()
+    assert dlg.isVisible()
+    dlg.accept()
+    app.processEvents()
+
+    # 4) PCS HATA İLE DURDU -> renkli log + hat filtresi + Okunan Veriler'de İncele
+    tt.set_mode("pcs")
+    assert tt.result_stack.currentIndex() == 2
+    t_halt = {
+        "mode": "pcs", "timestamp": "2026-11-27 12:00:01", "pcs_base": 0, "pcs_id": 0x5EC00200,
+        "imem_size": 1024, "dmem_size": 256, "imem_cnt": 562, "pcs_state": "RUNNING", "pcs_busy": True,
+        "pcs_err": False, "pcs_pc": 300, "pcs_err_code": 0, "pcs_err_text": "", "pcs_err_pc": 0,
+        "pcs_err_addr": 0, "recognized": True, "signature": 0xA4292101, "run_state": "HATA İLE DURDU",
+        "halted_on_fail": True, "stop_on_fail": True,
+        "clk_hz": 50_000_000, "ip_base": 0x00010000, "gap_ms": 500.0, "max_rounds": 0,
+        "total_rounds": 1, "pass_rounds": 0, "fail_rounds": 1, "pass_rate_pct": 0.0, "consec_pass": 0,
+        "last_round_failed": True, "last_dur_ms": 11.2, "max_noise_clk": 0,
+        "tests": [
+            {"idx": 3, "tid": "single_hs", "title": "HS Tek Word", "hint": "HS yol", "fails": 1, "last_failed": True, "ever_failed": True, "fail_channels": ["RX2"]},
+        ],
+        "channels": [
+            {"idx": 0, "code": 0, "name": "RX0", "fails": 0},
+            {"idx": 1, "code": 2, "name": "RX2", "fails": 1},
+        ],
+        "first_fail": {"round": 1, "test_idx": 3, "test_id": "single_hs", "test_title": "HS Tek Word",
+                       "channel": "RX2", "channel_code": 2, "sub_code": 10, "reason": "LAST_WORD uyuşmadı",
+                       "expected": 0x11111111, "got": 0x11111011},
+        "last_fail": {"round": 1, "test_idx": 3, "test_id": "single_hs", "test_title": "HS Tek Word",
+                      "channel": "RX2", "channel_code": 2, "sub_code": 10, "reason": "LAST_WORD uyuşmadı",
+                      "expected": 0x11111111, "got": 0x11111011},
+        "passed": False,
+    }
+    tt.set_pcs_telemetry(t_halt)
+    win._sync_pcs_control_state(t_halt)
+    assert tt.pcs_tree.topLevelItemCount() == 1
+    assert tt.pcs_tree.topLevelItem(0).text(0) == "KALDI"
+    assert tt.pcs_tree.itemWidget(tt.pcs_tree.topLevelItem(0), 5) is not None  # ⓘ düğmesi
+    assert tt.pcs_ch_tree.topLevelItemCount() == 2
+    assert tt._pcs_last_fail_ch == "RX2"
+    assert "HATA İLE DURDU" in tt.pill.text()
+    assert "RX2" in tt.txt_pcs_log.toPlainText()
+
+    # Hat filtresini RX0 seçince RX2 hatası gizlenmeli, Tüm Hatlar'da geri gelmeli
+    idx_rx0 = tt.cb_pcs_log_filter.findData("RX0")
+    assert idx_rx0 >= 0
+    tt.cb_pcs_log_filter.setCurrentIndex(idx_rx0)
+    assert "RX2" not in tt.txt_pcs_log.toPlainText()
+    tt.cb_pcs_log_filter.setCurrentIndex(0)
+    assert "RX2" in tt.txt_pcs_log.toPlainText()
+
+    # Okunan Veriler'de İncele -> RX2 seçilip Okunan Veriler sekmesine geçip okumalı
+    win.do_inspect_pcs_channel("RX2")
+    _wait(app, win)
+    assert win.current_channel() == "RX2"
+    assert win.tabs.currentWidget() is win.read_tab
+    assert len(win.sessions) == 1
+
+    # Loopback'a geri dönünce önceki Loopback sonucu hâlâ duruyor olmalı
+    tt.set_mode("loopback")
+    assert tt.result_stack.currentIndex() == 0
+    assert tt.tree_lb.topLevelItemCount() == 1
+    assert "GEÇTİ" in tt.pill.text()
+
+    # 5) ControlTab outdated_bar döngüsü: running -> stale -> Şimdi Yenile ile temizlenme
+    win.control_tab.set_outdated("running")
+    assert win.control_tab.outdated_bar.isVisibleTo(win.control_tab)
+    assert "AKTİF" in win.control_tab.outdated_pill.text()
+    win.control_tab.set_outdated("stale")
+    assert "GÜNCEL DEĞİL" in win.control_tab.outdated_pill.text()
+    win.control_tab._refresh_all_now()
+    _wait(app, win)
+    assert not win.control_tab.outdated_bar.isVisibleTo(win.control_tab)
+
+    tt.stop_pcs_poll()
+    win._closing = True
+    win.close()
+    win.bus.shutdown()
+    app.processEvents()
+
+
+

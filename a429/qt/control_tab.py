@@ -46,6 +46,7 @@ class ControlTab(QWidget):
         self._loading = False
         self._syncing_en = False
         self._log_big = False
+        self._outdated_state = ""
         self._tx_win: TxLiveWindow | None = None
 
         root = QVBoxLayout(self)
@@ -106,6 +107,33 @@ class ControlTab(QWidget):
         fdl.addWidget(self.chk_verb)
         top_card.lay.addWidget(self.files_drawer)
         root.addWidget(top_card)
+
+        # ---- 1b. Otomatik Test / Güncel Değil (Outdated) Uyarı Şeridi
+        self.outdated_bar = QFrame()
+        self.outdated_bar.setObjectName("OutdatedBar")
+        self.outdated_bar.setStyleSheet(
+            f"QFrame#OutdatedBar {{ background: rgba(247, 147, 29, 0.14); "
+            f"border: 1px solid {look.tokens()['warning']}; border-radius: 8px; }}"
+        )
+        obl = QHBoxLayout(self.outdated_bar)
+        obl.setContentsMargins(10, 6, 10, 6)
+        obl.setSpacing(8)
+        self.outdated_pill = look.Pill("VERİLER GÜNCEL DEĞİL", "warn")
+        obl.addWidget(self.outdated_pill)
+        self.lbl_outdated = look.label("", None, True)
+        obl.addWidget(self.lbl_outdated, 1)
+        self.btn_outdated_test = look.button(
+            "Test Sekmesine Git", None,
+            lambda: self.app.tabs.setCurrentWidget(self.app.test_tab),
+        )
+        self.btn_outdated_refresh = look.button(
+            "↻ Şimdi Yenile", "primary", self._refresh_all_now,
+            "Kontrol sekmesindeki RX/TX aktif config, sayaç ve IP durumunu karttan yeniden okur",
+        )
+        obl.addWidget(self.btn_outdated_test)
+        obl.addWidget(self.btn_outdated_refresh)
+        self.outdated_bar.setVisible(False)
+        root.addWidget(self.outdated_bar)
 
         # ---- 2. Orta Alan: 2 Eşit Ana Kart (RX Kanal Kontrolü | TX Canlı Kontrol)
         self.cards_split = QSplitter(Qt.Orientation.Horizontal)
@@ -447,6 +475,40 @@ class ControlTab(QWidget):
 
     def update_tx_active_config(self, info: dict | None):
         self._set_cfg_pill(self.tx_cfg_pill, info)
+
+    def set_outdated(self, state: str, reason: str = ""):
+        """Kontrol sekmesindeki verilerin otomatik test nedeniyle güncel olmadığını belirtir.
+
+        state: ``""`` (güncel) | ``"running"`` (otomatik/PCS testi aktif) | ``"stale"`` (test sonrası yenileme gerekli).
+        """
+        self._outdated_state = state
+        if not state:
+            self.outdated_bar.setVisible(False)
+            return
+        if state == "running":
+            self.outdated_pill.set("OTOMATİK TEST AKTİF", "warn")
+            self.lbl_outdated.setText(
+                reason or "Otonom PCS testi şu an kartı sürüyor — buradaki sayaçlar ve aktif config değerleri güncel olmayabilir."
+            )
+            self.btn_outdated_test.setVisible(True)
+        else:
+            self.outdated_pill.set("VERİLER GÜNCEL DEĞİL", "warn")
+            self.lbl_outdated.setText(
+                reason or "Otomatik test donanım ayarlarını/sayaçlarını değiştirdi — güncel değerler için 'Şimdi Yenile'ye basın."
+            )
+            self.btn_outdated_test.setVisible(False)
+        for pill in (self.rx_cfg_pill, self.tx_cfg_pill):
+            txt = pill.text()
+            if txt and txt != "Okunmadı" and "güncel değil" not in txt:
+                pill.set(f"{txt} (güncel değil)", "warn")
+        self.outdated_bar.setVisible(True)
+
+    def _refresh_all_now(self):
+        if self._outdated_state == "stale":
+            self.set_outdated("")
+        self.app.do_refresh_status()
+        self.app.do_check_tx_config(show_dialog=False)
+        self.app.do_check_ip()
 
     def _on_rx_enable_toggled(self, checked: bool):
         if not self._syncing_en:
