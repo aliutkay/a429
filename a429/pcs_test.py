@@ -519,6 +519,10 @@ M_FIRST_FAIL_INFO = 23
 M_FIRST_FAIL_EXP = 24
 M_FIRST_FAIL_GOT = 25
 M_MAX_NOISE = 26
+M_LAST_FAIL_ROUND = 27
+M_LAST_FAIL_INFO = 28
+M_LAST_FAIL_EXP = 29
+M_LAST_FAIL_GOT = 30
 D_TEST_FAIL = 32   # 32..47 (16 test kalma sayacı)
 D_CHAN_FAIL = 48   # 48..64 (17 kanal kalma sayacı)
 
@@ -555,6 +559,7 @@ OFF_TX_CUST_TIM = 0x0444
 OFF_TX_CUST_GAP = 0x0448
 OFF_TX_CUST_SLP = 0x044C
 OFF_TX_ACT_TIM = 0x0460
+OFF_TX_ACT_GAP = 0x0464
 OFF_TX_STATUS = 0x0480
 OFF_TX_WORD_CNT = 0x0484
 
@@ -657,7 +662,7 @@ def build_program(
 
     w_5us = 5 * clk_us
     w_30us = 30 * clk_us
-    w_settle_hs = 70 * clk_us
+    w_settle_hs = 90 * clk_us
     w_settle_ls = 520 * clk_us
     w_tx_to = 12_000 * clk_us
     w_sched_to = max(50_000 * clk_us, burst_ls * 4_500 * clk_us)
@@ -718,10 +723,6 @@ def build_program(
     for i, w in enumerate(PATTERN_FIXED):
         dmem_init[D_PATTERNS + i] = w
 
-    hs_pulse_clk = 5 * clk_us
-    hs_cust_tim = ((hs_pulse_clk & 0xFFFF) << 16) | (hs_pulse_clk & 0xFFFF)
-    hs_gap2_clk = 20 * clk_us  # 2 bit (< 4 bit min gap)
-
     need_chk_line = bool(sel_set & {"idle", "polarity"})
     need_send_one = bool(sel_set & {"pattern_hs", "pattern_ls", "switch", "parity", "mismatch", "gapviol", "bittime", "logger"})
     need_pattern = bool(sel_set & {"pattern_hs", "pattern_ls"})
@@ -764,6 +765,7 @@ def build_program(
         f".equ OFF_TX_CUST_GAP  0x{OFF_TX_CUST_GAP:04X}",
         f".equ OFF_TX_CUST_SLP  0x{OFF_TX_CUST_SLP:04X}",
         f".equ OFF_TX_ACT_TIM   0x{OFF_TX_ACT_TIM:04X}",
+        f".equ OFF_TX_ACT_GAP   0x{OFF_TX_ACT_GAP:04X}",
         f".equ OFF_TX_STATUS    0x{OFF_TX_STATUS:04X}",
         f".equ OFF_TX_WORD_CNT  0x{OFF_TX_WORD_CNT:04X}",
         f".equ CH_CTRL          0x{CH_CTRL:04X}",
@@ -795,8 +797,6 @@ def build_program(
         f".equ W_TX_TO          {w_tx_to}",
         f".equ W_SCHED_TO       {w_sched_to}",
         f".equ TB_TO_CLK        {tb_timeout_clk}",
-        f".equ HS_CUST_TIM      0x{hs_cust_tim:08X}",
-        f".equ HS_GAP2_CLK      {hs_gap2_clk}",
         f".equ ERR_MASK         0x{err_mask:X}",
         f".equ BIT_WMASK        0x{bit_wmask:X}",
         f".equ N_CHANS          {len(chans)}",
@@ -811,6 +811,8 @@ def build_program(
         "        WAIT  W_5US",
         "        WR    [R6+OFF_TS_CTRL], R1",
         "        WR    [R6+OFF_TX_CTRL], R1",
+        "        WR    [R6+OFF_TX_INIT_DLY], R0",     # eski scheduler gecikmesini sıfırla
+        "        WR    [R6+OFF_TX_IWG], R1",          # 1 clk min inter-word gap
         "        LDI   R1, 5",                       # ENABLE + CLEAR
         "        CALL  all_ch_ctrl",
     ]
@@ -926,7 +928,10 @@ def build_program(
         L += [
             "t_par:",
             "        LDI   R9, 10",
-            "        CALL  set_hs",
+        ]
+        if "switch" not in sel_set:
+            L += ["        CALL  set_hs"]
+        L += [
             f"        LDI   R11, 0x{PARITY_BAD_WORD:08X}",  # Even parity
             f"        LDI   R12, 0x{ERR_PARITY:X}",
             "        CALL  send_chk_rej",
@@ -955,15 +960,19 @@ def build_program(
             "        CALL  set_hs",
         ]
 
-    # ---- Test 12: gapviol (IP 2.1.0 TX_SCHED_COUNT=5 + TX_CUST_GAP_DUR = 2*bit)
+    # ---- Test 12: gapviol (IP 2.1.0 TX_SCHED_COUNT=3 + TX_CUST_GAP_DUR = ACT_GAP/2)
     if "gapviol" in sel_set:
         L += [
             "t_gap:",
             "        LDI   R9, 12",
-            "        CALL  set_hs",
-            "        LDI   R1, HS_CUST_TIM",
+        ]
+        if "mismatch" not in sel_set:
+            L += ["        CALL  set_hs"]
+        L += [
+            "        RD    R1, [R6+OFF_TX_ACT_TIM]",
             "        WR    [R6+OFF_TX_CUST_TIM], R1",
-            "        LDI   R1, HS_GAP2_CLK",
+            "        RD    R1, [R6+OFF_TX_ACT_GAP]",
+            "        SHR   R1, 1",                   # 4-bit gap / 2 = 2-bit gap (< 4-bit min)
             "        WR    [R6+OFF_TX_CUST_GAP], R1",
             "        LDI   R1, 1",
             "        WR    [R6+OFF_TX_CUST_SLP], R1",
@@ -971,11 +980,9 @@ def build_program(
             "        WR    [R6+OFF_TX_CFG], R1",
             "        CALL  snap_all",
             "        LDI   R11, 0x80C0FFEE",
-            "        LDI   R12, 5",
+            "        LDI   R12, 3",                  # 3 Word: W1->W2 GAP_VIOL, depth-4 TB_CHK taşmaz
             "        CALL  sched_run",
-            "        LDI   R1, 0x10",                # HS'e dön
-            "        WR    [R6+OFF_TX_CFG], R1",
-            "        WAIT  W_SETTLE_HS",
+            "        CALL  set_hs",                  # HS'e dön + TB_CHK FIFO/OVF temizle + settle
             f"        LDI   R12, 0x{ERR_GAP_VIOL:X}",
             "        CALL  check_rej",
             "        CALL  send_chk_one",            # toparlanma (R11=0x80C0FFEE)
@@ -986,7 +993,10 @@ def build_program(
         L += [
             "t_bt:",
             "        LDI   R9, 13",
-            "        CALL  set_hs",
+        ]
+        if "gapviol" not in sel_set:
+            L += ["        CALL  set_hs"]
+        L += [
             "        LDI   R11, 0xD5555555",
             "        CALL  send_one",
             "        LDI   R8, N_CHANS",
@@ -1058,7 +1068,10 @@ def build_program(
         L += [
             "t_log:",
             "        LDI   R9, 14",
-            "        CALL  set_hs",
+        ]
+        if "bittime" not in sel_set:
+            L += ["        CALL  set_hs"]
+        L += [
             "        LDI   R11, 0x80555AAA",
             "        LDI   R1, 0",                   # ENABLE=0 -> DROP+0
             "        LDI   R12, 0",
@@ -1154,17 +1167,21 @@ def build_program(
         "        ADD   R5, 1",
         f"        STD   D[{ch_fail_m1}+R8], R5",
         "rf_first:",
-        f"        LDD   R5, D[{M_FIRST_FAIL_ROUND}]",
-        "        CMP   R5, 0",
-        "        BR    NZ, rf_ret",
         f"        LDD   R5, D[{M_TOTAL_ROUNDS}]",
         "        ADD   R5, 1",
-        f"        STD   D[{M_FIRST_FAIL_ROUND}], R5",
         f"        LDD   R4, D[{ch_code_m1}+R8]",
         "        SHL   R4, 8",
         "        OR    R4, R9",
         "        SHL   R3, 16",
         "        OR    R4, R3",
+        f"        STD   D[{M_LAST_FAIL_ROUND}], R5",
+        f"        STD   D[{M_LAST_FAIL_INFO}], R4",
+        f"        STD   D[{M_LAST_FAIL_EXP}], R2",
+        f"        STD   D[{M_LAST_FAIL_GOT}], R1",
+        f"        LDD   R3, D[{M_FIRST_FAIL_ROUND}]",
+        "        CMP   R3, 0",
+        "        BR    NZ, rf_ret",
+        f"        STD   D[{M_FIRST_FAIL_ROUND}], R5",
         f"        STD   D[{M_FIRST_FAIL_INFO}], R4",
         f"        STD   D[{M_FIRST_FAIL_EXP}], R2",
         f"        STD   D[{M_FIRST_FAIL_GOT}], R1",
@@ -1835,15 +1852,16 @@ def read_telemetry(client, pcs_base: int) -> dict:
             "fails": int(dm[D_CHAN_FAIL + i]),
         })
 
-    first_fail = None
-    if recognized and dm[M_FIRST_FAIL_ROUND]:
-        info_w = int(dm[M_FIRST_FAIL_INFO])
+    def _decode_fail(r_idx: int, i_idx: int, e_idx: int, g_idx: int) -> dict | None:
+        if not recognized or not dm[r_idx]:
+            return None
+        info_w = int(dm[i_idx])
         f_tid_idx = info_w & 0xFF
         f_ch_code = (info_w >> 8) & 0xFF
         f_sub = (info_w >> 16) & 0xFFFF
         t_entry = TEST_BY_IDX.get(f_tid_idx, (f"test#{f_tid_idx}", f"Test #{f_tid_idx}", ""))
-        first_fail = {
-            "round": int(dm[M_FIRST_FAIL_ROUND]),
+        return {
+            "round": int(dm[r_idx]),
             "test_idx": f_tid_idx,
             "test_id": t_entry[0],
             "test_title": t_entry[1],
@@ -1851,9 +1869,12 @@ def read_telemetry(client, pcs_base: int) -> dict:
             "channel_code": f_ch_code,
             "sub_code": f_sub,
             "reason": SUB_REASON.get(f_sub, f"alt kod {f_sub}"),
-            "expected": int(dm[M_FIRST_FAIL_EXP]),
-            "got": int(dm[M_FIRST_FAIL_GOT]),
+            "expected": int(dm[e_idx]),
+            "got": int(dm[g_idx]),
         }
+
+    first_fail = _decode_fail(M_FIRST_FAIL_ROUND, M_FIRST_FAIL_INFO, M_FIRST_FAIL_EXP, M_FIRST_FAIL_GOT)
+    last_fail = _decode_fail(M_LAST_FAIL_ROUND, M_LAST_FAIL_INFO, M_LAST_FAIL_EXP, M_LAST_FAIL_GOT)
 
     total = int(dm[M_TOTAL_ROUNDS]) if recognized else 0
     failed_n = int(dm[M_FAIL_ROUNDS]) if recognized else 0
@@ -1886,13 +1907,92 @@ def read_telemetry(client, pcs_base: int) -> dict:
         "total_rounds": total,
         "pass_rounds": passed_n,
         "fail_rounds": failed_n,
+        "last_round_failed": bool(last_mask),
         "last_dur_ms": round(int(dm[M_LAST_DUR_CLK]) * 1000.0 / clk_hz, 3) if recognized else 0.0,
         "max_noise_clk": int(dm[M_MAX_NOISE]) if recognized else 0,
         "tests": tests_out,
         "channels": chans_out,
         "first_fail": first_fail,
+        "last_fail": last_fail,
         "passed": recognized and not st.err and total > 0 and failed_n == 0,
     }
+
+
+def _fmt_fail_rec(rec: dict) -> str:
+    return (
+        f"Tur #{rec['round']} · {rec['test_title']} · {rec['channel']} · "
+        f"{rec['reason']} (beklenen 0x{rec['expected']:08X}, okunan 0x{rec['got']:08X})"
+    )
+
+
+def diff_fail_events(prev: dict | None, cur: dict) -> list[str]:
+    """İki PCS telemetri okuması arasındaki yeni hataları log satırları olarak döndürür."""
+    ts = str(cur.get("timestamp") or "").split(" ")[-1] or time.strftime("%H:%M:%S")
+    out: list[str] = []
+
+    if cur.get("pcs_err") and (prev is None or not prev.get("pcs_err")):
+        out.append(
+            f"[{ts}] PCS HATA · {cur.get('pcs_err_text', '')} "
+            f"(PC={cur.get('pcs_pc', 0)}, ERR_CODE={cur.get('pcs_err_code', 0)}, "
+            f"ADDR=0x{cur.get('pcs_err_addr', 0):08X})"
+        )
+
+    if not cur.get("recognized"):
+        return out
+
+    total = int(cur.get("total_rounds", 0))
+    fails = int(cur.get("fail_rounds", 0))
+    ff = cur.get("first_fail")
+    lf = cur.get("last_fail")
+
+    if prev is None:
+        if fails > 0:
+            if ff:
+                out.append(f"[{ts}] İlk hata · {_fmt_fail_rec(ff)}")
+            if lf and lf != ff:
+                out.append(f"[{ts}] Son hata · {_fmt_fail_rec(lf)}")
+            if not ff and not lf:
+                for x in cur.get("tests", []):
+                    if x.get("fails", 0) > 0:
+                        out.append(f"[{ts}] Tur #{total} · {x['title']} · {x['fails']}/{total} hata ({x.get('hint', '')})")
+        return out
+
+    prev_total = int(prev.get("total_rounds", 0))
+    prev_fails = int(prev.get("fail_rounds", 0))
+    if total <= prev_total or fails <= prev_fails:
+        return out
+
+    prev_t = {x["tid"]: int(x["fails"]) for x in prev.get("tests", [])}
+    prev_c = {c["code"]: int(c["fails"]) for c in prev.get("channels", [])}
+    ch_deltas = [
+        f"{c['name']} +{int(c['fails']) - prev_c.get(c['code'], 0)}"
+        for c in cur.get("channels", [])
+        if int(c["fails"]) > prev_c.get(c["code"], 0)
+    ]
+    ch_txt = ", ".join(ch_deltas)
+
+    logged_any = False
+    for x in cur.get("tests", []):
+        dt = int(x["fails"]) - prev_t.get(x["tid"], 0)
+        if dt <= 0:
+            continue
+        logged_any = True
+        if lf and lf.get("test_id") == x["tid"]:
+            extra = f" (+{dt} tur)" if dt > 1 else ""
+            out.append(f"[{ts}] {_fmt_fail_rec(lf)}{extra} [toplam {x['fails']}/{total}]")
+        else:
+            ch_part = f" · {ch_txt}" if ch_txt else ""
+            out.append(
+                f"[{ts}] Tur #{total} · {x['title']}{ch_part} · +{dt} hata "
+                f"({x.get('hint', '')}) [toplam {x['fails']}/{total}]"
+            )
+
+    if not logged_any:
+        if lf:
+            out.append(f"[{ts}] {_fmt_fail_rec(lf)} [hatalı tur {fails}/{total}]")
+        else:
+            out.append(f"[{ts}] Tur #{total} · +{fails - prev_fails} hatalı tur [toplam {fails}/{total}]")
+    return out
 
 
 def report_text(t: dict) -> str:
@@ -1927,6 +2027,13 @@ def report_text(t: dict) -> str:
         lines.append(
             f"İLK HATA  : Tur #{ff['round']} · {ff['test_title']} · {ff['channel']}\n"
             f"            Neden: {ff['reason']}  (beklenen 0x{ff['expected']:08X}, okunan 0x{ff['got']:08X})"
+        )
+    if t.get("last_fail") and t["last_fail"] != t.get("first_fail"):
+        lf = t["last_fail"]
+        lines.append("-" * 78)
+        lines.append(
+            f"SON HATA  : Tur #{lf['round']} · {lf['test_title']} · {lf['channel']}\n"
+            f"            Neden: {lf['reason']}  (beklenen 0x{lf['expected']:08X}, okunan 0x{lf['got']:08X})"
         )
     if t["pcs_err"]:
         lines.append("-" * 78)

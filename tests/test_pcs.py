@@ -29,6 +29,8 @@ class FakeIp21:
         self._bit_ptr: dict[str, int] = {}
         self._tx_speed = "HS"
         self._rx_speed: dict[str, str] = {}
+        self._tb_fifo: list[int] = []
+        self._tb_ovf = False
 
         # Donanım hata enjeksiyon anahtarları
         self.fault_bad_id = False
@@ -43,10 +45,17 @@ class FakeIp21:
         self.fault_noise_clk: dict[str, int] = {}
         self.fault_ignore_freeze = False
 
-        self._reset_all()
+        self._reset_all(hard=True)
 
-    def _reset_all(self):
+    def _reset_all(self, hard: bool = False):
+        keep = {}
+        if not hard and self._regs:
+            # SOFT_RESET çekirdeği sıfırlar, AXI4-Lite RW register'larını (arinc429_axil.v) sıfırlamaz
+            for off in (pcs_test.OFF_TX_INIT_DLY, pcs_test.OFF_TX_IWG):
+                if off in self._regs:
+                    keep[off] = self._regs[off]
         self._regs = {r.offset: r.reset for r in self.rm.regs.values()}
+        self._regs.update(keep)
         self._tx_speed = "HS"
         self._set_tx_act("HS")
         self._rx_speed = {ch: "HS" for ch in self.chans}
@@ -56,7 +65,14 @@ class FakeIp21:
         self._err_ptr = {ch: 0 for ch in self.chans}
         self._bit_ram = {ch: [[] for _ in range(8)] for ch in self.chans}
         self._bit_ptr = {ch: 0 for ch in self.chans}
+        self._tb_fifo = []
+        self._tb_ovf = False
+        self._update_tb_status()
         self._update_line_status()
+
+    def _update_tb_status(self):
+        if self.rm.has("TB_CHK_STATUS"):
+            self._regs[pcs_test.TB_CHK_STATUS] = (len(self._tb_fifo) & 0xF) | (0x10 if self._tb_ovf else 0)
 
     def _set_tx_act(self, spd: str):
         p = 250 if spd == "HS" else 2000
@@ -99,11 +115,26 @@ class FakeIp21:
         gfreeze = bool(self._regs.get(self.rm.offset("GLOBAL_FREEZE"), 0) & 1)
         tb_chk_en = bool(self._regs.get(self.rm.offset("TB_CHK_CTRL"), 0) & 1) if self.rm.has("TB_CHK_CTRL") else False
 
-        for wd_orig in words:
+        for w_idx, wd_orig in enumerate(words):
+            if "TB" in self.chans and tb_chk_en:
+                if len(self._tb_fifo) < 4:
+                    self._tb_fifo.append(wd_orig)
+                else:
+                    self._tb_ovf = True
+                self._update_tb_status()
+
             for ch in self.chans:
                 pre = "TB_" if ch == "TB" else ch + "_"
                 ctrl = self._regs.get(self.rm.offset(pre + "CTRL"), 0)
                 if not (ctrl & 1):
+                    # Logger kapalıyken decoder arka planda çalışmaya ve TB_CHK'yi beslemeye devam eder
+                    if ch == "TB" and tb_chk_en and self._tb_fifo:
+                        exp = self._tb_fifo.pop(0)
+                        if wd_orig == exp:
+                            self._regs[self.rm.offset("TB_CHK_OK_CNT")] += 1
+                        else:
+                            self._regs[self.rm.offset("TB_CHK_ERR_CNT")] += 1
+                        self._update_tb_status()
                     continue
                 if ch in self.fault_open or ch in self.fault_line_stuck11:
                     if ch == "TB" and tb_chk_en:
@@ -111,6 +142,13 @@ class FakeIp21:
                     continue
                 if ((ctrl & 2) or gfreeze) and not self.fault_ignore_freeze:
                     self._regs[self.rm.offset(pre + "DROP_CNT")] += 1
+                    if ch == "TB" and tb_chk_en and self._tb_fifo:
+                        exp = self._tb_fifo.pop(0)
+                        if wd_orig == exp:
+                            self._regs[self.rm.offset("TB_CHK_OK_CNT")] += 1
+                        else:
+                            self._regs[self.rm.offset("TB_CHK_ERR_CNT")] += 1
+                        self._update_tb_status()
                     continue
 
                 wd = wd_orig ^ (M32 if ch in self.fault_swapped else 0)
@@ -122,23 +160,27 @@ class FakeIp21:
                 if self._tx_speed != rspd:
                     if self._tx_speed == "LS" and rspd == "HS":
                         self._push_err(ch, pcs_test.ERR_PULSE_STUCK, wd)
-                    if ch == "TB" and tb_chk_en:
-                        self._regs[self.rm.offset("TB_CHK_ERR_CNT")] += 1
+                        if ch == "TB" and tb_chk_en and self._tb_fifo:
+                            self._tb_fifo.pop(0)
+                            self._update_tb_status()
                     continue
 
-                # Gap ihlali
+                # Gap ihlali (gerçek decoder: ilk 2 Word arasında 1 kez ERR_GAP_VIOL üretir,
+                # kalan Word'lerde ST_ERR_RECOVERY'de bekler -> TB_CHK FIFO'dan yalnızca 1 kayıt düşer)
                 if gap_viol and not self.fault_ignore_gap:
-                    self._push_err(ch, pcs_test.ERR_GAP_VIOL, wd)
-                    if ch == "TB" and tb_chk_en:
-                        self._push_err(ch, 0x200, wd)  # No Echo
-                        self._regs[self.rm.offset("TB_CHK_ERR_CNT")] += 1
+                    if w_idx == 1:
+                        self._push_err(ch, pcs_test.ERR_GAP_VIOL, wd)
+                        if ch == "TB" and tb_chk_en and self._tb_fifo:
+                            self._tb_fifo.pop(0)
+                            self._update_tb_status()
                     continue
 
                 # Odd parity
                 if (bin(wd).count("1") % 2 == 0) and not self.fault_ignore_parity:
                     self._push_err(ch, pcs_test.ERR_PARITY, wd)
-                    if ch == "TB" and tb_chk_en:
-                        self._regs[self.rm.offset("TB_CHK_ERR_CNT")] += 1
+                    if ch == "TB" and tb_chk_en and self._tb_fifo:
+                        self._tb_fifo.pop(0)
+                        self._update_tb_status()
                     continue
 
                 # Geçerli Word kabul
@@ -153,10 +195,15 @@ class FakeIp21:
                 self._bit_ram[ch][widx] = [(p_dur, noise if b == 5 else 0, n_dur, 0) for b in range(32)]
 
                 if ch == "TB" and tb_chk_en:
-                    if wd == wd_orig:
-                        self._regs[self.rm.offset("TB_CHK_OK_CNT")] += 1
+                    if self._tb_fifo:
+                        exp = self._tb_fifo.pop(0)
+                        if wd == exp:
+                            self._regs[self.rm.offset("TB_CHK_OK_CNT")] += 1
+                        else:
+                            self._regs[self.rm.offset("TB_CHK_ERR_CNT")] += 1
                     else:
                         self._regs[self.rm.offset("TB_CHK_ERR_CNT")] += 1
+                    self._update_tb_status()
 
     def _push_err(self, ch: str, code: int, data: int):
         pre = "TB_" if ch == "TB" else ch + "_"
@@ -206,7 +253,7 @@ class FakeIp21:
         off = (addr - self.base) & 0xFFFF
         val &= M32
         if off == pcs_test.OFF_SOFT_RESET and (val & 1):
-            self._reset_all()
+            self._reset_all(hard=False)
             return 0
         self._regs[off] = val
 
@@ -216,8 +263,9 @@ class FakeIp21:
             if off == pcs_test.OFF_TX_CTRL and (val & 0x0B) == 0x0B:
                 n = self._regs.get(pcs_test.OFF_TX_SCHED_CNT, 0) or 1
                 wd = self._regs.get(pcs_test.OFF_TX_EXT_DATA, 0)
-                gap_viol = (self._regs.get(pcs_test.OFF_TX_ACT_TIM, 0) != 0 and
-                            self._regs.get(self.rm.offset("TX_ACT_GAP_DUR"), 2000) < 1500)
+                iwg = max(1, self._regs.get(pcs_test.OFF_TX_IWG, 1))
+                act_gap = self._regs.get(self.rm.offset("TX_ACT_GAP_DUR"), 2000)
+                gap_viol = (self._regs.get(pcs_test.OFF_TX_ACT_TIM, 0) != 0 and (act_gap + iwg) < 1500)
                 send_list = [wd] * n
                 if self.fault_drop_burst and not gap_viol:
                     # 1 Word düşürerek burst kaybını simüle et
@@ -254,8 +302,9 @@ class FakeIp21:
             return 0
 
         if self.rm.has("TB_CHK_CTRL") and off == pcs_test.TB_CHK_CTRL and (val & 2):
-            self._regs[pcs_test.TB_CHK_OK_CNT] = 0
-            self._regs[pcs_test.TB_CHK_ERR_CNT] = 0
+            self._tb_fifo.clear()
+            self._tb_ovf = False
+            self._update_tb_status()
             self._regs[pcs_test.TB_CHK_CTRL] = val & 1
             return 0
 
@@ -668,4 +717,71 @@ def test_pcs_smart_imem_skip_on_relaunch():
     sys_pcs.run_until_rounds(2)
     t = pcs_test.read_telemetry(sys_pcs, 0)
     assert t["passed"] and t["total_rounds"] == 2 and t["gap_ms"] == 100.0
+
+
+def test_pcs_gapviol_clean_with_depth4_tb_fifo_and_stale_iwg():
+    """Eski bir testten yüksek TX_INTER_WORD_GAP kalmış olsa bile ve TB_CHK FIFO
+    derinliği 4 iken gapviol testi FIFO taşması yapmadan tüm turları geçer."""
+    ip = FakeIp21(num_rx=1, has_txbit=True)
+    # Önceki bir t_period / TX Canlı çalıştırmasından kalan büyük IWG ve initial delay
+    ip._regs[pcs_test.OFF_TX_IWG] = 5000
+    ip._regs[pcs_test.OFF_TX_INIT_DLY] = 1000
+    sys_pcs = FakePcsSystem(ip)
+    comp = pcs_test.build_program(ip.base, ["RX0"], use_tb=True, max_rounds=4, gap_ms=1)
+    pcs_test.load_and_start(sys_pcs, 0, comp)
+    sys_pcs.run_until_rounds(4)
+    t = pcs_test.read_telemetry(sys_pcs, 0)
+    assert t["passed"]
+    assert t["total_rounds"] == 4 and t["pass_rounds"] == 4 and t["fail_rounds"] == 0
+    assert not t["last_round_failed"]
+    assert not ip._tb_ovf
+    assert len(ip._tb_fifo) == 0
+
+
+def test_pcs_transient_fail_recovery_and_diff_fail_events():
+    """İlk turda geçici hata oluşup sonraki turlarda düzeldiğinde:
+    - last_round_failed True -> False döner (UI testleri geri yeşil yapar),
+    - first_fail ve last_fail korunur,
+    - diff_fail_events yalnızca hata artışı olduğunda log satırı üretir."""
+    ip = FakeIp21(num_rx=1, has_txbit=True)
+    ip.fault_ignore_gap = True
+    sys_pcs = FakePcsSystem(ip)
+    comp = pcs_test.build_program(ip.base, ["RX0"], use_tb=True, max_rounds=0, gap_ms=1)
+    pcs_test.load_and_start(sys_pcs, 0, comp)
+
+    # Tur 1: gapviol kalır
+    sys_pcs.run_until_rounds(1)
+    t1 = pcs_test.read_telemetry(sys_pcs, 0)
+    assert t1["total_rounds"] == 1 and t1["fail_rounds"] == 1 and t1["pass_rounds"] == 0
+    assert t1["last_round_failed"] is True
+    by1 = {x["tid"]: x for x in t1["tests"]}
+    assert by1["gapviol"]["last_failed"] is True and by1["gapviol"]["fails"] == 1
+    assert t1["first_fail"] is not None and t1["first_fail"]["test_id"] == "gapviol"
+    assert t1["last_fail"] is not None and t1["last_fail"]["test_id"] == "gapviol" and t1["last_fail"]["round"] == 1
+
+    ev1 = pcs_test.diff_fail_events(None, t1)
+    assert len(ev1) >= 1 and all("Tur #1" in e and "Gap ihlali" in e for e in ev1)
+
+    # Hata düzeldi -> Tur 2 ve Tur 3 temiz geçer
+    ip.fault_ignore_gap = False
+    sys_pcs.run_until_rounds(3)
+    t3 = pcs_test.read_telemetry(sys_pcs, 0)
+    assert t3["total_rounds"] == 3 and t3["fail_rounds"] == 1 and t3["pass_rounds"] == 2
+    assert t3["last_round_failed"] is False
+    by3 = {x["tid"]: x for x in t3["tests"]}
+    assert by3["gapviol"]["last_failed"] is False and by3["gapviol"]["fails"] == 1
+    # Yeni hata olmadığından log akışına satır eklenmez
+    assert pcs_test.diff_fail_events(t1, t3) == []
+
+    # Tur 4'te farklı bir hata (parity) oluşursa yeni log satırı eklenir ve last_fail güncellenir
+    ip.fault_ignore_parity = True
+    sys_pcs.run_until_rounds(4)
+    t4 = pcs_test.read_telemetry(sys_pcs, 0)
+    assert t4["total_rounds"] == 4 and t4["fail_rounds"] == 2 and t4["pass_rounds"] == 2
+    assert t4["last_round_failed"] is True
+    assert t4["first_fail"]["test_id"] == "gapviol" and t4["first_fail"]["round"] == 1
+    assert t4["last_fail"]["test_id"] == "parity" and t4["last_fail"]["round"] == 4
+    ev4 = pcs_test.diff_fail_events(t3, t4)
+    assert len(ev4) == 1 and "Tur #4" in ev4[0] and "Parity" in ev4[0] and "toplam 1/4" in ev4[0]
+
 

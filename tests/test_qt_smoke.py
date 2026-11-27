@@ -286,16 +286,25 @@ def test_test_tab_pcs_mode_ui():
         "pcs_err": False, "pcs_pc": 42, "pcs_err_code": 0, "pcs_err_text": "", "pcs_err_pc": 0,
         "pcs_err_addr": 0, "recognized": True, "signature": 0xA4292101, "run_state": "KOŞUYOR",
         "clk_hz": 50_000_000, "ip_base": 0x00010000, "gap_ms": 500.0, "max_rounds": 0,
-        "total_rounds": 10, "pass_rounds": 9, "fail_rounds": 1, "last_dur_ms": 12.5, "max_noise_clk": 0,
-        "tests": [{"idx": 0, "tid": "ident", "title": "IP kimliği", "hint": "", "fails": 0, "last_failed": False, "ever_failed": False}],
+        "total_rounds": 10, "pass_rounds": 9, "fail_rounds": 1, "last_round_failed": False,
+        "last_dur_ms": 12.5, "max_noise_clk": 0,
+        "tests": [{"idx": 0, "tid": "ident", "title": "IP kimliği", "hint": "", "fails": 1, "last_failed": False, "ever_failed": True}],
         "channels": [{"idx": 0, "code": 0, "name": "RX0", "fails": 1}],
         "first_fail": {"round": 4, "test_idx": 3, "test_id": "single_hs", "test_title": "HS Tek Word",
                        "channel": "RX0", "channel_code": 0, "sub_code": 10, "reason": "LAST_WORD uyuşmadı",
                        "expected": 0x12345678, "got": 0x12345679},
+        "last_fail": {"round": 4, "test_idx": 3, "test_id": "single_hs", "test_title": "HS Tek Word",
+                      "channel": "RX0", "channel_code": 0, "sub_code": 10, "reason": "LAST_WORD uyuşmadı",
+                      "expected": 0x12345678, "got": 0x12345679},
         "passed": False,
     })
     assert tt.tree.topLevelItemCount() >= 4
     assert "10 tur" in tt.pill.text()
+    assert tt.pill.property("state") == "ok"
+    assert tt.tree.topLevelItem(1).text(0) == "GEÇTİ"
+    assert "9" in tt.pill_pcs_pass.text()
+    assert "1" in tt.pill_pcs_fail.text()
+    assert "Tur #4" in tt.txt_pcs_log.toPlainText()
 
     tt.stop_pcs_poll()
     win._closing = True
